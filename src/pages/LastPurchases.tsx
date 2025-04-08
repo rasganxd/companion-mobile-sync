@@ -1,8 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft, Search } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Search } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -37,8 +34,7 @@ interface PurchaseItem {
 }
 
 const LastPurchases = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'calendar'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
@@ -145,20 +141,11 @@ const LastPurchases = () => {
     }
   };
 
-  const handleCalendarToggle = () => {
-    setViewMode('calendar');
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    setDate(date);
-    setViewMode('list');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
-        title={viewMode === 'details' ? 'Detalhes da Compra' : viewMode === 'calendar' ? 'Calendário' : `Compras - ${clientName}`}
-        backgroundColor={viewMode === 'details' ? 'gray' : viewMode === 'calendar' ? 'orange' : 'blue'}
+        title={viewMode === 'details' ? 'Detalhes da Compra' : `Compras - ${clientName}`}
+        backgroundColor={viewMode === 'details' ? 'gray' : 'blue'}
         showBackButton
       />
       
@@ -213,16 +200,7 @@ const LastPurchases = () => {
             )}
           </ScrollArea>
           
-          <div className="mt-4 space-y-3">
-            <AppButton 
-              variant="purple" 
-              fullWidth 
-              className="flex items-center justify-center gap-2"
-              onClick={handleCalendarToggle}
-            >
-              Selecionar Data <CalendarIcon size={20} />
-            </AppButton>
-            
+          <div className="mt-4">
             <AppButton 
               variant="gray" 
               fullWidth 
@@ -280,54 +258,6 @@ const LastPurchases = () => {
             >
               <ArrowLeft size={20} />
               <span>Voltar para Lista</span>
-            </AppButton>
-          </div>
-        </div>
-      )}
-
-      {viewMode === 'calendar' && (
-        <div className="p-4 flex-1 flex flex-col">
-          <div className="text-center mb-4">
-            <div className="flex justify-between items-center mb-4">
-              <button className="p-2">&lt;</button>
-              <h3 className="text-xl font-bold text-purple-900">
-                {format(date || new Date(), 'MMMM - yyyy', { locale: ptBR })}
-              </h3>
-              <button className="p-2">&gt;</button>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 text-sm">
-              <div>dom.</div>
-              <div>seg.</div>
-              <div>ter.</div>
-              <div>qua.</div>
-              <div>qui.</div>
-              <div>sex.</div>
-              <div>sáb.</div>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mt-2">
-              {[...Array(30)].map((_, i) => (
-                <button 
-                  key={i} 
-                  className="aspect-square bg-purple-100 rounded-lg flex items-center justify-center p-2"
-                  onClick={() => handleDateSelect(new Date(2025, 3, i + 1))}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-          
-          <div className="mt-auto">
-            <AppButton 
-              variant="gray" 
-              fullWidth 
-              className="flex items-center justify-center gap-2"
-              onClick={handleGoBack}
-            >
-              <ArrowLeft size={20} />
-              <span>Voltar</span>
             </AppButton>
           </div>
         </div>
