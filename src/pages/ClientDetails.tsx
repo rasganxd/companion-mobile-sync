@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info } from 'lucide-react';
@@ -7,6 +6,11 @@ import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ClientDetails = () => {
   const navigate = useNavigate();
