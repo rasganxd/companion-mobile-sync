@@ -31,17 +31,18 @@ const ClientDetails = () => {
   };
 
   const handleInitiate = () => {
-    // Quando clica em "Iniciar", volta para a página inicial
+    // Quando clica em "Iniciar", vai para a página inicial
     navigate('/');
   };
 
   const handleClose = () => {
     // Volta para a tela de rotas
-    navigate('/rotas');
+    navigate('/');
   };
   
   const handleGoBack = () => {
-    navigate(-1);
+    // Volta para a tela de rotas
+    navigate('/');
   };
 
   return (
@@ -187,3 +188,4 @@ const ClientDetails = () => {
 };
 
 export default ClientDetails;
+

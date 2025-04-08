@@ -10,7 +10,8 @@ const Index = () => {
   const navigate = useNavigate();
   
   const handleGoBack = () => {
-    navigate(-1);
+    // Ao voltar do menu, vai para detalhes do cliente
+    navigate('/clientes');
   };
 
   const handleClose = () => {
@@ -74,3 +75,4 @@ const Index = () => {
 };
 
 export default Index;
+
