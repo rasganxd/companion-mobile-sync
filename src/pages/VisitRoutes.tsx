@@ -7,16 +7,19 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 const VisitRoutes = () => {
-  // Dados de exemplo para as rotas
+  const { toast } = useToast();
+  
+  // Dados de exemplo zerados para as rotas - serão preenchidos pelo sistema desktop
   const routes = [
-    { day: 'Segunda', visited: 0, remaining: 30, total: 30 },
-    { day: 'Terça', visited: 0, remaining: 24, total: 24 },
-    { day: 'Quarta', visited: 0, remaining: 27, total: 27 },
-    { day: 'Quinta', visited: 0, remaining: 25, total: 25 },
-    { day: 'Sexta', visited: 0, remaining: 21, total: 21 },
-    { day: 'Sábado', visited: 0, remaining: 12, total: 12 },
+    { day: 'Segunda', visited: 0, remaining: 0, total: 0 },
+    { day: 'Terça', visited: 0, remaining: 0, total: 0 },
+    { day: 'Quarta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Quinta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Sexta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Sábado', visited: 0, remaining: 0, total: 0 },
   ];
 
   const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
@@ -24,7 +27,15 @@ const VisitRoutes = () => {
 
   // Helper function to get progress percentage
   const getProgressPercentage = (visited: number, total: number) => {
+    if (total === 0) return 0;
     return (visited / total) * 100;
+  };
+
+  const handleClose = () => {
+    toast({
+      title: "Fechando rotas",
+      description: "Retornando ao menu principal"
+    });
   };
 
   return (
@@ -55,7 +66,7 @@ const VisitRoutes = () => {
                     </div>
                     <div className="flex items-center justify-center">
                       <div className="flex items-center gap-1">
-                        <CheckCircle2 size={16} className={`${route.visited > 0 ? 'text-green-500' : 'text-gray-300'}`} />
+                        <CheckCircle2 size={16} className="text-gray-300" />
                         <span>{route.visited}</span>
                       </div>
                     </div>
@@ -105,6 +116,7 @@ const VisitRoutes = () => {
         <AppButton 
           fullWidth
           className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white border-orange-500"
+          onClick={handleClose}
         >
           Fechar
         </AppButton>
