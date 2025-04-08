@@ -12,7 +12,11 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title="Lista de Atividades" backgroundColor="blue" />
+      <Header 
+        title="Lista de Atividades" 
+        showBackButton={true} 
+        backgroundColor="blue" 
+      />
       
       <div className="flex-1 p-4 grid grid-cols-2 gap-4">
         <MenuCard
