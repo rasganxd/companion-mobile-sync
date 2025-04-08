@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -11,6 +10,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 // Mock product data
 const mockProducts = [
@@ -26,6 +34,15 @@ const mockClient = {
   id: 1223,
   name: 'NILSO ALVES FERREIRA',
 };
+
+// Mock clients data for search
+const mockClients = [
+  { id: 1223, name: 'NILSO ALVES FERREIRA', fantasyName: 'BAR DO NILSON' },
+  { id: 1224, name: 'MARIA SILVA SOUZA', fantasyName: 'MERCADO CENTRAL' },
+  { id: 1225, name: 'JOÃO CARLOS FERREIRA', fantasyName: 'RESTAURANTE BOM GOSTO' },
+  { id: 1226, name: 'ANTONIO JOSE SANTOS', fantasyName: 'LANCHONETE DELICIA' },
+  { id: 1227, name: 'CLARA OLIVEIRA ALMEIDA', fantasyName: 'SORVETERIA GELATO' },
+];
 
 interface OrderItem {
   id: number;
@@ -44,6 +61,8 @@ const PlaceOrder = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [quantity, setQuantity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(mockClient);
   
   const handleProductChange = (direction: 'prev' | 'next' | 'first' | 'last') => {
     const currentIndex = mockProducts.findIndex(p => p.id === currentProduct.id);
@@ -65,18 +84,15 @@ const PlaceOrder = () => {
   const handleAddItem = () => {
     if (!currentProduct || !quantity || parseFloat(quantity) <= 0) return;
     
-    // Check if product is already in the order
     const existingItem = orderItems.find(item => item.productId === currentProduct.id);
     
     if (existingItem) {
-      // Update quantity of existing item
       setOrderItems(orderItems.map(item => 
         item.productId === currentProduct.id 
           ? { ...item, quantity: item.quantity + parseFloat(quantity) } 
           : item
       ));
     } else {
-      // Add new item
       const newItem: OrderItem = {
         id: Date.now(),
         productId: currentProduct.id,
@@ -90,7 +106,6 @@ const PlaceOrder = () => {
       setOrderItems([...orderItems, newItem]);
     }
     
-    // Reset quantity
     setQuantity('');
   };
   
@@ -103,12 +118,20 @@ const PlaceOrder = () => {
   };
   
   const handleViewOrder = () => {
-    // Navigate to order details with the order items
-    navigate('/detalhes-pedido', { state: { orderItems, client: mockClient, paymentMethod } });
+    navigate('/detalhes-pedido', { state: { orderItems, client: selectedClient, paymentMethod } });
   };
   
   const handleGoBack = () => {
     navigate('/clientes-lista');
+  };
+
+  const handleClientSearch = () => {
+    setSearchOpen(true);
+  };
+
+  const handleSelectClient = (client: typeof mockClient) => {
+    setSelectedClient(client);
+    setSearchOpen(false);
   };
 
   return (
@@ -120,15 +143,13 @@ const PlaceOrder = () => {
       />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
-        <span className="font-semibold">{mockClient.id}</span> - {mockClient.name}
+        <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
       </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Main Product Selection Area */}
         <div className="flex-1 p-3">
           <Card className="h-full">
             <CardContent className="p-3 flex flex-col h-full">
-              {/* Current Product */}
               <div className="bg-gray-100 p-2 rounded-md mb-3 flex items-center">
                 <div className="bg-app-purple h-7 w-7 flex items-center justify-center mr-2 text-white rounded-full">
                   <span className="text-sm font-bold">1</span>
@@ -139,9 +160,7 @@ const PlaceOrder = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Left Column */}
                 <div className="space-y-3">
-                  {/* Unit Selection */}
                   <div className="bg-white">
                     <Label className="block mb-1 text-sm font-medium text-gray-700">Unidade:</Label>
                     <Select defaultValue={currentProduct.unit}>
@@ -156,7 +175,6 @@ const PlaceOrder = () => {
                     </Select>
                   </div>
                   
-                  {/* Payment Method */}
                   <div>
                     <Label className="block mb-1 text-sm font-medium text-gray-700">Tabela:</Label>
                     <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
@@ -170,7 +188,6 @@ const PlaceOrder = () => {
                     </Select>
                   </div>
                   
-                  {/* Quantity and Value */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label className="block mb-1 text-sm font-medium text-gray-700">Quantidade:</Label>
@@ -202,9 +219,7 @@ const PlaceOrder = () => {
                   </div>
                 </div>
                 
-                {/* Right Column */}
                 <div className="space-y-3">
-                  {/* Navigation Buttons */}
                   <div>
                     <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
                     <div className="flex gap-1">
@@ -225,6 +240,7 @@ const PlaceOrder = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                        onClick={handleClientSearch}
                       >
                         <Search size={14} className="mr-1" /> Con
                       </Button>
@@ -245,7 +261,6 @@ const PlaceOrder = () => {
                     </div>
                   </div>
                   
-                  {/* Extra Fields */}
                   <div className="grid grid-cols-12 gap-3">
                     <div className="col-span-3">
                       <Label className="block mb-1 text-sm font-medium text-gray-700">L</Label>
@@ -257,7 +272,6 @@ const PlaceOrder = () => {
                     </div>
                   </div>
                   
-                  {/* Product Details Summary */}
                   <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
                     <div className="grid grid-cols-2 gap-2 text-sm text-gray-800">
                       <div>
@@ -280,7 +294,6 @@ const PlaceOrder = () => {
           </Card>
         </div>
         
-        {/* Order Items Footer */}
         <div className="bg-white border-t">
           <div className="p-2">
             <div className="flex justify-between items-center mb-2 px-1">
@@ -334,7 +347,6 @@ const PlaceOrder = () => {
             </div>
           </div>
           
-          {/* Footer Buttons */}
           <div className="p-2 grid grid-cols-3 gap-2 border-t">
             <AppButton 
               variant="blue" 
@@ -366,6 +378,34 @@ const PlaceOrder = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Consultar Clientes</DialogTitle>
+          </DialogHeader>
+          <Command className="rounded-lg border shadow-md">
+            <CommandInput placeholder="Digite o nome do cliente..." />
+            <CommandList>
+              <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+              <CommandGroup heading="Clientes">
+                {mockClients.map((client) => (
+                  <CommandItem
+                    key={client.id}
+                    onSelect={() => handleSelectClient(client)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{client.name}</span>
+                      <span className="text-sm text-gray-500">{client.fantasyName}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
