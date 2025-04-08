@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ClientDetails from "./pages/ClientDetails";
+import ClientsList from "./pages/ClientsList";
 import LastPurchases from "./pages/LastPurchases";
 import VisitRoutes from "./pages/VisitRoutes";
 import NotFound from "./pages/NotFound";
@@ -23,6 +24,7 @@ const App = () => (
         <Route path="/menu" element={<Index />} />
         <Route path="/" element={<VisitRoutes />} />
         <Route path="/clientes" element={<ClientDetails />} />
+        <Route path="/clientes-lista" element={<ClientsList />} />
         <Route path="/ultimas-compras" element={<LastPurchases />} />
         
         {/* Rotas temporárias que redirecionam para a página principal */}

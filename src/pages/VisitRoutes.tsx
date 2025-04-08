@@ -27,7 +27,7 @@ const VisitRoutes = () => {
   };
 
   const handleDaySelect = (day: string) => {
-    navigate('/clientes');
+    navigate('/clientes-lista', { state: { day } });
   };
   
   const handleGoBack = () => {

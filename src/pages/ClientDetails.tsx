@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info, ArrowLeft } from 'lucide-react';
@@ -42,6 +43,11 @@ const ClientDetails = () => {
   const handleGoBack = () => {
     // Volta para a tela de rotas
     navigate('/');
+  };
+  
+  const handleListClients = () => {
+    // Navega para a lista de clientes do dia atual
+    navigate('/clientes-lista', { state: { day: 'Segunda' } });
   };
 
   return (
@@ -164,7 +170,7 @@ const ClientDetails = () => {
       </ScrollArea>
       
       <div className="p-2 grid grid-cols-2 gap-2 bg-white border-t">
-        <AppButton variant="gray" size="sm">Listar</AppButton>
+        <AppButton variant="gray" size="sm" onClick={handleListClients}>Listar</AppButton>
         <div className="grid grid-cols-2 gap-2">
           <AppButton variant="gray" size="sm">&lt;</AppButton>
           <AppButton variant="gray" size="sm">&gt;</AppButton>
