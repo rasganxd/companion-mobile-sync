@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { ArrowLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
@@ -29,10 +29,6 @@ const VisitRoutes = () => {
 
   const handleDaySelect = (day: string) => {
     navigate('/clientes-lista', { state: { day } });
-  };
-  
-  const handleGoBack = () => {
-    navigate(-1);
   };
 
   return (
@@ -80,7 +76,7 @@ const VisitRoutes = () => {
         </div>
       </div>
       
-      <div className="p-3 bg-white border-t space-y-2">
+      <div className="p-3 bg-white border-t">
         <button 
           onClick={handleClose}
           className="w-full py-3 bg-app-blue text-white rounded-lg flex items-center justify-center gap-2"
@@ -88,16 +84,6 @@ const VisitRoutes = () => {
           <X size={18} />
           <span>Fechar</span>
         </button>
-        
-        <AppButton 
-          fullWidth
-          onClick={handleGoBack}
-          variant="gray"
-          className="flex justify-center items-center gap-2"
-        >
-          <ArrowLeft size={18} />
-          <span>Voltar</span>
-        </AppButton>
       </div>
     </div>
   );
