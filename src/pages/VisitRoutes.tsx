@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { Calendar, ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
@@ -80,15 +80,13 @@ const VisitRoutes = () => {
       </div>
       
       <div className="p-3 bg-white border-t space-y-2">
-        <AppButton 
-          fullWidth
+        <button 
           onClick={handleClose}
-          variant="blue"
-          className="flex justify-center items-center gap-2"
+          className="w-full py-3 bg-app-blue text-white rounded-lg flex items-center justify-center gap-2"
         >
           <X size={18} />
           <span>Fechar</span>
-        </AppButton>
+        </button>
         
         <AppButton 
           fullWidth
@@ -98,7 +96,7 @@ const VisitRoutes = () => {
         >
           <ArrowLeft size={18} />
           <span>Voltar</span>
-        </AppButton>
+        </button>
       </div>
     </div>
   );

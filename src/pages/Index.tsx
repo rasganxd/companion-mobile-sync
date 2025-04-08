@@ -13,6 +13,10 @@ const Index = () => {
     navigate(-1);
   };
 
+  const handleClose = () => {
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Lista de Atividades" backgroundColor="blue" />
@@ -45,13 +49,15 @@ const Index = () => {
         />
       </div>
       
-      <div className="p-4 space-y-3">
-        <MenuCard
-          icon={<LogOut size={32} />}
-          title="Fechar"
-          to="/login"
-          variant="secondary"
-        />
+      <div className="p-3 space-y-3">
+        {/* Botão de fechar - redesenhado para corresponder à imagem */}
+        <button 
+          onClick={handleClose}
+          className="w-full py-3 bg-app-blue text-white rounded-lg flex items-center justify-center gap-2"
+        >
+          <LogOut size={20} />
+          <span>Fechar</span>
+        </button>
         
         <AppButton 
           variant="gray" 
@@ -59,7 +65,7 @@ const Index = () => {
           onClick={handleGoBack}
           className="flex items-center justify-center gap-2"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
           <span>Voltar</span>
         </AppButton>
       </div>
