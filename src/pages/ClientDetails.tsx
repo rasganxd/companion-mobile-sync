@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info, ArrowLeft } from 'lucide-react';
@@ -31,8 +30,8 @@ const ClientDetails = () => {
   };
 
   const handleInitiate = () => {
-    // Quando clica em "Iniciar", vai para a página inicial
-    navigate('/');
+    // Quando clica em "Iniciar", vai para a lista de atividades
+    navigate('/menu');
   };
 
   const handleClose = () => {
@@ -188,4 +187,3 @@ const ClientDetails = () => {
 };
 
 export default ClientDetails;
-
