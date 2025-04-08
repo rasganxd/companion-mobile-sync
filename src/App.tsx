@@ -10,6 +10,7 @@ import ClientsList from "./pages/ClientsList";
 import LastPurchases from "./pages/LastPurchases";
 import VisitRoutes from "./pages/VisitRoutes";
 import PlaceOrder from "./pages/PlaceOrder";
+import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
 
 // Create a new QueryClient instance
@@ -28,6 +29,7 @@ const App = () => (
         <Route path="/clientes-lista" element={<ClientsList />} />
         <Route path="/ultimas-compras" element={<LastPurchases />} />
         <Route path="/fazer-pedidos" element={<PlaceOrder />} />
+        <Route path="/detalhes-pedido" element={<OrderDetails />} />
         
         {/* Rotas temporárias que redirecionam para a página principal */}
         <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
