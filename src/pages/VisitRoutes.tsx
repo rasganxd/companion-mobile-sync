@@ -23,12 +23,10 @@ const VisitRoutes = () => {
   const totalNegatives = 0;
 
   const handleClose = () => {
-    // Removed toast notification
     navigate('/menu');
   };
 
   const handleDaySelect = (day: string) => {
-    // Quando seleciona um dia, vai para a tela de clientes
     navigate('/clientes');
   };
   
@@ -40,9 +38,9 @@ const VisitRoutes = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Rotas de Visitas" backgroundColor="blue" />
       
-      <div className="p-4 flex-1">
-        {/* Cabeçalho da tabela - Removed text box here */}
-        <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center text-sm bg-app-blue text-white p-3 rounded-t-lg shadow-sm">
+      <div className="p-3 flex-1">
+        {/* Cabeçalho da tabela */}
+        <div className="grid grid-cols-4 gap-2 mb-1 font-medium text-center text-sm bg-app-blue text-white p-2 rounded-t-lg shadow-sm">
           <div className="text-left">Dia</div>
           <div>Visitados</div>
           <div>Restantes</div>
@@ -50,11 +48,11 @@ const VisitRoutes = () => {
         </div>
         
         {/* Linhas da tabela */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           {routes.map((route, index) => (
             <div 
               key={index} 
-              className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
+              className="grid grid-cols-4 gap-2 py-3 px-3 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
               onClick={() => handleDaySelect(route.day)}
             >
               <div className="text-left">
@@ -68,20 +66,20 @@ const VisitRoutes = () => {
         </div>
         
         {/* Totais e info em cards */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-2">Total de Visitas</h3>
-            <div className="text-2xl font-bold text-app-blue">{totalVisits}</div>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1">Total de Visitas</h3>
+            <div className="text-xl font-bold text-app-blue">{totalVisits}</div>
           </div>
           
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-2">Vendas Negativas</h3>
-            <div className="text-2xl font-bold text-red-500">{totalNegatives}</div>
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1">Vendas Negativas</h3>
+            <div className="text-xl font-bold text-red-500">{totalNegatives}</div>
           </div>
         </div>
       </div>
       
-      <div className="p-4 bg-white border-t space-y-3">
+      <div className="p-3 bg-white border-t space-y-2">
         <AppButton 
           fullWidth
           onClick={handleClose}
