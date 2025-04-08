@@ -13,37 +13,40 @@ import VisitRoutes from "./pages/VisitRoutes";
 import PlaceOrder from "./pages/PlaceOrder";
 import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
+import { useState } from "react";
 
-// Create a new QueryClient instance
-const queryClient = new QueryClient();
+const App = () => {
+  // Create QueryClient inside the component
+  const [queryClient] = useState(() => new QueryClient());
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/menu" element={<Index />} />
-          <Route path="/" element={<VisitRoutes />} />
-          <Route path="/clientes" element={<ClientDetails />} />
-          <Route path="/clientes-lista" element={<ClientsList />} />
-          <Route path="/ultimas-compras" element={<LastPurchases />} />
-          <Route path="/fazer-pedidos" element={<PlaceOrder />} />
-          <Route path="/detalhes-pedido" element={<OrderDetails />} />
-          
-          {/* Rotas temporárias que redirecionam para a página principal */}
-          <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
-          <Route path="/mensagem" element={<Navigate to="/menu" />} />
-          <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
-          
-          {/* Rota de fallback para páginas não encontradas */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-        <Sonner />
-      </BrowserRouter>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/menu" element={<Index />} />
+            <Route path="/" element={<VisitRoutes />} />
+            <Route path="/clientes" element={<ClientDetails />} />
+            <Route path="/clientes-lista" element={<ClientsList />} />
+            <Route path="/ultimas-compras" element={<LastPurchases />} />
+            <Route path="/fazer-pedidos" element={<PlaceOrder />} />
+            <Route path="/detalhes-pedido" element={<OrderDetails />} />
+            
+            {/* Rotas temporárias que redirecionam para a página principal */}
+            <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
+            <Route path="/mensagem" element={<Navigate to="/menu" />} />
+            <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
+            
+            {/* Rota de fallback para páginas não encontradas */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+          <Sonner />
+        </BrowserRouter>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
