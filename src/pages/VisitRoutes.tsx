@@ -24,7 +24,7 @@ const VisitRoutes = () => {
 
   const handleClose = () => {
     // Removed toast notification
-    navigate('/');
+    navigate('/menu');
   };
 
   const handleDaySelect = (day: string) => {

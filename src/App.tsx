@@ -20,16 +20,16 @@ const App = () => (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Index />} />
+        <Route path="/menu" element={<Index />} />
+        <Route path="/" element={<VisitRoutes />} />
         <Route path="/clientes" element={<ClientDetails />} />
         <Route path="/ultimas-compras" element={<LastPurchases />} />
-        <Route path="/rotas" element={<VisitRoutes />} />
         
         {/* Rotas temporárias que redirecionam para a página principal */}
-        <Route path="/fazer-pedidos" element={<Navigate to="/" />} />
-        <Route path="/negativar-venda" element={<Navigate to="/" />} />
-        <Route path="/mensagem" element={<Navigate to="/" />} />
-        <Route path="/capturar-posicao" element={<Navigate to="/" />} />
+        <Route path="/fazer-pedidos" element={<Navigate to="/menu" />} />
+        <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
+        <Route path="/mensagem" element={<Navigate to="/menu" />} />
+        <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
         
         {/* Rota de fallback para páginas não encontradas */}
         <Route path="*" element={<NotFound />} />
