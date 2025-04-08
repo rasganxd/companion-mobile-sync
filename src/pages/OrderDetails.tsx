@@ -135,7 +135,7 @@ const OrderDetails = () => {
           </AppButton>
           
           <AppButton 
-            variant="green" 
+            variant="blue" 
             className="flex items-center justify-center h-10"
             onClick={handleConfirm}
           >

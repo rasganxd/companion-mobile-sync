@@ -125,26 +125,27 @@ const PlaceOrder = () => {
       
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Main Product Selection Area */}
-        <div className="flex-1 p-2">
+        <div className="flex-1 p-3">
           <Card className="h-full">
-            <CardContent className="p-2 flex flex-col h-full">
+            <CardContent className="p-3 flex flex-col h-full">
               {/* Current Product */}
-              <div className="bg-gray-100 p-2 flex items-center mb-1">
-                <div className="bg-app-purple h-6 w-6 flex items-center justify-center mr-1 text-white rounded-full">
-                  <span className="text-xs font-bold">1</span>
+              <div className="bg-gray-100 p-2 rounded-md mb-3 flex items-center">
+                <div className="bg-app-purple h-7 w-7 flex items-center justify-center mr-2 text-white rounded-full">
+                  <span className="text-sm font-bold">1</span>
                 </div>
                 <div className="flex-1 font-bold text-app-blue text-sm truncate">
                   {currentProduct.name}
                 </div>
               </div>
               
-              <div className="grid grid-cols-12 gap-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Left Column */}
-                <div className="col-span-6 space-y-1">
+                <div className="space-y-3">
                   {/* Unit Selection */}
                   <div className="bg-white">
+                    <Label className="block mb-1 text-sm font-medium text-gray-700">Unidade:</Label>
                     <Select defaultValue={currentProduct.unit}>
-                      <SelectTrigger className="h-7 w-full bg-gray-50 border border-gray-200 text-xs">
+                      <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
                         <SelectValue placeholder="Unidade" />
                       </SelectTrigger>
                       <SelectContent>
@@ -157,9 +158,9 @@ const PlaceOrder = () => {
                   
                   {/* Payment Method */}
                   <div>
-                    <Label className="block mb-1 text-xs font-medium text-gray-700">Tabela:</Label>
+                    <Label className="block mb-1 text-sm font-medium text-gray-700">Tabela:</Label>
                     <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger className="h-7 w-full bg-gray-50 border border-gray-200 text-xs">
+                      <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -170,30 +171,30 @@ const PlaceOrder = () => {
                   </div>
                   
                   {/* Quantity and Value */}
-                  <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-7">
-                      <Label className="block mb-1 text-xs font-medium text-gray-700">Quantidade:</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Quantidade:</Label>
                       <div className="flex">
                         <Input 
                           type="number"
-                          className="h-7 flex-1 border border-gray-200 text-xs"
+                          className="h-9 flex-1 border border-gray-300 text-sm"
                           value={quantity}
                           onChange={(e) => setQuantity(e.target.value)}
                         />
                         <Button 
                           variant="default"
-                          className="ml-1 w-7 h-7 bg-app-blue text-xs p-0"
+                          className="ml-2 w-9 h-9 bg-app-blue text-sm p-0"
                           onClick={handleAddItem}
                         >
                           E
                         </Button>
                       </div>
                     </div>
-                    <div className="col-span-5">
-                      <Label className="block mb-1 text-xs font-medium text-gray-700">Valor:</Label>
+                    <div>
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Valor:</Label>
                       <Input 
                         type="text" 
-                        className="h-7 bg-gray-50 border border-gray-200 text-xs" 
+                        className="h-9 bg-white border border-gray-300 text-sm" 
                         value={currentProduct.price.toFixed(2)}
                         readOnly 
                       />
@@ -202,71 +203,74 @@ const PlaceOrder = () => {
                 </div>
                 
                 {/* Right Column */}
-                <div className="col-span-6 space-y-1">
+                <div className="space-y-3">
                   {/* Navigation Buttons */}
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 bg-gray-50 h-7 border border-gray-200 text-xs px-1"
-                      onClick={() => handleProductChange('first')}
-                    >
-                      &lt;&lt;
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 bg-gray-50 h-7 border border-gray-200 text-xs px-1"
-                      onClick={() => handleProductChange('prev')}
-                    >
-                      &lt;
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 bg-gray-50 h-7 border border-gray-200 text-xs px-1"
-                    >
-                      <Search size={10} className="mr-1" /> Con
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 bg-gray-50 h-7 border border-gray-200 text-xs px-1"
-                      onClick={() => handleProductChange('next')}
-                    >
-                      &gt;
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 bg-gray-50 h-7 border border-gray-200 text-xs px-1"
-                      onClick={() => handleProductChange('last')}
-                    >
-                      &gt;&gt;
-                    </Button>
+                  <div>
+                    <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                        onClick={() => handleProductChange('first')}
+                      >
+                        &lt;&lt;
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                        onClick={() => handleProductChange('prev')}
+                      >
+                        &lt;
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                      >
+                        <Search size={14} className="mr-1" /> Con
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                        onClick={() => handleProductChange('next')}
+                      >
+                        &gt;
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                        onClick={() => handleProductChange('last')}
+                      >
+                        &gt;&gt;
+                      </Button>
+                    </div>
                   </div>
                   
                   {/* Extra Fields */}
-                  <div className="grid grid-cols-12 gap-1">
+                  <div className="grid grid-cols-12 gap-3">
                     <div className="col-span-3">
-                      <Label className="block mb-1 text-xs font-medium text-gray-700">L</Label>
-                      <div className="bg-gray-50 h-7 flex items-center justify-center border rounded-md border-gray-200 text-xs">L</div>
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">L</Label>
+                      <div className="bg-gray-50 h-9 flex items-center justify-center border rounded-md border-gray-300 text-sm">L</div>
                     </div>
                     <div className="col-span-9">
-                      <Label className="block mb-1 text-xs font-medium text-gray-700">Viagem:</Label>
-                      <Input type="text" className="h-7 bg-white border border-gray-200 text-xs" value="1" readOnly />
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Viagem:</Label>
+                      <Input type="text" className="h-9 bg-white border border-gray-300 text-sm" value="1" readOnly />
                     </div>
                   </div>
                   
                   {/* Product Details Summary */}
-                  <div className="bg-blue-50 p-1 rounded-sm">
-                    <div className="grid grid-cols-2 gap-1 text-xs text-gray-800">
+                  <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-800">
                       <div>
-                        <span className="text-gray-600">P. unit:</span>
-                        <span className="ml-1 font-medium">{currentProduct.unitPrice.toFixed(2)}</span>
+                        <span className="text-gray-600 font-medium">P. unit:</span>
+                        <span className="ml-1">{currentProduct.unitPrice.toFixed(2)}</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">Estq:</span>
-                        <span className="ml-1 font-medium">{currentProduct.stock}</span>
+                        <span className="text-gray-600 font-medium">Estq:</span>
+                        <span className="ml-1">{currentProduct.stock}</span>
                       </div>
                       <div>
-                        <span className="text-gray-600">P. mín:</span>
-                        <span className="ml-1 font-medium">{currentProduct.minPrice.toFixed(2)}</span>
+                        <span className="text-gray-600 font-medium">P. mín:</span>
+                        <span className="ml-1">{currentProduct.minPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -278,10 +282,10 @@ const PlaceOrder = () => {
         
         {/* Order Items Footer */}
         <div className="bg-white border-t">
-          <div className="p-1">
-            <div className="flex justify-between items-center mb-1 px-1">
-              <h3 className="text-xs font-medium text-app-blue">Itens do Pedido ({orderItems.length})</h3>
-              <div className="text-xs font-medium">
+          <div className="p-2">
+            <div className="flex justify-between items-center mb-2 px-1">
+              <h3 className="text-sm font-medium text-app-blue">Itens do Pedido ({orderItems.length})</h3>
+              <div className="text-sm font-medium">
                 Total: <span className="text-app-blue">{calculateTotal()}</span>
               </div>
             </div>
@@ -334,7 +338,7 @@ const PlaceOrder = () => {
           <div className="p-2 grid grid-cols-3 gap-2 border-t">
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-8 text-xs"
+              className="flex items-center justify-center h-9 text-xs"
               onClick={handleGoBack}
             >
               <ArrowLeft size={14} className="mr-1" />
@@ -343,7 +347,7 @@ const PlaceOrder = () => {
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-8 text-xs"
+              className="flex items-center justify-center h-9 text-xs"
               onClick={handleViewOrder}
               disabled={orderItems.length === 0}
             >
@@ -353,7 +357,7 @@ const PlaceOrder = () => {
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-8 text-xs"
+              className="flex items-center justify-center h-9 text-xs"
               disabled={orderItems.length === 0}
             >
               <ShoppingCart size={14} className="mr-1" />
