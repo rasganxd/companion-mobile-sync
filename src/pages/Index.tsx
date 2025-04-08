@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Package2, ThumbsDown, Box, Mail, Compass, LogOut, ArrowLeft } from 'lucide-react';
+import { Package2, ThumbsDown, Box, Mail, Compass, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import AppButton from '@/components/AppButton';
@@ -12,10 +12,6 @@ const Index = () => {
   const handleGoBack = () => {
     // Ao voltar do menu, vai para detalhes do cliente
     navigate('/clientes');
-  };
-
-  const handleClose = () => {
-    navigate('/login');
   };
 
   return (
@@ -51,15 +47,6 @@ const Index = () => {
       </div>
       
       <div className="p-3 space-y-3">
-        {/* Botão de fechar - redesenhado para corresponder à imagem */}
-        <button 
-          onClick={handleClose}
-          className="w-full py-3 bg-app-blue text-white rounded-lg flex items-center justify-center gap-2"
-        >
-          <LogOut size={20} />
-          <span>Fechar</span>
-        </button>
-        
         <AppButton 
           variant="gray" 
           fullWidth 
@@ -75,4 +62,3 @@ const Index = () => {
 };
 
 export default Index;
-

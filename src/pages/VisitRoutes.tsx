@@ -23,7 +23,8 @@ const VisitRoutes = () => {
   const totalNegatives = 0;
 
   const handleClose = () => {
-    navigate('/menu');
+    // Modificado para redirecionar para a tela de login
+    navigate('/login');
   };
 
   const handleDaySelect = (day: string) => {
