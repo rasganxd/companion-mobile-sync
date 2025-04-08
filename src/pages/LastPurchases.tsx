@@ -1,107 +1,226 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft, Search } from 'lucide-react';
 import Header from '@/components/Header';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import AppButton from '@/components/AppButton';
-import { cn } from '@/lib/utils';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell
+} from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+
+// Interface for purchase data
+interface Purchase {
+  id: string;
+  date: string;
+  total: string;
+  items: PurchaseItem[];
+}
+
+interface PurchaseItem {
+  id: string;
+  name: string;
+  quantity: number;
+  value: string;
+  table: number;
+  deviation: number;
+  type: string;
+}
 
 const LastPurchases = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date('2025-03-03'));
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [viewMode, setViewMode] = useState<'details' | 'calendar'>('details');
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'calendar'>('list');
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const clientName = location.state?.clientName || 'Cliente';
 
-  // Dados de exemplo para uma compra
-  const purchaseDetails = {
-    date: '03/03/2025',
-    total: 'R$ 225,00',
-    items: [
-      {
-        id: '700',
-        name: 'CX-HEINEKEN 600ML',
-        quantity: 3.0,
-        value: 'R$ 225.0',
-        table: 1,
-        deviation: 0.0,
-        type: ''
-      }
-    ]
+  // Dummy purchase history data grouped by date
+  const purchaseHistory = [
+    {
+      date: '05/04/2025',
+      purchases: [
+        {
+          id: '001',
+          date: '05/04/2025',
+          total: 'R$ 325,50',
+          items: [
+            {
+              id: '700',
+              name: 'CX-HEINEKEN 600ML',
+              quantity: 3.0,
+              value: 'R$ 225,00',
+              table: 1,
+              deviation: 0.0,
+              type: ''
+            },
+            {
+              id: '701',
+              name: 'CX-SKOL 350ML',
+              quantity: 2.0,
+              value: 'R$ 100,50',
+              table: 1,
+              deviation: 0.0,
+              type: ''
+            }
+          ]
+        }
+      ]
+    },
+    {
+      date: '03/04/2025',
+      purchases: [
+        {
+          id: '002',
+          date: '03/04/2025',
+          total: 'R$ 225,00',
+          items: [
+            {
+              id: '700',
+              name: 'CX-HEINEKEN 600ML',
+              quantity: 3.0,
+              value: 'R$ 225,00',
+              table: 1,
+              deviation: 0.0,
+              type: ''
+            }
+          ]
+        }
+      ]
+    },
+    {
+      date: '28/03/2025',
+      purchases: [
+        {
+          id: '003',
+          date: '28/03/2025',
+          total: 'R$ 450,00',
+          items: [
+            {
+              id: '700',
+              name: 'CX-HEINEKEN 600ML',
+              quantity: 6.0,
+              value: 'R$ 450,00',
+              table: 1,
+              deviation: 0.0,
+              type: ''
+            }
+          ]
+        }
+      ]
+    }
+  ];
+
+  // Filter purchase history based on search term
+  const filteredPurchaseHistory = purchaseHistory.filter(group => 
+    group.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    group.purchases.some(purchase => 
+      purchase.items.some(item => 
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    )
+  );
+
+  const handlePurchaseSelect = (purchase: Purchase) => {
+    setSelectedPurchase(purchase);
+    setViewMode('details');
   };
 
-  const handleDateSelect = (date: Date | undefined) => {
-    setDate(date);
-    setShowCalendar(false);
-    setViewMode('details');
+  const handleGoBack = () => {
+    if (viewMode === 'details') {
+      setViewMode('list');
+      setSelectedPurchase(null);
+    } else {
+      navigate(-1);
+    }
   };
 
   const handleCalendarToggle = () => {
     setViewMode('calendar');
   };
-  
-  const handleGoBack = () => {
-    navigate(-1);
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setDate(date);
+    setViewMode('list');
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Header title="Ultimas Compras" showBackButton backgroundColor={viewMode === 'details' ? 'gray' : 'orange'} />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header 
+        title={viewMode === 'details' ? 'Detalhes da Compra' : viewMode === 'calendar' ? 'Calendário' : `Compras - ${clientName}`}
+        backgroundColor={viewMode === 'details' ? 'gray' : viewMode === 'calendar' ? 'orange' : 'blue'}
+        showBackButton
+      />
       
-      {viewMode === 'details' ? (
+      {viewMode === 'list' && (
         <div className="p-4 flex-1 flex flex-col">
-          <div>
-            <div className="font-semibold mb-2">Data Selecionada:</div>
-            <div className="text-2xl">{purchaseDetails.date}</div>
+          <div className="mb-4 relative">
+            <Input
+              placeholder="Pesquisar compras..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           </div>
           
-          <div className="mt-4">
-            <div className="font-semibold mb-2">Valor Total:</div>
-            <div className="text-2xl">{purchaseDetails.total}</div>
-          </div>
-          
-          <div className="mt-4">
-            <div className="font-semibold mb-2">Filtro:</div>
-          </div>
-          
-          <div className="mt-2 bg-gray-400 text-white p-2">
-            <div className="grid grid-cols-5 gap-2 font-medium">
-              <div>Produto</div>
-              <div>Qtd</div>
-              <div>Valor</div>
-              <div>Tabela</div>
-              <div>Dev./Tipo</div>
-            </div>
-          </div>
-          
-          {purchaseDetails.items.map((item, index) => (
-            <div key={index} className="border border-gray-300 p-2">
-              <div className="font-medium">[{item.id}] {item.name}</div>
-              <div className="grid grid-cols-5 gap-2 mt-1">
-                <div>{item.quantity}</div>
-                <div>{item.value}</div>
-                <div>{item.table}</div>
-                <div>{item.deviation}</div>
-                <div>{item.type}</div>
+          <ScrollArea className="flex-1">
+            {filteredPurchaseHistory.length > 0 ? (
+              <div className="space-y-4">
+                {filteredPurchaseHistory.map((group, groupIndex) => (
+                  <div key={groupIndex}>
+                    <div className="bg-slate-100 py-1 px-3 rounded-t-lg font-medium">
+                      {group.date}
+                    </div>
+                    <div className="space-y-2">
+                      {group.purchases.map((purchase, purchaseIndex) => (
+                        <Card 
+                          key={purchaseIndex} 
+                          className="cursor-pointer hover:bg-slate-50 transition-colors"
+                          onClick={() => handlePurchaseSelect(purchase)}
+                        >
+                          <CardContent className="p-3 flex justify-between items-center">
+                            <div>
+                              <p className="font-medium">Pedido #{purchase.id}</p>
+                              <p className="text-sm text-gray-500">
+                                {purchase.items.length} {purchase.items.length > 1 ? 'itens' : 'item'}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-app-blue">{purchase.total}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          ))}
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Nenhuma compra encontrada</p>
+              </div>
+            )}
+          </ScrollArea>
           
-          <div className="mt-auto space-y-3">
+          <div className="mt-4 space-y-3">
             <AppButton 
               variant="purple" 
               fullWidth 
               className="flex items-center justify-center gap-2"
               onClick={handleCalendarToggle}
             >
-              Trocar data <CalendarIcon size={20} />
+              Selecionar Data <CalendarIcon size={20} />
             </AppButton>
             
             <AppButton 
@@ -115,25 +234,63 @@ const LastPurchases = () => {
             </AppButton>
           </div>
         </div>
-      ) : (
+      )}
+
+      {viewMode === 'details' && selectedPurchase && (
         <div className="p-4 flex-1 flex flex-col">
-          <div className="flex justify-center mb-4">
-            <label className="inline-flex items-center">
-              <input 
-                type="radio" 
-                className="form-radio" 
-                name="filter" 
-                value="todos" 
-                checked 
-              />
-              <span className="ml-2">Todos</span>
-            </label>
+          <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <div className="text-sm text-gray-500">Data</div>
+                <div className="font-medium">{selectedPurchase.date}</div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500">Valor Total</div>
+                <div className="font-medium text-app-blue">{selectedPurchase.total}</div>
+              </div>
+            </div>
+
+            <div className="mb-2 font-medium">Itens do Pedido</div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Qtd</TableHead>
+                  <TableHead>Valor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedPurchase.items.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">[{item.id}] {item.name}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-          
+
+          <div className="mt-auto">
+            <AppButton 
+              variant="gray" 
+              fullWidth 
+              className="flex items-center justify-center gap-2"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft size={20} />
+              <span>Voltar para Lista</span>
+            </AppButton>
+          </div>
+        </div>
+      )}
+
+      {viewMode === 'calendar' && (
+        <div className="p-4 flex-1 flex flex-col">
           <div className="text-center mb-4">
             <div className="flex justify-between items-center mb-4">
               <button className="p-2">&lt;</button>
-              <h3 className="text-2xl font-bold text-purple-900">
+              <h3 className="text-xl font-bold text-purple-900">
                 {format(date || new Date(), 'MMMM - yyyy', { locale: ptBR })}
               </h3>
               <button className="p-2">&gt;</button>
@@ -160,15 +317,6 @@ const LastPurchases = () => {
                 </button>
               ))}
             </div>
-          </div>
-          
-          <div className="mt-6">
-            <p className="text-xl text-center">
-              Selecione um dia do mês para ver as compras.
-            </p>
-            <p className="text-center mt-4 font-medium">
-              Nenhuma compra encontrada para o filtro selecionado
-            </p>
           </div>
           
           <div className="mt-auto">

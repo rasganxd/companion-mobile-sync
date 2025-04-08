@@ -1,19 +1,15 @@
 
 import React from 'react';
-import { Package2, ThumbsDown, Box, Mail, Compass, ArrowLeft } from 'lucide-react';
+import { Package2, ThumbsDown, Box, Mail, Compass } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
-import AppButton from '@/components/AppButton';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { clientName } = location.state || { clientName: 'Cliente' };
   
-  const handleGoBack = () => {
-    // Ao voltar do menu, vai para detalhes do cliente
-    navigate('/clientes');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Lista de Atividades" backgroundColor="blue" />
@@ -33,6 +29,7 @@ const Index = () => {
           icon={<Box size={32} color="orange" />}
           title="Últimas Compras"
           to="/ultimas-compras"
+          state={{ clientName }}
         />
         <MenuCard
           icon={<Mail size={32} color="gold" />}
@@ -44,18 +41,6 @@ const Index = () => {
           title="Capturar Posição"
           to="/capturar-posicao"
         />
-      </div>
-      
-      <div className="p-3 space-y-3">
-        <AppButton 
-          variant="gray" 
-          fullWidth 
-          onClick={handleGoBack}
-          className="flex items-center justify-center gap-2"
-        >
-          <ArrowLeft size={18} />
-          <span>Voltar</span>
-        </AppButton>
       </div>
     </div>
   );
