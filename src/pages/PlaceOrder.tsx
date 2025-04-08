@@ -113,32 +113,32 @@ const PlaceOrder = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <div className="w-full bg-orange-500 py-4 px-4 flex items-center justify-center shadow-md">
-        <h1 className="text-white text-xl font-semibold">
-          Digitação de Pedidos
-        </h1>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Header 
+        title="Digitação de Pedidos"
+        backgroundColor="blue"
+        showBackButton
+      />
       
-      <div className="bg-gray-800 text-white p-2">
-        {mockClient.id} - {mockClient.name}
+      <div className="bg-app-blue text-white p-2">
+        <span className="font-semibold">{mockClient.id}</span> - {mockClient.name}
       </div>
       
       <div className="flex-1 overflow-auto p-0">
         {/* Current Product */}
-        <div className="bg-gray-200 p-2 flex items-center">
-          <div className="bg-gray-300 h-10 w-10 flex items-center justify-center mr-2">
+        <div className="bg-gray-100 p-3 flex items-center border-b">
+          <div className="bg-app-purple h-10 w-10 flex items-center justify-center mr-2 text-white rounded-full">
             <span className="text-lg font-bold">1</span>
           </div>
-          <div className="flex-1 font-bold text-black">
+          <div className="flex-1 font-bold text-app-blue">
             {currentProduct.name}
           </div>
         </div>
         
         {/* Unit Selection */}
-        <div className="p-2 bg-gray-100">
+        <div className="p-3 bg-white border-b">
           <Select defaultValue={currentProduct.unit}>
-            <SelectTrigger className="w-60 bg-gray-200">
+            <SelectTrigger className="w-60 bg-gray-50 border border-gray-200">
               <SelectValue placeholder="Unidade" />
             </SelectTrigger>
             <SelectContent>
@@ -150,37 +150,37 @@ const PlaceOrder = () => {
         </div>
         
         {/* Navigation Buttons */}
-        <div className="flex p-1 gap-1 bg-gray-100">
+        <div className="flex p-2 gap-1 bg-white border-b">
           <Button 
             variant="outline" 
-            className="flex-1 bg-gray-200 h-12"
+            className="flex-1 bg-gray-50 h-12 border border-gray-200"
             onClick={() => handleProductChange('first')}
           >
             &lt;&lt;
           </Button>
           <Button 
             variant="outline" 
-            className="flex-1 bg-gray-200 h-12"
+            className="flex-1 bg-gray-50 h-12 border border-gray-200"
             onClick={() => handleProductChange('prev')}
           >
             &lt;
           </Button>
           <Button 
             variant="outline" 
-            className="flex-1 bg-gray-200 h-12"
+            className="flex-1 bg-gray-50 h-12 border border-gray-200"
           >
-            Consultar
+            <Search size={16} className="mr-1" /> Consultar
           </Button>
           <Button 
             variant="outline" 
-            className="flex-1 bg-gray-200 h-12"
+            className="flex-1 bg-gray-50 h-12 border border-gray-200"
             onClick={() => handleProductChange('next')}
           >
             &gt;
           </Button>
           <Button 
             variant="outline" 
-            className="flex-1 bg-gray-200 h-12"
+            className="flex-1 bg-gray-50 h-12 border border-gray-200"
             onClick={() => handleProductChange('last')}
           >
             &gt;&gt;
@@ -188,12 +188,12 @@ const PlaceOrder = () => {
         </div>
         
         {/* Payment and Quantity */}
-        <div className="p-2 bg-gray-100">
-          <div className="flex gap-2 mb-2">
+        <div className="p-3 bg-white border-b">
+          <div className="flex gap-2 mb-3">
             <div className="flex-1">
-              <Label className="block mb-1 text-sm">Tabela:</Label>
+              <Label className="block mb-1 text-sm font-medium text-gray-700">Tabela:</Label>
               <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger className="w-full bg-gray-200">
+                <SelectTrigger className="w-full bg-gray-50 border border-gray-200">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,28 +203,28 @@ const PlaceOrder = () => {
               </Select>
             </div>
             <div className="w-16">
-              <Label className="block mb-1 text-sm">L</Label>
-              <div className="bg-gray-200 h-10 flex items-center justify-center border rounded-md">L</div>
+              <Label className="block mb-1 text-sm font-medium text-gray-700">L</Label>
+              <div className="bg-gray-50 h-10 flex items-center justify-center border rounded-md border-gray-200">L</div>
             </div>
             <div className="w-20">
-              <Label className="block mb-1 text-sm">Viagem:</Label>
-              <Input type="text" className="bg-white" value="1" readOnly />
+              <Label className="block mb-1 text-sm font-medium text-gray-700">Viagem:</Label>
+              <Input type="text" className="bg-white border border-gray-200" value="1" readOnly />
             </div>
           </div>
           
           <div className="flex gap-2">
             <div className="flex-1">
-              <Label className="block mb-1 text-sm">Quantidade:</Label>
+              <Label className="block mb-1 text-sm font-medium text-gray-700">Quantidade:</Label>
               <div className="flex">
                 <Input 
                   type="number"
-                  className="flex-1"
+                  className="flex-1 border border-gray-200"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                 />
                 <Button 
-                  variant="outline" 
-                  className="ml-1 w-10 bg-gray-300"
+                  variant="default"
+                  className="ml-1 w-10 bg-app-blue"
                   onClick={handleAddItem}
                 >
                   E
@@ -232,10 +232,10 @@ const PlaceOrder = () => {
               </div>
             </div>
             <div className="flex-1">
-              <Label className="block mb-1 text-sm">Valor:</Label>
+              <Label className="block mb-1 text-sm font-medium text-gray-700">Valor:</Label>
               <Input 
                 type="text" 
-                className="bg-white" 
+                className="bg-gray-50 border border-gray-200" 
                 value={currentProduct.price.toFixed(2)}
                 readOnly 
               />
@@ -244,75 +244,84 @@ const PlaceOrder = () => {
         </div>
         
         {/* Product Details */}
-        <div className="bg-green-100 p-2">
-          <h3 className="text-center text-green-800 font-medium mb-2">Detalhes do Produto</h3>
+        <div className="bg-blue-50 p-3 border-b">
+          <h3 className="text-center text-app-blue font-medium mb-2">Detalhes do Produto</h3>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-sm">Preço unitário:</Label>
-              <span className="ml-2">{currentProduct.unitPrice.toFixed(2)}</span>
+              <Label className="text-sm text-gray-600">Preço unitário:</Label>
+              <span className="ml-2 font-medium">{currentProduct.unitPrice.toFixed(2)}</span>
             </div>
             <div>
-              <Label className="text-sm">% Neg:</Label>
-              <span className="ml-2">15.39</span>
+              <Label className="text-sm text-gray-600">% Neg:</Label>
+              <span className="ml-2 font-medium">15.39</span>
             </div>
             <div>
-              <Label className="text-sm">Preço mínimo:</Label>
-              <span className="ml-2">{currentProduct.minPrice.toFixed(2)}</span>
+              <Label className="text-sm text-gray-600">Preço mínimo:</Label>
+              <span className="ml-2 font-medium">{currentProduct.minPrice.toFixed(2)}</span>
             </div>
             <div>
-              <Label className="text-sm">% MKP:</Label>
-              <span className="ml-2">15.39</span>
+              <Label className="text-sm text-gray-600">% MKP:</Label>
+              <span className="ml-2 font-medium">15.39</span>
             </div>
             <div>
-              <Label className="text-sm">Preço + AF:</Label>
-              <span className="ml-2">0.00</span>
+              <Label className="text-sm text-gray-600">Preço + AF:</Label>
+              <span className="ml-2 font-medium">0.00</span>
             </div>
           </div>
         </div>
         
-        <div className="bg-yellow-100 p-2">
+        <div className="bg-blue-50 p-3 border-b">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-sm">Vol. Emb.:</Label>
-              <span className="ml-2">1</span>
+              <Label className="text-sm text-gray-600">Vol. Emb.:</Label>
+              <span className="ml-2 font-medium">1</span>
             </div>
             <div>
-              <Label className="text-sm">Últ. compra:</Label>
-              <span className="ml-2">-</span>
+              <Label className="text-sm text-gray-600">Últ. compra:</Label>
+              <span className="ml-2 font-medium">-</span>
             </div>
             <div>
-              <Label className="text-sm">Estoque:</Label>
-              <span className="ml-2">{currentProduct.stock} {currentProduct.unit}</span>
+              <Label className="text-sm text-gray-600">Estoque:</Label>
+              <span className="ml-2 font-medium">{currentProduct.stock} {currentProduct.unit}</span>
             </div>
           </div>
         </div>
         
         {/* Order Items */}
-        <div className="bg-blue-100 p-2">
-          <h3 className="text-center text-blue-800 font-medium mb-2">Itens do Pedido</h3>
-          <div className="overflow-x-auto">
+        <div className="bg-white p-3 border-b">
+          <h3 className="text-center text-app-blue font-medium mb-2">Itens do Pedido</h3>
+          <div className="overflow-x-auto border rounded">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-50">
                 <TableRow>
-                  <TableHead className="py-1 text-xs">Código</TableHead>
-                  <TableHead className="py-1 text-xs">Descrição</TableHead>
-                  <TableHead className="py-1 text-xs">Qtd</TableHead>
-                  <TableHead className="py-1 text-xs">Un</TableHead>
-                  <TableHead className="py-1 text-xs">Valor</TableHead>
-                  <TableHead className="py-1 text-xs">Tab</TableHead>
-                  <TableHead className="py-1 text-xs">Vg</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Código</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Descrição</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Qtd</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Un</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Valor</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Tab</TableHead>
+                  <TableHead className="py-2 text-xs font-medium text-gray-700">Vg</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {orderItems.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-blue-50">
+                  <TableRow key={item.id} className="hover:bg-gray-50">
                     <TableCell className="py-1 text-xs">{item.code}</TableCell>
                     <TableCell className="py-1 text-xs">{item.productName}</TableCell>
                     <TableCell className="py-1 text-xs">{item.quantity}</TableCell>
                     <TableCell className="py-1 text-xs">{item.unit}</TableCell>
                     <TableCell className="py-1 text-xs">{(item.price * item.quantity).toFixed(2)}</TableCell>
                     <TableCell className="py-1 text-xs">1</TableCell>
-                    <TableCell className="py-1 text-xs">1</TableCell>
+                    <TableCell className="py-1 text-xs">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-6 w-6 p-0 text-red-500"
+                        onClick={() => handleRemoveItem(item.id)}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
                 {orderItems.length === 0 && (
@@ -328,58 +337,58 @@ const PlaceOrder = () => {
         </div>
         
         {/* Order Totals */}
-        <div className="bg-blue-100 p-2 border-t border-blue-200">
-          <h3 className="text-center text-blue-800 font-medium mb-2">Totais</h3>
+        <div className="bg-white p-3 border-b">
+          <h3 className="text-center text-app-blue font-medium mb-2">Totais</h3>
           <div className="flex justify-between">
             <div className="text-sm">
               <span className="font-semibold">T. Bruto: </span>
-              {calculateTotal()}
+              <span className="text-app-blue font-bold">{calculateTotal()}</span>
             </div>
             <div className="text-sm">
               <span className="font-semibold">T. Líqu: </span>
-              {calculateTotal()}
+              <span className="text-app-blue font-bold">{calculateTotal()}</span>
             </div>
             <div className="text-sm">
               <span className="font-semibold">% OP: </span>
-              0.00
+              <span className="text-app-blue font-bold">0.00</span>
             </div>
           </div>
         </div>
       </div>
       
-      <div className="bg-gray-100 p-2 grid grid-cols-3 gap-2">
-        <Button 
-          variant="outline" 
-          className="bg-gray-200 h-16 flex flex-col items-center justify-center"
+      <div className="bg-white p-3 grid grid-cols-3 gap-2 shadow-inner">
+        <AppButton 
+          variant="blue" 
+          className="flex flex-col items-center justify-center h-16"
           onClick={handleGoBack}
         >
-          <div className="w-8 h-8 bg-blue-400 flex items-center justify-center mb-1">
-            <span className="text-white text-xl">⚙️</span>
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mb-1">
+            <ArrowLeft size={18} className="text-app-blue" />
           </div>
-          <span className="text-xs">Opções</span>
-        </Button>
+          <span className="text-xs">Voltar</span>
+        </AppButton>
         
-        <Button 
-          variant="outline" 
-          className="bg-gray-200 h-16 flex flex-col items-center justify-center"
+        <AppButton 
+          variant="blue" 
+          className="flex flex-col items-center justify-center h-16"
         >
-          <div className="w-8 h-8 bg-green-500 flex items-center justify-center mb-1">
-            <span className="text-white text-xl">🛒</span>
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mb-1">
+            <RefreshCcw size={18} className="text-app-blue" />
           </div>
           <span className="text-xs">Gravar</span>
-        </Button>
+        </AppButton>
         
-        <Button 
-          variant="outline" 
-          className="bg-gray-200 h-16 flex flex-col items-center justify-center"
+        <AppButton 
+          variant="blue" 
+          className="flex flex-col items-center justify-center h-16"
           onClick={handleFinishOrder}
           disabled={orderItems.length === 0}
         >
-          <div className="w-8 h-8 bg-orange-500 flex items-center justify-center mb-1">
-            <ShoppingCart size={18} className="text-white" />
+          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center mb-1">
+            <ShoppingCart size={18} className="text-app-blue" />
           </div>
-          <span className="text-xs">Fin. Pedido</span>
-        </Button>
+          <span className="text-xs">Finalizar</span>
+        </AppButton>
       </div>
     </div>
   );
