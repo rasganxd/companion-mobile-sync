@@ -12,8 +12,8 @@ const Login = () => {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Em uma implementação real, aqui teríamos uma chamada para API
-    // Por enquanto, apenas redirecionamos para a página inicial
-    navigate('/');
+    // Por enquanto, após login redirecionamos para a página de rotas
+    navigate('/rotas');
   };
   
   return (

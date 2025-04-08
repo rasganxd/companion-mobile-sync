@@ -1,10 +1,13 @@
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 
 const ClientDetails = () => {
+  const navigate = useNavigate();
+  
   // Dados de exemplo para um cliente
   const client = {
     codigo: '179',
@@ -22,6 +25,16 @@ const ClientDetails = () => {
     rotatividade: 'Semanal',
     proximaVisita: '14/04/2025',
     restricao: 'Livre'
+  };
+
+  const handleInitiate = () => {
+    // Quando clica em "Iniciar", volta para a página inicial
+    navigate('/');
+  };
+
+  const handleClose = () => {
+    // Volta para a tela de rotas
+    navigate('/rotas');
   };
 
   return (
@@ -123,8 +136,8 @@ const ClientDetails = () => {
           <AppButton>&gt;</AppButton>
         </div>
         <AppButton>Consultar</AppButton>
-        <AppButton>Iniciar</AppButton>
-        <AppButton>Fechar</AppButton>
+        <AppButton onClick={handleInitiate}>Iniciar</AppButton>
+        <AppButton onClick={handleClose}>Fechar</AppButton>
         <AppButton>Compl/Obs</AppButton>
       </div>
     </div>
