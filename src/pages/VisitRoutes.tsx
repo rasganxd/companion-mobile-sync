@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { Calendar, ArrowLeft, ArrowRight, X, Clock } from 'lucide-react';
+import { Calendar, ArrowLeft, ArrowRight, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
@@ -66,8 +66,7 @@ const VisitRoutes = () => {
               className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
               onClick={() => handleDaySelect(route.day)}
             >
-              <div className="text-left flex items-center gap-2">
-                <Clock size={16} className="text-app-blue" />
+              <div className="text-left">
                 <span>{route.day}</span>
               </div>
               <div className="text-green-600">{route.visited}</div>
