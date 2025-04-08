@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +20,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { toast } from "sonner";
 
 // Mock product data
 const mockProducts = [
@@ -33,6 +35,7 @@ const mockProducts = [
 const mockClient = {
   id: 1223,
   name: 'NILSO ALVES FERREIRA',
+  fantasyName: 'BAR DO NILSON',
 };
 
 // Mock clients data for search
@@ -54,6 +57,12 @@ interface OrderItem {
   unit: string;
 }
 
+interface Client {
+  id: number;
+  name: string;
+  fantasyName: string;
+}
+
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,7 +71,28 @@ const PlaceOrder = () => {
   const [quantity, setQuantity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(mockClient);
+  const [selectedClient, setSelectedClient] = useState<Client>(mockClient);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredClients, setFilteredClients] = useState<Client[]>(mockClients);
+  
+  // Filter clients based on search query
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    
+    if (!value.trim()) {
+      setFilteredClients(mockClients);
+      return;
+    }
+    
+    const lowercasedValue = value.toLowerCase();
+    const filtered = mockClients.filter(
+      client => 
+        client.name.toLowerCase().includes(lowercasedValue) || 
+        (client.fantasyName && client.fantasyName.toLowerCase().includes(lowercasedValue))
+    );
+    
+    setFilteredClients(filtered);
+  }, []);
   
   const handleProductChange = (direction: 'prev' | 'next' | 'first' | 'last') => {
     const currentIndex = mockProducts.findIndex(p => p.id === currentProduct.id);
@@ -82,7 +112,10 @@ const PlaceOrder = () => {
   };
   
   const handleAddItem = () => {
-    if (!currentProduct || !quantity || parseFloat(quantity) <= 0) return;
+    if (!currentProduct || !quantity || parseFloat(quantity) <= 0) {
+      toast.error("Por favor, insira uma quantidade válida");
+      return;
+    }
     
     const existingItem = orderItems.find(item => item.productId === currentProduct.id);
     
@@ -106,11 +139,13 @@ const PlaceOrder = () => {
       setOrderItems([...orderItems, newItem]);
     }
     
+    toast.success(`${quantity} ${currentProduct.unit} de ${currentProduct.name} adicionado`);
     setQuantity('');
   };
   
   const handleRemoveItem = (id: number) => {
     setOrderItems(orderItems.filter(item => item.id !== id));
+    toast.info("Item removido do pedido");
   };
   
   const calculateTotal = () => {
@@ -118,6 +153,10 @@ const PlaceOrder = () => {
   };
   
   const handleViewOrder = () => {
+    if (orderItems.length === 0) {
+      toast.error("Adicione pelo menos um item ao pedido");
+      return;
+    }
     navigate('/detalhes-pedido', { state: { orderItems, client: selectedClient, paymentMethod } });
   };
   
@@ -126,12 +165,26 @@ const PlaceOrder = () => {
   };
 
   const handleClientSearch = () => {
+    setSearchQuery('');
+    setFilteredClients(mockClients);
     setSearchOpen(true);
   };
 
-  const handleSelectClient = (client: typeof mockClient) => {
+  const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
     setSearchOpen(false);
+    toast.success(`Cliente ${client.name} selecionado`);
+  };
+
+  const handleFinishOrder = () => {
+    if (orderItems.length === 0) {
+      toast.error("Adicione pelo menos um item ao pedido");
+      return;
+    }
+    
+    // Here you would typically save the order to a database
+    toast.success("Pedido finalizado com sucesso!");
+    navigate('/clientes-lista');
   };
 
   return (
@@ -144,6 +197,7 @@ const PlaceOrder = () => {
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
         <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
+        {selectedClient.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
       </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -370,6 +424,7 @@ const PlaceOrder = () => {
             <AppButton 
               variant="blue" 
               className="flex items-center justify-center h-9 text-xs"
+              onClick={handleFinishOrder}
               disabled={orderItems.length === 0}
             >
               <ShoppingCart size={14} className="mr-1" />
@@ -385,11 +440,15 @@ const PlaceOrder = () => {
             <DialogTitle>Consultar Clientes</DialogTitle>
           </DialogHeader>
           <Command className="rounded-lg border shadow-md">
-            <CommandInput placeholder="Digite o nome do cliente..." />
+            <CommandInput 
+              placeholder="Digite o nome do cliente..." 
+              value={searchQuery}
+              onValueChange={handleSearchChange}
+            />
             <CommandList>
               <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
               <CommandGroup heading="Clientes">
-                {mockClients.map((client) => (
+                {filteredClients.map((client) => (
                   <CommandItem
                     key={client.id}
                     onSelect={() => handleSelectClient(client)}
