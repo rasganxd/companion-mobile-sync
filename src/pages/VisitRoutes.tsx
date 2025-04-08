@@ -2,6 +2,11 @@
 import React from 'react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
+import { Calendar, Route, CheckCircle2, ArrowRight } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+} from "@/components/ui/card";
 
 const VisitRoutes = () => {
   // Dados de exemplo para as rotas
@@ -17,47 +22,92 @@ const VisitRoutes = () => {
   const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
   const totalNegatives = 0;
 
+  // Helper function to get progress percentage
+  const getProgressPercentage = (visited: number, total: number) => {
+    return (visited / total) * 100;
+  };
+
   return (
     <div className="min-h-screen bg-white flex flex-col">
       <Header title="Rotas (Visitas)" backgroundColor="orange" />
       
       <div className="p-4 flex-1">
-        <div className="grid grid-cols-4 gap-2 font-medium mb-4">
-          <div></div>
-          <div className="text-center">Visitados</div>
-          <div className="text-center">Restam</div>
-          <div className="text-center">Total</div>
-        </div>
+        <Card className="mb-4 overflow-hidden shadow-sm border border-gray-100">
+          <CardContent className="p-0">
+            <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 border-b">
+              <div className="grid grid-cols-4 gap-2 font-medium text-gray-700">
+                <div className="flex items-center gap-2">
+                  <Calendar size={16} className="text-orange-500" />
+                  <span>Dia</span>
+                </div>
+                <div className="text-center">Visitados</div>
+                <div className="text-center">Restam</div>
+                <div className="text-center">Total</div>
+              </div>
+            </div>
+            
+            <div className="divide-y divide-gray-100">
+              {routes.map((route, index) => (
+                <div key={index} className="hover:bg-gray-50 transition-colors">
+                  <div className="grid grid-cols-4 gap-2 p-3">
+                    <div className="flex items-center">
+                      <span className="font-medium text-gray-800">{route.day}</span>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 size={16} className={`${route.visited > 0 ? 'text-green-500' : 'text-gray-300'}`} />
+                        <span>{route.visited}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center text-blue-600 font-medium">{route.remaining}</div>
+                    <div className="flex items-center justify-center font-medium">{route.total}</div>
+                  </div>
+                  
+                  {/* Progress bar */}
+                  <div className="h-1 w-full bg-gray-100">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-400 to-green-500" 
+                      style={{ width: `${getProgressPercentage(route.visited, route.total)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
         
-        {routes.map((route, index) => (
-          <div key={index} className="grid grid-cols-4 gap-2 mb-4">
-            <AppButton>{route.day}</AppButton>
-            <div className="flex items-center justify-center">{route.visited}</div>
-            <div className="flex items-center justify-center">{route.remaining}</div>
-            <div className="flex items-center justify-center">{route.total}</div>
-          </div>
-        ))}
+        <Card className="mb-4 overflow-hidden shadow-sm border border-gray-100">
+          <CardContent className="p-0">
+            <div className="p-3 flex items-center justify-between bg-gradient-to-r from-blue-50 to-blue-100">
+              <div className="flex items-center gap-2">
+                <Route size={18} className="text-blue-500" />
+                <span className="font-medium">Todos</span>
+              </div>
+              <div className="font-bold text-xl text-blue-700">{totalVisits}</div>
+            </div>
+          </CardContent>
+        </Card>
         
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <AppButton>Todos</AppButton>
-          <div className="col-span-3 flex items-center justify-end font-medium">
-            {totalVisits}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <AppButton>Info</AppButton>
-          <div className="col-span-2 flex items-center font-bold">
-            Negativos
-          </div>
-          <div className="flex items-center justify-center">
-            {totalNegatives}
-          </div>
-        </div>
+        <Card className="overflow-hidden shadow-sm border border-gray-100">
+          <CardContent className="p-0">
+            <div className="p-3 flex items-center justify-between bg-gradient-to-r from-red-50 to-red-100">
+              <div className="flex items-center gap-2">
+                <ArrowRight size={18} className="text-red-500" />
+                <span className="font-medium">Negativos</span>
+              </div>
+              <div className="font-bold text-xl text-red-700">{totalNegatives}</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
-      <div className="p-4">
-        <AppButton fullWidth>Fechar</AppButton>
+      <div className="p-4 bg-gray-50 border-t border-gray-200">
+        <AppButton 
+          fullWidth
+          className="bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white border-orange-500"
+        >
+          Fechar
+        </AppButton>
       </div>
     </div>
   );
