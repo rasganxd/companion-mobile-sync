@@ -4,19 +4,21 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { useToast } from "@/hooks/use-toast";
+import { Calendar, ArrowLeft, ArrowRight, X, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  // Dados de exemplo conforme imagem - serão preenchidos pelo sistema desktop
+  // Dados de exemplo zerados conforme solicitado
   const routes = [
-    { day: 'Segunda', visited: 0, remaining: 30, total: 30 },
-    { day: 'Terça', visited: 0, remaining: 24, total: 24 },
-    { day: 'Quarta', visited: 0, remaining: 27, total: 27 },
-    { day: 'Quinta', visited: 0, remaining: 25, total: 25 },
-    { day: 'Sexta', visited: 0, remaining: 21, total: 21 },
-    { day: 'Sábado', visited: 0, remaining: 12, total: 12 },
+    { day: 'Segunda', visited: 0, remaining: 0, total: 0 },
+    { day: 'Terça', visited: 0, remaining: 0, total: 0 },
+    { day: 'Quarta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Quinta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Sexta', visited: 0, remaining: 0, total: 0 },
+    { day: 'Sábado', visited: 0, remaining: 0, total: 0 },
   ];
 
   const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
@@ -36,15 +38,24 @@ const VisitRoutes = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
-      <Header title="Rotas (Visitas)" backgroundColor="orange" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Rotas de Visitas" backgroundColor="blue" />
       
       <div className="p-4 flex-1">
+        {/* Cabeçalho informativo */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-4 flex items-center">
+          <Calendar className="text-app-blue mr-3" size={24} />
+          <div>
+            <h2 className="font-medium text-gray-800">Programação de Visitas</h2>
+            <p className="text-sm text-gray-500">Selecione um dia para ver os clientes</p>
+          </div>
+        </div>
+        
         {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center bg-white p-3 rounded-t-lg shadow-sm">
+        <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center text-sm bg-app-blue text-white p-3 rounded-t-lg shadow-sm">
           <div className="text-left">Dia</div>
           <div>Visitados</div>
-          <div>Restam</div>
+          <div>Restantes</div>
           <div>Total</div>
         </div>
         
@@ -53,40 +64,43 @@ const VisitRoutes = () => {
           {routes.map((route, index) => (
             <div 
               key={index} 
-              className="grid grid-cols-4 gap-2 p-3 bg-gray-200 rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-gray-300 transition-colors"
+              className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
               onClick={() => handleDaySelect(route.day)}
             >
-              <div className="text-left">{route.day}</div>
-              <div>{route.visited}</div>
-              <div>{route.remaining}</div>
-              <div>{route.total}</div>
+              <div className="text-left flex items-center gap-2">
+                <Clock size={16} className="text-app-blue" />
+                <span>{route.day}</span>
+              </div>
+              <div className="text-green-600">{route.visited}</div>
+              <div className="text-blue-600">{route.remaining}</div>
+              <div className="text-gray-800">{route.total}</div>
             </div>
           ))}
         </div>
         
-        {/* Totais */}
-        <div className="grid grid-cols-4 gap-2 p-3 bg-gray-200 rounded-lg font-medium text-center mt-2 shadow-sm">
-          <div className="text-left">Todos</div>
-          <div></div>
-          <div></div>
-          <div>{totalVisits}</div>
-        </div>
-        
-        {/* Negativos */}
-        <div className="grid grid-cols-4 gap-2 p-3 bg-gray-200 rounded-lg font-medium text-center mt-2 shadow-sm">
-          <div className="text-left">Info</div>
-          <div className="col-span-2 text-left">Negativos</div>
-          <div>{totalNegatives}</div>
+        {/* Totais e info em cards */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-2">Total de Visitas</h3>
+            <div className="text-2xl font-bold text-app-blue">{totalVisits}</div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-2">Vendas Negativas</h3>
+            <div className="text-2xl font-bold text-red-500">{totalNegatives}</div>
+          </div>
         </div>
       </div>
       
-      <div className="p-4">
+      <div className="p-4 bg-white border-t border-gray-200">
         <AppButton 
           fullWidth
           onClick={handleClose}
-          className="bg-orange-500 hover:bg-orange-600 text-white"
+          variant="blue"
+          className="flex justify-center items-center gap-2"
         >
-          Fechar
+          <X size={18} />
+          <span>Fechar</span>
         </AppButton>
       </div>
     </div>

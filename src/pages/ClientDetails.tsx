@@ -1,9 +1,11 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PhoneCall, MapPin, FileText } from 'lucide-react';
+import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 const ClientDetails = () => {
   const navigate = useNavigate();
@@ -38,107 +40,132 @@ const ClientDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Header title="Clientes" showBackButton backgroundColor="orange" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Detalhes do Cliente" showBackButton backgroundColor="blue" />
       
-      <div className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="font-semibold">Código:</span>
-            <span className="ml-2 bg-gray-200 px-3 py-1 rounded">{client.codigo}</span>
+      <div className="p-4 space-y-4 flex-1">
+        <Card className="overflow-hidden">
+          <div className="bg-gradient-to-r from-app-blue to-app-blue-dark p-4 flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="bg-white text-app-blue p-2 rounded-lg font-bold">
+                {client.codigo}
+              </div>
+              <span className="text-white">{client.status}</span>
+            </div>
+            <FileText size={24} className="text-white" />
           </div>
-          <div className="flex items-center gap-2">
-            <span>{client.status}</span>
-            <FileText size={24} />
-          </div>
-        </div>
+          
+          <CardContent className="p-5">
+            <div className="space-y-1 mb-4">
+              <div className="flex items-center gap-2">
+                <User size={18} className="text-app-blue" />
+                <span className="text-gray-500 text-sm font-medium">Cliente:</span>
+              </div>
+              <div className="pl-7 text-lg font-medium">{client.nome}</div>
+            </div>
+            
+            <div className="space-y-1 mb-4">
+              <div className="flex items-center gap-2">
+                <Building2 size={18} className="text-app-blue" />
+                <span className="text-gray-500 text-sm font-medium">Fantasia:</span>
+              </div>
+              <div className="pl-7 text-lg font-medium">{client.fantasia}</div>
+            </div>
+            
+            <div className="space-y-1 mb-4">
+              <div className="flex items-start gap-2">
+                <MapPin size={18} className="text-app-blue mt-1" />
+                <div>
+                  <span className="text-gray-500 text-sm font-medium">Endereço:</span>
+                  <div className="text-app-blue font-medium">{client.endereco}</div>
+                </div>
+              </div>
+            </div>
+            
+            <Separator className="my-4" />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <span className="text-gray-500 text-sm font-medium">Comprador:</span>
+                <div>{client.comprador}</div>
+              </div>
+              
+              <div className="space-y-1">
+                <span className="text-gray-500 text-sm font-medium">Bairro:</span>
+                <div>{client.bairro}</div>
+              </div>
+            </div>
+            
+            <div className="mt-4 space-y-1">
+              <div className="flex items-center gap-2">
+                <MapPinned size={18} className="text-app-blue" />
+                <span className="text-gray-500 text-sm font-medium">Cidade:</span>
+              </div>
+              <div className="pl-7">{client.cidade}</div>
+            </div>
+            
+            <div className="mt-4">
+              <div className="flex items-center gap-2">
+                <PhoneCall size={18} className="text-app-blue" />
+                <span className="text-gray-500 text-sm font-medium">Telefone:</span>
+              </div>
+              <div className="pl-7 text-app-blue font-medium mt-1">{client.telefone[0]}</div>
+              {client.telefone[1] && <div className="mt-1 ml-6">{client.telefone[1]}</div>}
+              {client.telefone[2] && <div className="mt-1 ml-6">{client.telefone[2]}</div>}
+            </div>
+          </CardContent>
+        </Card>
         
-        <div>
-          <span className="font-semibold">Cliente:</span>
-          <div className="mt-1">{client.nome}</div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Fantasia:</span>
-          <div className="mt-1">{client.fantasia}</div>
-        </div>
-        
-        <div className="flex items-start gap-2">
-          <MapPin size={20} />
-          <div>
-            <span className="font-semibold">Endereço:</span>
-            <div className="mt-1 text-blue-500">{client.endereco}</div>
-          </div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Comprador:</span>
-          <div className="mt-1">{client.comprador}</div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Bairro:</span>
-          <div className="mt-1">{client.bairro}</div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Cidade:</span>
-          <div className="mt-1">{client.cidade}</div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Telefone:</span>
-          <div className="flex items-center mt-1">
-            <PhoneCall size={20} className="mr-2" />
-            <span className="text-blue-500">{client.telefone[0]}</span>
-          </div>
-          {client.telefone[1] && <div className="mt-1 ml-6">{client.telefone[1]}</div>}
-          {client.telefone[2] && <div className="mt-1 ml-6">{client.telefone[2]}</div>}
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 mt-6">
-          <div>
-            <span className="font-semibold">Tipo F/J:</span>
-            <div className="mt-1">{client.tipoFJ}</div>
-          </div>
-          <div>
-            <span className="font-semibold">Dias max prazo:</span>
-            <div className="mt-1">{client.diasMaxPrazo}</div>
-          </div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Canal:</span>
-          <div className="mt-1">{client.canal}</div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <span className="font-semibold">Rotatividade:</span>
-            <div className="mt-1">{client.rotatividade}</div>
-          </div>
-          <div>
-            <span className="font-semibold">Próx. Visita:</span>
-            <div className="mt-1">{client.proximaVisita}</div>
-          </div>
-        </div>
-        
-        <div>
-          <span className="font-semibold">Restrição:</span>
-          <div className="mt-1">{client.restricao}</div>
-        </div>
+        <Card>
+          <CardContent className="p-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-gray-500 text-sm">Tipo F/J:</span>
+                <div className="font-medium">{client.tipoFJ}</div>
+              </div>
+              <div>
+                <span className="text-gray-500 text-sm">Dias máx prazo:</span>
+                <div className="font-medium">{client.diasMaxPrazo}</div>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <span className="text-gray-500 text-sm">Canal:</span>
+              <div className="font-medium">{client.canal}</div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <span className="text-gray-500 text-sm">Rotatividade:</span>
+                <div className="font-medium">{client.rotatividade}</div>
+              </div>
+              <div>
+                <span className="text-gray-500 text-sm">Próx. Visita:</span>
+                <div className="font-medium">{client.proximaVisita}</div>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <div className="flex items-center gap-2">
+                <Info size={18} className="text-app-blue" />
+                <span className="text-gray-500 text-sm">Restrição:</span>
+              </div>
+              <div className="font-medium mt-1">{client.restricao}</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
-      <div className="mt-auto grid grid-cols-2 gap-2 p-4">
-        <AppButton>Listar</AppButton>
+      <div className="p-4 grid grid-cols-2 gap-2 bg-white border-t">
+        <AppButton variant="gray">Listar</AppButton>
         <div className="grid grid-cols-2 gap-2">
-          <AppButton>&lt;</AppButton>
-          <AppButton>&gt;</AppButton>
+          <AppButton variant="gray">&lt;</AppButton>
+          <AppButton variant="gray">&gt;</AppButton>
         </div>
-        <AppButton>Consultar</AppButton>
-        <AppButton onClick={handleInitiate}>Iniciar</AppButton>
-        <AppButton onClick={handleClose}>Fechar</AppButton>
-        <AppButton>Compl/Obs</AppButton>
+        <AppButton variant="gray">Consultar</AppButton>
+        <AppButton onClick={handleInitiate} variant="blue">Iniciar</AppButton>
+        <AppButton onClick={handleClose} variant="gray">Fechar</AppButton>
+        <AppButton variant="gray">Compl/Obs</AppButton>
       </div>
     </div>
   );
