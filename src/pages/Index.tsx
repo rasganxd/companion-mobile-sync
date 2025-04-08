@@ -1,10 +1,18 @@
 
 import React from 'react';
-import { Package2, ThumbsDown, Box, Mail, Compass, LogOut } from 'lucide-react';
+import { Package2, ThumbsDown, Box, Mail, Compass, LogOut, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
+import AppButton from '@/components/AppButton';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const navigate = useNavigate();
+  
+  const handleGoBack = () => {
+    navigate(-1);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Lista de Atividades" backgroundColor="blue" />
@@ -37,13 +45,23 @@ const Index = () => {
         />
       </div>
       
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         <MenuCard
           icon={<LogOut size={32} />}
           title="Fechar"
           to="/login"
           variant="secondary"
         />
+        
+        <AppButton 
+          variant="gray" 
+          fullWidth 
+          onClick={handleGoBack}
+          className="flex items-center justify-center gap-2"
+        >
+          <ArrowLeft size={20} />
+          <span>Voltar</span>
+        </AppButton>
       </div>
     </div>
   );

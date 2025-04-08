@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import AppButton from '@/components/AppButton';
-import { KeyRound, LogIn } from 'lucide-react';
+import { KeyRound, LogIn, ArrowLeft } from 'lucide-react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -15,6 +15,10 @@ const Login = () => {
     // Em uma implementação real, aqui teríamos uma chamada para API
     // Por enquanto, após login redirecionamos para a página de rotas
     navigate('/rotas');
+  };
+  
+  const handleGoBack = () => {
+    navigate(-1);
   };
   
   return (
@@ -80,6 +84,17 @@ const Login = () => {
               className="mt-6 py-2.5 transition-all duration-200 transform hover:translate-y-[-2px]"
             >
               Entrar
+            </AppButton>
+            
+            <AppButton
+              type="button"
+              variant="gray"
+              fullWidth
+              className="flex items-center justify-center gap-2"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft size={18} />
+              <span>Voltar</span>
             </AppButton>
           </form>
         </div>

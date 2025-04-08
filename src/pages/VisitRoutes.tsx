@@ -36,6 +36,10 @@ const VisitRoutes = () => {
     // Quando seleciona um dia, vai para a tela de clientes
     navigate('/clientes');
   };
+  
+  const handleGoBack = () => {
+    navigate(-1);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -92,7 +96,7 @@ const VisitRoutes = () => {
         </div>
       </div>
       
-      <div className="p-4 bg-white border-t border-gray-200">
+      <div className="p-4 bg-white border-t space-y-3">
         <AppButton 
           fullWidth
           onClick={handleClose}
@@ -101,6 +105,16 @@ const VisitRoutes = () => {
         >
           <X size={18} />
           <span>Fechar</span>
+        </AppButton>
+        
+        <AppButton 
+          fullWidth
+          onClick={handleGoBack}
+          variant="gray"
+          className="flex justify-center items-center gap-2"
+        >
+          <ArrowLeft size={18} />
+          <span>Voltar</span>
         </AppButton>
       </div>
     </div>

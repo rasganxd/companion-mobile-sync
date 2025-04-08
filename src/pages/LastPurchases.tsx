@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -12,11 +12,13 @@ import {
 } from '@/components/ui/popover';
 import AppButton from '@/components/AppButton';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const LastPurchases = () => {
   const [date, setDate] = useState<Date | undefined>(new Date('2025-03-03'));
   const [showCalendar, setShowCalendar] = useState(false);
   const [viewMode, setViewMode] = useState<'details' | 'calendar'>('details');
+  const navigate = useNavigate();
 
   // Dados de exemplo para uma compra
   const purchaseDetails = {
@@ -43,6 +45,10 @@ const LastPurchases = () => {
 
   const handleCalendarToggle = () => {
     setViewMode('calendar');
+  };
+  
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -88,7 +94,7 @@ const LastPurchases = () => {
             </div>
           ))}
           
-          <div className="mt-auto">
+          <div className="mt-auto space-y-3">
             <AppButton 
               variant="purple" 
               fullWidth 
@@ -96,6 +102,16 @@ const LastPurchases = () => {
               onClick={handleCalendarToggle}
             >
               Trocar data <CalendarIcon size={20} />
+            </AppButton>
+            
+            <AppButton 
+              variant="gray" 
+              fullWidth 
+              className="flex items-center justify-center gap-2"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft size={20} />
+              <span>Voltar</span>
             </AppButton>
           </div>
         </div>
@@ -153,6 +169,18 @@ const LastPurchases = () => {
             <p className="text-center mt-4 font-medium">
               Nenhuma compra encontrada para o filtro selecionado
             </p>
+          </div>
+          
+          <div className="mt-auto">
+            <AppButton 
+              variant="gray" 
+              fullWidth 
+              className="flex items-center justify-center gap-2"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft size={20} />
+              <span>Voltar</span>
+            </AppButton>
           </div>
         </div>
       )}

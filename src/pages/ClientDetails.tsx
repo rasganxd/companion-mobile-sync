@@ -1,16 +1,12 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info } from 'lucide-react';
+import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 const ClientDetails = () => {
   const navigate = useNavigate();
@@ -42,6 +38,10 @@ const ClientDetails = () => {
   const handleClose = () => {
     // Volta para a tela de rotas
     navigate('/rotas');
+  };
+  
+  const handleGoBack = () => {
+    navigate(-1);
   };
 
   return (
@@ -173,6 +173,14 @@ const ClientDetails = () => {
         <AppButton onClick={handleInitiate} variant="blue" size="sm">Iniciar</AppButton>
         <AppButton onClick={handleClose} variant="gray" size="sm">Fechar</AppButton>
         <AppButton variant="gray" size="sm">Compl/Obs</AppButton>
+        <AppButton 
+          variant="gray" 
+          onClick={handleGoBack}
+          size="sm"
+          className="col-span-2 flex items-center justify-center gap-2 mt-2"
+        >
+          <ArrowLeft size={16} /> Voltar
+        </AppButton>
       </div>
     </div>
   );
