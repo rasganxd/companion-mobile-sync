@@ -1,6 +1,7 @@
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
@@ -18,28 +19,30 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/menu" element={<Index />} />
-        <Route path="/" element={<VisitRoutes />} />
-        <Route path="/clientes" element={<ClientDetails />} />
-        <Route path="/clientes-lista" element={<ClientsList />} />
-        <Route path="/ultimas-compras" element={<LastPurchases />} />
-        <Route path="/fazer-pedidos" element={<PlaceOrder />} />
-        <Route path="/detalhes-pedido" element={<OrderDetails />} />
-        
-        {/* Rotas temporárias que redirecionam para a página principal */}
-        <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
-        <Route path="/mensagem" element={<Navigate to="/menu" />} />
-        <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
-        
-        {/* Rota de fallback para páginas não encontradas */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/menu" element={<Index />} />
+          <Route path="/" element={<VisitRoutes />} />
+          <Route path="/clientes" element={<ClientDetails />} />
+          <Route path="/clientes-lista" element={<ClientsList />} />
+          <Route path="/ultimas-compras" element={<LastPurchases />} />
+          <Route path="/fazer-pedidos" element={<PlaceOrder />} />
+          <Route path="/detalhes-pedido" element={<OrderDetails />} />
+          
+          {/* Rotas temporárias que redirecionam para a página principal */}
+          <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
+          <Route path="/mensagem" element={<Navigate to="/menu" />} />
+          <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
+          
+          {/* Rota de fallback para páginas não encontradas */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+        <Sonner />
+      </BrowserRouter>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
