@@ -6,8 +6,8 @@ import MenuCard from '@/components/MenuCard';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Header title="Lista de Atividades" backgroundColor="orange" />
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Lista de Atividades" backgroundColor="blue" />
       
       <div className="flex-1 p-4 grid grid-cols-2 gap-4">
         <MenuCard
@@ -42,6 +42,7 @@ const Index = () => {
           icon={<LogOut size={32} />}
           title="Fechar"
           to="/login"
+          variant="secondary"
         />
       </div>
     </div>
