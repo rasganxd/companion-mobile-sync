@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, ArrowLeft, ArrowRight, X, Clock } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { Calendar, ArrowLeft, X } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 const VisitRoutes = () => {
   const { toast } = useToast();
@@ -21,8 +21,8 @@ const VisitRoutes = () => {
     { day: 'Sábado', visited: 0, remaining: 0, total: 0 },
   ];
 
-  const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
-  const totalNegatives = 0;
+  // No clients for all days - empty state
+  const hasClients = routes.some(route => route.total > 0);
 
   const handleClose = () => {
     toast({
@@ -46,54 +46,56 @@ const VisitRoutes = () => {
       <Header title="Rotas de Visitas" backgroundColor="blue" />
       
       <div className="p-4 flex-1">
-        {/* Cabeçalho informativo */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-4 flex items-center">
-          <Calendar className="text-app-blue mr-3" size={24} />
-          <div>
-            <h2 className="font-medium text-gray-800">Programação de Visitas</h2>
-            <p className="text-sm text-gray-500">Selecione um dia para ver os clientes</p>
-          </div>
-        </div>
-        
-        {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center text-sm bg-app-blue text-white p-3 rounded-t-lg shadow-sm">
-          <div className="text-left">Dia</div>
-          <div>Visitados</div>
-          <div>Restantes</div>
-          <div>Total</div>
-        </div>
-        
-        {/* Linhas da tabela */}
-        <div className="space-y-2">
-          {routes.map((route, index) => (
-            <div 
-              key={index} 
-              className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
-              onClick={() => handleDaySelect(route.day)}
-            >
-              <div className="text-left flex items-center gap-2">
-                <Clock size={16} className="text-app-blue" />
-                <span>{route.day}</span>
-              </div>
-              <div className="text-green-600">{route.visited}</div>
-              <div className="text-blue-600">{route.remaining}</div>
-              <div className="text-gray-800">{route.total}</div>
+        {/* Cartão de programação de visitas - seguindo o design da imagem */}
+        <Card className="bg-white rounded-lg shadow-md p-4 mb-4">
+          <div className="flex items-center">
+            <Calendar className="text-app-blue mr-3" size={24} />
+            <div>
+              <h2 className="font-medium text-gray-800">Programação de Visitas</h2>
+              <p className="text-sm text-gray-500">Selecione um dia para ver os clientes</p>
             </div>
-          ))}
-        </div>
+          </div>
+        </Card>
         
-        {/* Totais e info em cards */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-2">Total de Visitas</h3>
-            <div className="text-2xl font-bold text-app-blue">{totalVisits}</div>
+        {hasClients ? (
+          // Se tiver clientes, mostra a tabela
+          <>
+            {/* Cabeçalho da tabela */}
+            <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center text-sm bg-app-blue text-white p-3 rounded-t-lg shadow-sm">
+              <div className="text-left">Dia</div>
+              <div>Visitados</div>
+              <div>Restantes</div>
+              <div>Total</div>
+            </div>
+            
+            {/* Linhas da tabela */}
+            <div className="space-y-2">
+              {routes.map((route, index) => (
+                <div 
+                  key={index} 
+                  className="grid grid-cols-4 gap-2 p-4 bg-white rounded-lg font-medium text-center shadow-sm cursor-pointer hover:bg-slate-100 transition-colors border border-slate-100"
+                  onClick={() => handleDaySelect(route.day)}
+                >
+                  <div className="text-left">{route.day}</div>
+                  <div className="text-green-600">{route.visited}</div>
+                  <div className="text-blue-600">{route.remaining}</div>
+                  <div className="text-gray-800">{route.total}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          // Estado vazio - sem clientes
+          <div className="flex flex-col items-center justify-center mt-8 text-center p-6">
+            <div className="text-gray-400 mb-4">
+              <Calendar size={48} />
+            </div>
+            <h3 className="text-lg font-medium text-gray-600 mb-2">Sem clientes cadastrados</h3>
+            <p className="text-sm text-gray-500">
+              Não há clientes cadastrados para visitas. Quando houver, eles aparecerão aqui.
+            </p>
           </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-2">Vendas Negativas</h3>
-            <div className="text-2xl font-bold text-red-500">{totalNegatives}</div>
-          </div>
-        </div>
+        )}
       </div>
       
       <div className="p-4 bg-white border-t space-y-3">
@@ -108,10 +110,10 @@ const VisitRoutes = () => {
         </AppButton>
         
         <AppButton 
-          fullWidth
+          variant="gray" 
+          fullWidth 
           onClick={handleGoBack}
-          variant="gray"
-          className="flex justify-center items-center gap-2"
+          className="flex items-center justify-center gap-2"
         >
           <ArrowLeft size={18} />
           <span>Voltar</span>
