@@ -3,7 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { Calendar, ArrowLeft, ArrowRight, X } from 'lucide-react';
+import { Calendar, ArrowLeft, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
@@ -41,16 +41,7 @@ const VisitRoutes = () => {
       <Header title="Rotas de Visitas" backgroundColor="blue" />
       
       <div className="p-4 flex-1">
-        {/* Cabeçalho informativo */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-4 flex items-center">
-          <Calendar className="text-app-blue mr-3" size={24} />
-          <div>
-            <h2 className="font-medium text-gray-800">Programação de Visitas</h2>
-            <p className="text-sm text-gray-500">Selecione um dia para ver os clientes</p>
-          </div>
-        </div>
-        
-        {/* Cabeçalho da tabela */}
+        {/* Cabeçalho da tabela - Removed text box here */}
         <div className="grid grid-cols-4 gap-2 mb-2 font-medium text-center text-sm bg-app-blue text-white p-3 rounded-t-lg shadow-sm">
           <div className="text-left">Dia</div>
           <div>Visitados</div>
