@@ -96,7 +96,7 @@ const VisitRoutes = () => {
         >
           <ArrowLeft size={18} />
           <span>Voltar</span>
-        </button>
+        </AppButton>
       </div>
     </div>
   );
