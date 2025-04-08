@@ -3,12 +3,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { useToast } from "@/hooks/use-toast";
 import { Calendar, ArrowLeft, ArrowRight, X, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
   
   // Dados de exemplo zerados conforme solicitado
@@ -25,10 +23,7 @@ const VisitRoutes = () => {
   const totalNegatives = 0;
 
   const handleClose = () => {
-    toast({
-      title: "Fechando rotas",
-      description: "Retornando ao menu principal"
-    });
+    // Removed toast notification
     navigate('/');
   };
 
