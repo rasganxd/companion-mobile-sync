@@ -8,12 +8,14 @@ interface MenuCardProps {
   title: string;
   to: string;
   variant?: 'primary' | 'secondary';
+  state?: any; // Adding the state prop to the interface
 }
 
-const MenuCard = ({ icon, title, to, variant = 'primary' }: MenuCardProps) => {
+const MenuCard = ({ icon, title, to, variant = 'primary', state }: MenuCardProps) => {
   return (
     <Link
       to={to}
+      state={state} // Pass the state to the Link component
       className={cn(
         "rounded-lg shadow p-4 flex flex-col items-center justify-center gap-2 min-h-[120px] transition-all",
         variant === 'primary' 
