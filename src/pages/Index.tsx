@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Package2, ThumbsDown, Receipt, Box, Refrigerator, Mail, Camera, Compass, LogOut } from 'lucide-react';
+import { Package2, ThumbsDown, Box, Mail, Compass, LogOut } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 
@@ -21,29 +21,14 @@ const Index = () => {
           to="/negativar-venda"
         />
         <MenuCard
-          icon={<Receipt size={32} color="blue" />}
-          title="Consultar Dívidas"
-          to="/consultar-dividas"
-        />
-        <MenuCard
           icon={<Box size={32} color="orange" />}
           title="Últimas Compras"
           to="/ultimas-compras"
         />
         <MenuCard
-          icon={<Refrigerator size={32} color="green" />}
-          title="Comodatos"
-          to="/comodatos"
-        />
-        <MenuCard
           icon={<Mail size={32} color="gold" />}
           title="Mensagem"
           to="/mensagem"
-        />
-        <MenuCard
-          icon={<Camera size={32} color="orange" />}
-          title="Registrar Foto PDV"
-          to="/registrar-foto"
         />
         <MenuCard
           icon={<Compass size={32} color="blue" />}

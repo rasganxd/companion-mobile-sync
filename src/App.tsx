@@ -29,10 +29,7 @@ const App = () => (
           {/* Rotas temporárias que redirecionam para a página principal */}
           <Route path="/fazer-pedidos" element={<Navigate to="/" />} />
           <Route path="/negativar-venda" element={<Navigate to="/" />} />
-          <Route path="/consultar-dividas" element={<Navigate to="/" />} />
-          <Route path="/comodatos" element={<Navigate to="/" />} />
           <Route path="/mensagem" element={<Navigate to="/" />} />
-          <Route path="/registrar-foto" element={<Navigate to="/" />} />
           <Route path="/capturar-posicao" element={<Navigate to="/" />} />
           
           {/* Rota de fallback para páginas não encontradas */}
