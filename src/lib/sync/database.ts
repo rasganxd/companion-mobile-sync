@@ -12,12 +12,12 @@ const DATABASE = {
 };
 
 // Database connection instance
-let db: any; // Changed from SQLiteDatabase to any
+let db: any; // Using 'any' type instead of SQLiteDatabase
 
 /**
  * Initialize the database
  */
-export async function initDatabase(): Promise<any> { // Changed return type from SQLiteDatabase
+export async function initDatabase(): Promise<any> { // Changed return type to any
   if (db) {
     return db;
   }
