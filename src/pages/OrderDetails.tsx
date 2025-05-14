@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,23 +27,47 @@ interface Client {
 const OrderDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [redirecting, setRedirecting] = useState(false);
   
-  // Check if location.state exists, otherwise use default values
-  const orderState = location.state || { 
-    orderItems: [], 
-    client: { id: 0, name: 'Cliente não selecionado' },
+  // Create default state values
+  const defaultState = {
+    orderItems: [] as OrderItem[],
+    client: { id: 0, name: 'Cliente não selecionado' } as Client,
     paymentMethod: 'Não definido'
   };
   
-  const { orderItems, client, paymentMethod } = orderState;
+  // Use the state from location or default if not available
+  const orderState = location.state || defaultState;
+  
+  // Safely destructure values with fallbacks
+  const orderItems = orderState.orderItems || [];
+  const client = orderState.client || defaultState.client;
+  const paymentMethod = orderState.paymentMethod || defaultState.paymentMethod;
   
   // If there's no state, redirect to the order creation page
   useEffect(() => {
-    if (!location.state) {
+    if (!location.state && !redirecting) {
+      setRedirecting(true);
       toast.error("Informações do pedido não encontradas");
       navigate('/fazer-pedidos');
     }
-  }, [location.state, navigate]);
+  }, [location.state, navigate, redirecting]);
+
+  // If we're redirecting, don't render the full component
+  if (redirecting) {
+    return (
+      <div className="h-screen flex flex-col bg-gray-50">
+        <Header 
+          title="Redirecionando..." 
+          backgroundColor="blue"
+          showBackButton
+        />
+        <div className="flex flex-col items-center justify-center flex-1">
+          <p className="text-gray-500 mb-4">Informações do pedido não encontradas</p>
+        </div>
+      </div>
+    );
+  }
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2);
