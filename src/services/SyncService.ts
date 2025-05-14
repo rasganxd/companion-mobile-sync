@@ -1,6 +1,7 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
-import DatabaseService from './DatabaseService';
+import { getDatabaseAdapter } from './DatabaseAdapter';
 
 export interface SyncProgress {
   total: number;
@@ -10,7 +11,7 @@ export interface SyncProgress {
 
 class SyncService {
   private static instance: SyncService;
-  private dbService: DatabaseService;
+  private dbService = getDatabaseAdapter();
   private apiUrl: string = 'https://preview--vendas-fortes.lovable.app/api';
   private syncInProgress: boolean = false;
   private syncSettings: SyncSettings = {
@@ -30,7 +31,6 @@ class SyncService {
   private onStatusChangeCallback: ((status: SyncStatus) => void) | null = null;
   
   private constructor() {
-    this.dbService = DatabaseService.getInstance();
     this.checkConnection();
     this.loadSettings();
   }
