@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,9 +7,10 @@ interface HeaderProps {
   title: string;
   showBackButton?: boolean;
   backgroundColor?: 'orange' | 'gray' | 'blue';
+  rightContent?: ReactNode;
 }
 
-const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: HeaderProps) => {
+const Header = ({ title, showBackButton = false, backgroundColor = 'blue', rightContent }: HeaderProps) => {
   const navigate = useNavigate();
   
   const getBgColor = () => {
@@ -37,6 +38,11 @@ const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: Hea
       <h1 className="text-white text-xl font-semibold flex-1 text-center">
         {title}
       </h1>
+      {rightContent && (
+        <div className="ml-2">
+          {rightContent}
+        </div>
+      )}
     </div>
   );
 };
