@@ -80,8 +80,13 @@ const ClientDetails = () => {
   }, [clientId, navigate]);
 
   const handleInitiate = () => {
-    // Quando clica em "Iniciar", vai para a lista de atividades
-    navigate('/menu', { state: { clientName: client?.fantasia } });
+    // Navigate to the activities list with client name
+    if (client) {
+      navigate('/atividades', { state: { clientName: client.fantasia } });
+    } else {
+      // Fallback
+      navigate('/atividades');
+    }
   };
 
   const handleClose = () => {

@@ -13,7 +13,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
-        title="Lista de Atividades" 
+        title={`Lista de Atividades - ${clientName}`}
         showBackButton={true} 
         backgroundColor="blue" 
       />
@@ -23,6 +23,7 @@ const Index = () => {
           icon={<Package2 size={32} />}
           title="Fazer Pedidos"
           to="/fazer-pedidos"
+          state={{ clientName }}
         />
         <MenuCard
           icon={<ThumbsDown size={32} color="red" />}

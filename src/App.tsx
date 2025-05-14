@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -80,9 +79,10 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Home />} />
-            <Route path="/menu" element={<Navigate to="/clientes-lista" />} />
+            <Route path="/menu" element={<Index />} />
             <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/clientes" element={<ClientDetails />} />
+            <Route path="/cliente-detalhes" element={<ClientDetails />} />
             <Route path="/clientes-lista" element={<ClientsList />} />
             <Route path="/ultimas-compras" element={<LastPurchases />} />
             <Route path="/fazer-pedidos" element={<PlaceOrder />} />
