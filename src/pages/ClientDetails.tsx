@@ -1,38 +1,87 @@
 
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { toast } from '@/components/ui/use-toast';
+
+interface ClientData {
+  id: string;
+  codigo: string;
+  status: string;
+  nome: string;
+  fantasia: string;
+  endereco: string;
+  comprador: string;
+  bairro: string;
+  cidade: string;
+  telefone: string[];
+  tipoFJ: string;
+  diasMaxPrazo: string;
+  canal: string;
+  rotatividade: string;
+  proximaVisita: string;
+  restricao: string;
+}
 
 const ClientDetails = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { clientId } = location.state || {};
+  const [client, setClient] = useState<ClientData | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  // Dados de exemplo para um cliente
-  const client = {
-    codigo: '179',
-    status: 'Pendente',
-    nome: 'GILMAR ELIAS TAZONIERO',
-    fantasia: 'CANCHA DE BOCHA DO PILA',
-    endereco: 'RUA MARECHAL DEODORO 2325',
-    comprador: 'GILMAR',
-    bairro: 'PARAISO',
-    cidade: 'CHAPECO',
-    telefone: ['(49)99825.9077', '', ''],
-    tipoFJ: 'F',
-    diasMaxPrazo: '0',
-    canal: '001-SUPERMERCAD',
-    rotatividade: 'Semanal',
-    proximaVisita: '14/04/2025',
-    restricao: 'Livre'
-  };
+  useEffect(() => {
+    const loadClient = async () => {
+      if (!clientId) {
+        toast({
+          title: "Erro",
+          description: "ID do cliente não fornecido",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
+      }
+      
+      try {
+        setLoading(true);
+        const db = getDatabaseAdapter();
+        const clients = await db.getClients();
+        const foundClient = clients.find(c => c.id === clientId);
+        
+        if (foundClient) {
+          setClient(foundClient);
+        } else {
+          toast({
+            title: "Erro",
+            description: "Cliente não encontrado",
+            variant: "destructive"
+          });
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error loading client details:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar detalhes do cliente",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadClient();
+  }, [clientId, navigate]);
 
   const handleInitiate = () => {
     // Quando clica em "Iniciar", vai para a lista de atividades
-    navigate('/menu');
+    navigate('/menu', { state: { clientName: client?.fantasia } });
   };
 
   const handleClose = () => {
@@ -49,6 +98,31 @@ const ClientDetails = () => {
     // Navega para a lista de clientes do dia atual
     navigate('/clientes-lista', { state: { day: 'Segunda' } });
   };
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title="Carregando..." showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500">Carregando detalhes do cliente...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!client) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title="Erro" showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-red-500">Cliente não encontrado</p>
+        </div>
+        <div className="p-3 bg-white">
+          <AppButton variant="blue" onClick={handleGoBack}>Voltar</AppButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
