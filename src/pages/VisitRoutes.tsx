@@ -3,7 +3,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
-import { X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 const VisitRoutes = () => {
@@ -22,18 +21,17 @@ const VisitRoutes = () => {
   const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
   const totalNegatives = 0;
 
-  const handleClose = () => {
-    // Modificado para redirecionar para a tela de login
-    navigate('/login');
-  };
-
   const handleDaySelect = (day: string) => {
     navigate('/clientes-lista', { state: { day } });
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title="Rotas de Visitas" backgroundColor="blue" />
+      <Header 
+        title="Rotas de Visitas" 
+        backgroundColor="blue" 
+        showBackButton={true}
+      />
       
       <div className="p-3 flex-1">
         {/* Cabeçalho da tabela */}
@@ -74,16 +72,6 @@ const VisitRoutes = () => {
             <div className="text-xl font-bold text-red-500">{totalNegatives}</div>
           </div>
         </div>
-      </div>
-      
-      <div className="p-3 bg-white border-t">
-        <button 
-          onClick={handleClose}
-          className="w-full py-3 bg-app-blue text-white rounded-lg flex items-center justify-center gap-2"
-        >
-          <X size={18} />
-          <span>Fechar</span>
-        </button>
       </div>
     </div>
   );

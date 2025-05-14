@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { RefreshCw, Upload, Download, User, Users, Calendar } from 'lucide-react';
+import { RefreshCw, Upload, Download, User, Users, Calendar, LogOut } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
@@ -33,6 +33,10 @@ const Home = () => {
       toast.error("Erro inesperado durante a transmissão");
       console.error("Erro na transmissão:", error);
     }
+  };
+
+  const handleLogout = () => {
+    navigate('/login');
   };
 
   return (
@@ -148,6 +152,17 @@ const Home = () => {
             Rotas de Visitas
           </Button>
         </div>
+        
+        {/* Botão de Logout */}
+        <Button 
+          onClick={handleLogout}
+          className="w-full mt-auto"
+          variant="destructive"
+          size="lg"
+        >
+          <LogOut size={16} className="mr-2" />
+          Sair
+        </Button>
       </div>
     </div>
   );
