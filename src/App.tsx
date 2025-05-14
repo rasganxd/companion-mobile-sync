@@ -79,8 +79,8 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/menu" element={<Index />} />
             <Route path="/" element={<Home />} />
+            <Route path="/menu" element={<Navigate to="/clientes-lista" />} />
             <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/clientes" element={<ClientDetails />} />
             <Route path="/clientes-lista" element={<ClientsList />} />
@@ -88,11 +88,12 @@ const App = () => {
             <Route path="/fazer-pedidos" element={<PlaceOrder />} />
             <Route path="/detalhes-pedido" element={<OrderDetails />} />
             <Route path="/sincronizacao" element={<SyncSettings />} />
+            <Route path="/atividades" element={<Index />} />
             
             {/* Rotas temporárias que redirecionam para a página principal */}
-            <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
-            <Route path="/mensagem" element={<Navigate to="/menu" />} />
-            <Route path="/capturar-posicao" element={<Navigate to="/menu" />} />
+            <Route path="/negativar-venda" element={<Navigate to="/" />} />
+            <Route path="/mensagem" element={<Navigate to="/" />} />
+            <Route path="/capturar-posicao" element={<Navigate to="/" />} />
             
             {/* Rota de fallback para páginas não encontradas */}
             <Route path="*" element={<NotFound />} />

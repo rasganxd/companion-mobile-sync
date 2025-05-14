@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { RefreshCw, Upload, Download, User } from 'lucide-react';
+import { RefreshCw, Upload, Download, User, Users, Calendar } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
@@ -33,10 +33,6 @@ const Home = () => {
       toast.error("Erro inesperado durante a transmissão");
       console.error("Erro na transmissão:", error);
     }
-  };
-
-  const handleAcessarMenu = () => {
-    navigate('/menu');
   };
 
   return (
@@ -131,15 +127,27 @@ const Home = () => {
           </CardContent>
         </Card>
         
-        {/* Botões de Ação */}
-        <Button 
-          onClick={handleAcessarMenu}
-          className="w-full"
-          variant="secondary"
-          size="lg"
-        >
-          Acessar Menu Principal
-        </Button>
+        {/* Botões de Navegação */}
+        <div className="grid grid-cols-2 gap-4">
+          <Button 
+            onClick={() => navigate('/clientes-lista')}
+            className="w-full"
+            variant="secondary"
+            size="lg"
+          >
+            <Users size={16} className="mr-2" />
+            Lista de Clientes
+          </Button>
+          <Button 
+            onClick={() => navigate('/rotas')}
+            className="w-full"
+            variant="secondary"
+            size="lg"
+          >
+            <Calendar size={16} className="mr-2" />
+            Rotas de Visitas
+          </Button>
+        </div>
       </div>
     </div>
   );
