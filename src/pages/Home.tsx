@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { RefreshCw, Upload, Download, User, Users, Calendar, LogOut } from 'lucide-react';
+import { RefreshCw, Upload, Download, Calendar, LogOut } from 'lucide-react';
 import { useSync } from '@/hooks/useSync';
 import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
@@ -132,16 +131,7 @@ const Home = () => {
         </Card>
         
         {/* Botões de Navegação */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            onClick={() => navigate('/clientes-lista')}
-            className="w-full"
-            variant="secondary"
-            size="lg"
-          >
-            <Users size={16} className="mr-2" />
-            Lista de Clientes
-          </Button>
+        <div className="grid grid-cols-1 gap-4">
           <Button 
             onClick={() => navigate('/rotas')}
             className="w-full"
