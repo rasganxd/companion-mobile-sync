@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -131,27 +130,16 @@ const Home = () => {
           </CardContent>
         </Card>
         
-        {/* Botões de Navegação */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button 
-            onClick={() => navigate('/clientes-lista')}
-            className="w-full"
-            variant="secondary"
-            size="lg"
-          >
-            <Users size={16} className="mr-2" />
-            Lista de Clientes
-          </Button>
-          <Button 
-            onClick={() => navigate('/rotas')}
-            className="w-full"
-            variant="secondary"
-            size="lg"
-          >
-            <Calendar size={16} className="mr-2" />
-            Rotas de Visitas
-          </Button>
-        </div>
+        {/* Botões de Navegação - Agora com apenas um botão para Rotas de Visitas */}
+        <Button 
+          onClick={() => navigate('/rotas')}
+          className="w-full"
+          variant="secondary"
+          size="lg"
+        >
+          <Calendar size={16} className="mr-2" />
+          Rotas de Visitas e Clientes
+        </Button>
         
         {/* Botão de Logout */}
         <Button 

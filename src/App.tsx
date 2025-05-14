@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -9,7 +8,6 @@ import Index from "./pages/Index";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import ClientDetails from "./pages/ClientDetails";
-import ClientsList from "./pages/ClientsList";
 import LastPurchases from "./pages/LastPurchases";
 import VisitRoutes from "./pages/VisitRoutes";
 import PlaceOrder from "./pages/PlaceOrder";
@@ -80,10 +78,10 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Home />} />
-            <Route path="/menu" element={<Navigate to="/clientes-lista" />} />
+            <Route path="/menu" element={<Navigate to="/" />} />
             <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/clientes" element={<ClientDetails />} />
-            <Route path="/clientes-lista" element={<ClientsList />} />
+            <Route path="/clientes-lista" element={<Navigate to="/rotas" />} />
             <Route path="/ultimas-compras" element={<LastPurchases />} />
             <Route path="/fazer-pedidos" element={<PlaceOrder />} />
             <Route path="/detalhes-pedido" element={<OrderDetails />} />
