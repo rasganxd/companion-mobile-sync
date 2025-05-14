@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import ClientDetails from "./pages/ClientDetails";
@@ -13,11 +14,24 @@ import VisitRoutes from "./pages/VisitRoutes";
 import PlaceOrder from "./pages/PlaceOrder";
 import OrderDetails from "./pages/OrderDetails";
 import NotFound from "./pages/NotFound";
-import { useState } from "react";
+import SyncSettings from "./pages/SyncSettings";
+import DatabaseService from "./services/DatabaseService";
 
 const App = () => {
   // Create QueryClient inside the component
   const [queryClient] = useState(() => new QueryClient());
+  const [dbInitialized, setDbInitialized] = useState(false);
+
+  useEffect(() => {
+    // Initialize database on app startup
+    const initDb = async () => {
+      const dbService = DatabaseService.getInstance();
+      await dbService.initDatabase();
+      setDbInitialized(true);
+    };
+
+    initDb();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,6 +46,7 @@ const App = () => {
             <Route path="/ultimas-compras" element={<LastPurchases />} />
             <Route path="/fazer-pedidos" element={<PlaceOrder />} />
             <Route path="/detalhes-pedido" element={<OrderDetails />} />
+            <Route path="/sincronizacao" element={<SyncSettings />} />
             
             {/* Rotas temporárias que redirecionam para a página principal */}
             <Route path="/negativar-venda" element={<Navigate to="/menu" />} />
