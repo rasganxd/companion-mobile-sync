@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +20,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 // Mock product data
 const mockProducts = [
@@ -71,9 +71,57 @@ const PlaceOrder = () => {
   const [quantity, setQuantity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client>(mockClient);
+  const [selectedClient, setSelectedClient] = useState<Client>({ id: 0, name: '', fantasyName: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredClients, setFilteredClients] = useState<Client[]>(mockClients);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Load client data from location state or database when component mounts
+  useEffect(() => {
+    const fetchClientData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Check if client info was passed via location state
+        if (location.state && location.state.clientId) {
+          const clientId = location.state.clientId;
+          
+          try {
+            // Try to fetch client details from database
+            const db = getDatabaseAdapter();
+            const clientDetails = await db.getClientById(clientId);
+            
+            if (clientDetails) {
+              setSelectedClient({
+                id: clientDetails.id ? parseInt(clientDetails.id) : 0,
+                name: clientDetails.nome || '',
+                fantasyName: clientDetails.fantasia || ''
+              });
+            } else {
+              // Fallback to mockClient if database fetch fails
+              toast.error("Não foi possível carregar os dados do cliente");
+            }
+          } catch (error) {
+            console.error("Error fetching client:", error);
+            toast.error("Erro ao buscar os dados do cliente");
+          }
+        } else if (location.state && location.state.clientName) {
+          // If only name is available (legacy support)
+          setSelectedClient({
+            id: location.state.clientId || 0,
+            name: location.state.clientName || '',
+            fantasyName: location.state.clientName || ''
+          });
+        }
+      } catch (error) {
+        console.error("Error in fetchClientData:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchClientData();
+  }, [location.state]);
   
   // Filter clients based on search query
   const handleSearchChange = useCallback((value: string) => {
@@ -161,7 +209,13 @@ const PlaceOrder = () => {
   };
   
   const handleGoBack = () => {
-    navigate('/clientes-lista');
+    // If we came from client details, go back there
+    if (location.state && location.state.clientId) {
+      navigate('/cliente-detalhes', { state: { clientId: location.state.clientId } });
+    } else {
+      // Default fallback
+      navigate('/clientes-lista');
+    }
   };
 
   const handleClientSearch = () => {
@@ -196,8 +250,14 @@ const PlaceOrder = () => {
       />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
-        <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
-        {selectedClient.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
+        {isLoading ? (
+          <div className="animate-pulse">Carregando dados do cliente...</div>
+        ) : (
+          <>
+            <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
+            {selectedClient.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
+          </>
+        )}
       </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
