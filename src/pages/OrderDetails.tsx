@@ -6,13 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
-import { ArrowLeft, Check, X, WifiOff } from 'lucide-react';
-import { OrderRepository } from '@/lib/sync';
-import { toast } from 'sonner';
+import { ArrowLeft, Check, X } from 'lucide-react';
 
 interface OrderItem {
   id: number;
-  productId: number | string;
+  productId: number;
   productName: string;
   quantity: number;
   price: number;
@@ -21,19 +19,17 @@ interface OrderItem {
 }
 
 interface Client {
-  id: number | string;
+  id: number;
   name: string;
-  fantasyName?: string;
 }
 
 const OrderDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orderItems, client, paymentMethod, offline } = location.state as {
+  const { orderItems, client, paymentMethod } = location.state as {
     orderItems: OrderItem[];
     client: Client;
     paymentMethod: string;
-    offline?: boolean;
   };
 
   const calculateTotal = () => {
@@ -45,40 +41,11 @@ const OrderDetails = () => {
     navigate(-1);
   };
 
-  const handleConfirm = async () => {
-    try {
-      // Save order to local database
-      const orderData = {
-        client_id: client.id.toString(),
-        sales_rep_id: "1", // Mock sales rep ID
-        order_date: new Date().toISOString(),
-        payment_method: paymentMethod,
-        total: parseFloat(calculateTotal()),
-        status: 'Pendente'
-      };
-      
-      const orderItems_ = orderItems.map(item => ({
-        product_id: item.productId.toString(),
-        product_name: item.productName,
-        quantity: item.quantity,
-        price: item.price,
-        code: item.code,
-        unit: item.unit
-      }));
-      
-      await OrderRepository.createOrder(orderData, orderItems_);
-      
-      if (offline) {
-        toast.success("Pedido salvo localmente. Será sincronizado quando online.");
-      } else {
-        toast.success("Pedido salvo com sucesso!");
-      }
-      
-      navigate('/clientes-lista');
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error("Erro ao salvar pedido: " + error.message);
-    }
+  const handleConfirm = () => {
+    // Save the order and redirect to clients list
+    // In a real app, this would send data to the server
+    alert("Pedido salvo com sucesso!");
+    navigate('/clientes-lista');
   };
 
   return (
@@ -89,16 +56,8 @@ const OrderDetails = () => {
         showBackButton
       />
       
-      <div className="bg-app-blue text-white px-3 py-1 text-xs flex justify-between items-center">
-        <div>
-          <span className="font-semibold">{client.id}</span> - {client.name}
-        </div>
-        
-        {offline && (
-          <div className="flex items-center text-orange-300 text-xs">
-            <WifiOff size={12} className="mr-1" /> Offline
-          </div>
-        )}
+      <div className="bg-app-blue text-white px-3 py-1 text-xs">
+        <span className="font-semibold">{client.id}</span> - {client.name}
       </div>
       
       <div className="flex flex-col flex-1 p-3 gap-3 overflow-hidden">

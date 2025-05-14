@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,22 +21,35 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { SyncStatus } from '@/lib/sync';
-import { 
-  ProductRepository, 
-  ClientRepository, 
-  OrderRepository,
-  useConnectionStore,
-  ConnectionStatus
-} from '@/lib/sync';
 
-// Temporary mock for sales rep ID
-const MOCK_SALES_REP_ID = "1";
-const MOCK_TOKEN = "mock-token";
+// Mock product data
+const mockProducts = [
+  { id: 1, name: 'VINHO COLONIAL BORDO SECO 2L', price: 65.00, code: 'P001', unitPrice: 10.83, minPrice: 55.00, stock: 0, unit: 'PT' },
+  { id: 2, name: 'CERVEJA LATA 350ML', price: 4.50, code: 'P002', unitPrice: 3.75, minPrice: 4.00, stock: 24, unit: 'UN' },
+  { id: 3, name: 'ÁGUA MINERAL COM GÁS 500ML', price: 2.50, code: 'P003', unitPrice: 1.95, minPrice: 2.20, stock: 36, unit: 'UN' },
+  { id: 4, name: 'REFRIGERANTE COLA 2L', price: 8.90, code: 'P004', unitPrice: 7.50, minPrice: 8.00, stock: 12, unit: 'UN' },
+  { id: 5, name: 'SUCO DE LARANJA 1L', price: 6.75, code: 'P005', unitPrice: 5.50, minPrice: 6.00, stock: 8, unit: 'UN' },
+];
+
+// Mock client
+const mockClient = {
+  id: 1223,
+  name: 'NILSO ALVES FERREIRA',
+  fantasyName: 'BAR DO NILSON',
+};
+
+// Mock clients data for search
+const mockClients = [
+  { id: 1223, name: 'NILSO ALVES FERREIRA', fantasyName: 'BAR DO NILSON' },
+  { id: 1224, name: 'MARIA SILVA SOUZA', fantasyName: 'MERCADO CENTRAL' },
+  { id: 1225, name: 'JOÃO CARLOS FERREIRA', fantasyName: 'RESTAURANTE BOM GOSTO' },
+  { id: 1226, name: 'ANTONIO JOSE SANTOS', fantasyName: 'LANCHONETE DELICIA' },
+  { id: 1227, name: 'CLARA OLIVEIRA ALMEIDA', fantasyName: 'SORVETERIA GELATO' },
+];
 
 interface OrderItem {
   id: number;
-  productId: number | string;
+  productId: number;
   productName: string;
   quantity: number;
   price: number;
@@ -44,105 +58,57 @@ interface OrderItem {
 }
 
 interface Client {
-  id: number | string;
+  id: number;
   name: string;
-  fantasyName?: string;
+  fantasyName: string;
 }
 
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [products, setProducts] = useState<ProductRepository.Product[]>([]);
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
-  const [currentProduct, setCurrentProduct] = useState<ProductRepository.Product | null>(null);
+  const [currentProduct, setCurrentProduct] = useState(mockProducts[0]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [quantity, setQuantity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client>(mockClient);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredClients, setFilteredClients] = useState<ClientRepository.Client[]>([]);
-  const connectionStatus = useConnectionStore(state => state.status);
-  
-  // Load products and initial client
-  useEffect(() => {
-    loadProducts();
-    loadClients();
-  }, []);
-  
-  // Load products from local database
-  const loadProducts = async () => {
-    try {
-      const localProducts = await ProductRepository.getAllProducts();
-      setProducts(localProducts);
-      if (localProducts.length > 0) {
-        setCurrentProduct(localProducts[0]);
-        setCurrentProductIndex(0);
-      }
-    } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Erro ao carregar produtos');
-    }
-  };
-  
-  // Load clients from local database
-  const loadClients = async () => {
-    try {
-      const localClients = await ClientRepository.getAllClients();
-      setFilteredClients(localClients);
-      
-      // If client was passed through navigation, use it
-      const clientFromNavigation = location.state?.client;
-      if (clientFromNavigation) {
-        setSelectedClient(clientFromNavigation);
-      } else if (localClients.length > 0) {
-        // Otherwise use the first client in the list
-        setSelectedClient({
-          id: localClients[0].id,
-          name: localClients[0].name,
-          fantasyName: localClients[0].fantasy_name
-        });
-      }
-    } catch (error) {
-      console.error('Error loading clients:', error);
-      toast.error('Erro ao carregar clientes');
-    }
-  };
+  const [filteredClients, setFilteredClients] = useState<Client[]>(mockClients);
   
   // Filter clients based on search query
-  const handleSearchChange = useCallback(async (value: string) => {
+  const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     
-    try {
-      if (!value.trim()) {
-        const allClients = await ClientRepository.getAllClients();
-        setFilteredClients(allClients);
-        return;
-      }
-      
-      const results = await ClientRepository.searchClients(value);
-      setFilteredClients(results);
-    } catch (error) {
-      console.error('Error searching clients:', error);
+    if (!value.trim()) {
+      setFilteredClients(mockClients);
+      return;
     }
+    
+    const lowercasedValue = value.toLowerCase();
+    const filtered = mockClients.filter(
+      client => 
+        client.name.toLowerCase().includes(lowercasedValue) || 
+        (client.fantasyName && client.fantasyName.toLowerCase().includes(lowercasedValue))
+    );
+    
+    setFilteredClients(filtered);
   }, []);
   
   const handleProductChange = (direction: 'prev' | 'next' | 'first' | 'last') => {
-    if (!products.length) return;
+    const currentIndex = mockProducts.findIndex(p => p.id === currentProduct.id);
     
     let newIndex;
     if (direction === 'prev') {
-      newIndex = currentProductIndex > 0 ? currentProductIndex - 1 : currentProductIndex;
+      newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
     } else if (direction === 'next') {
-      newIndex = currentProductIndex < products.length - 1 ? currentProductIndex + 1 : currentProductIndex;
+      newIndex = currentIndex < mockProducts.length - 1 ? currentIndex + 1 : currentIndex;
     } else if (direction === 'first') {
       newIndex = 0;
     } else if (direction === 'last') {
-      newIndex = products.length - 1;
+      newIndex = mockProducts.length - 1;
     }
     
-    setCurrentProductIndex(newIndex);
-    setCurrentProduct(products[newIndex]);
+    setCurrentProduct(mockProducts[newIndex]);
   };
   
   const handleAddItem = () => {
@@ -191,20 +157,7 @@ const PlaceOrder = () => {
       toast.error("Adicione pelo menos um item ao pedido");
       return;
     }
-    
-    if (!selectedClient) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-    
-    navigate('/detalhes-pedido', { 
-      state: { 
-        orderItems, 
-        client: selectedClient, 
-        paymentMethod,
-        offline: connectionStatus !== ConnectionStatus.ONLINE
-      }
-    });
+    navigate('/detalhes-pedido', { state: { orderItems, client: selectedClient, paymentMethod } });
   };
   
   const handleGoBack = () => {
@@ -213,96 +166,26 @@ const PlaceOrder = () => {
 
   const handleClientSearch = () => {
     setSearchQuery('');
-    loadClients(); // Reload all clients when opening search
+    setFilteredClients(mockClients);
     setSearchOpen(true);
   };
 
-  const handleSelectClient = (client: ClientRepository.Client) => {
-    setSelectedClient({
-      id: client.id,
-      name: client.name,
-      fantasyName: client.fantasy_name
-    });
+  const handleSelectClient = (client: Client) => {
+    setSelectedClient(client);
     setSearchOpen(false);
     toast.success(`Cliente ${client.name} selecionado`);
   };
 
-  const handleFinishOrder = async () => {
+  const handleFinishOrder = () => {
     if (orderItems.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido");
       return;
     }
     
-    if (!selectedClient) {
-      toast.error("Selecione um cliente");
-      return;
-    }
-    
-    try {
-      // Save order to local database
-      const orderData = {
-        client_id: selectedClient.id.toString(),
-        sales_rep_id: MOCK_SALES_REP_ID,
-        order_date: new Date().toISOString(),
-        payment_method: paymentMethod,
-        total: parseFloat(calculateTotal()),
-        status: 'Pendente'
-      };
-      
-      const orderItems_ = orderItems.map(item => ({
-        product_id: item.productId.toString(),
-        product_name: item.productName,
-        quantity: item.quantity,
-        price: item.price,
-        code: item.code,
-        unit: item.unit
-      }));
-      
-      await OrderRepository.createOrder(orderData, orderItems_);
-      
-      toast.success("Pedido finalizado com sucesso!");
-      
-      // If online, attempt to sync immediately
-      if (connectionStatus === ConnectionStatus.ONLINE) {
-        try {
-          const result = await OrderRepository.getUnsyncedOrders();
-          if (result.length > 0) {
-            toast.info("Sincronizando pedido...");
-            // This would trigger a sync in a real app
-          }
-        } catch (error) {
-          console.error('Error checking unsynced orders:', error);
-        }
-      } else {
-        toast.info("Pedido salvo localmente e será sincronizado quando online");
-      }
-      
-      navigate('/clientes-lista');
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error("Erro ao finalizar pedido: " + error.message);
-    }
+    // Here you would typically save the order to a database
+    toast.success("Pedido finalizado com sucesso!");
+    navigate('/clientes-lista');
   };
-  
-  // Show a message if no products or clients are loaded
-  if (!currentProduct) {
-    return (
-      <div className="h-screen flex flex-col bg-gray-50">
-        <Header 
-          title="Digitação de Pedidos"
-          backgroundColor="blue"
-          showBackButton
-        />
-        <div className="flex-1 flex flex-col items-center justify-center p-4">
-          <p className="text-gray-500 mb-4">Carregando produtos...</p>
-          <Button variant="outline" onClick={loadProducts}>
-            <RefreshCcw size={16} className="mr-2" />
-            Recarregar
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -310,27 +193,11 @@ const PlaceOrder = () => {
         title="Digitação de Pedidos"
         backgroundColor="blue"
         showBackButton
-        rightContent={
-          <SyncStatus 
-            token={MOCK_TOKEN}
-            salesRepId={MOCK_SALES_REP_ID}
-          />
-        }
       />
       
-      <div className="bg-app-blue text-white px-3 py-1 text-xs flex justify-between items-center">
-        <div>
-          <span className="font-semibold">{selectedClient?.id}</span> - {selectedClient?.name}
-          {selectedClient?.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
-        </div>
-        
-        <div className={`text-xs font-medium ${
-          connectionStatus === ConnectionStatus.ONLINE 
-            ? 'text-green-300' 
-            : 'text-orange-300'
-        }`}>
-          {connectionStatus === ConnectionStatus.ONLINE ? 'Online' : 'Offline'}
-        </div>
+      <div className="bg-app-blue text-white px-3 py-1 text-xs">
+        <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
+        {selectedClient.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
       </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
@@ -355,7 +222,9 @@ const PlaceOrder = () => {
                         <SelectValue placeholder="Unidade" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={currentProduct.unit}>{currentProduct.unit}</SelectItem>
+                        <SelectItem value="PT">PT - {currentProduct.unit}</SelectItem>
+                        <SelectItem value="CX">CX - Caixa</SelectItem>
+                        <SelectItem value="UN">UN - Unidade</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -461,7 +330,7 @@ const PlaceOrder = () => {
                     <div className="grid grid-cols-2 gap-2 text-sm text-gray-800">
                       <div>
                         <span className="text-gray-600 font-medium">P. unit:</span>
-                        <span className="ml-1">{currentProduct.unit_price.toFixed(2)}</span>
+                        <span className="ml-1">{currentProduct.unitPrice.toFixed(2)}</span>
                       </div>
                       <div>
                         <span className="text-gray-600 font-medium">Estq:</span>
@@ -469,7 +338,7 @@ const PlaceOrder = () => {
                       </div>
                       <div>
                         <span className="text-gray-600 font-medium">P. mín:</span>
-                        <span className="ml-1">{currentProduct.min_price.toFixed(2)}</span>
+                        <span className="ml-1">{currentProduct.minPrice.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -587,7 +456,7 @@ const PlaceOrder = () => {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{client.name}</span>
-                      <span className="text-sm text-gray-500">{client.fantasy_name}</span>
+                      <span className="text-sm text-gray-500">{client.fantasyName}</span>
                     </div>
                   </CommandItem>
                 ))}
