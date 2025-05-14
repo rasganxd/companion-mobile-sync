@@ -63,7 +63,8 @@ const ClientsList = () => {
   };
   
   const handleGoBack = () => {
-    navigate('/');
+    // Changed to return to the routes page instead of home
+    navigate('/rotas');
   };
 
   return (
