@@ -90,7 +90,7 @@ const NegativeSale = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
         title="Negativar Venda" 
-        backgroundColor="red"
+        backgroundColor="orange"
         showBackButton
       />
       
@@ -162,7 +162,7 @@ const NegativeSale = () => {
         </AppButton>
         
         <AppButton 
-          variant="red" 
+          variant="orange" 
           onClick={handleConfirm}
           disabled={isLoading || !reason}
           className="flex items-center justify-center"
@@ -176,3 +176,4 @@ const NegativeSale = () => {
 };
 
 export default NegativeSale;
+
