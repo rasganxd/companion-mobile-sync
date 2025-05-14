@@ -58,13 +58,31 @@ const ClientsList = () => {
     loadClients();
   }, [day]);
   
-  const handleClientSelect = (clientId: string) => {
-    navigate('/cliente-detalhes', { state: { clientId } });
+  const handleClientSelect = (client: Client) => {
+    navigate('/cliente-detalhes', { state: { clientId: client.id } });
   };
   
   const handleGoBack = () => {
     // Changed to return to the routes page instead of home
     navigate('/rotas');
+  };
+  
+  // Helper to determine status color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'ativo':
+        return 'bg-green-100 text-green-800';
+      case 'positivado':
+        return 'bg-green-100 text-green-800';
+      case 'negativado':
+        return 'bg-red-100 text-red-800';
+      case 'pendente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'inativo':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
   };
 
   return (
@@ -83,7 +101,7 @@ const ClientsList = () => {
                 <div 
                   key={client.id}
                   className="bg-white rounded-lg shadow p-3 flex items-center gap-3 cursor-pointer"
-                  onClick={() => handleClientSelect(client.id)}
+                  onClick={() => handleClientSelect(client)}
                 >
                   <div className="bg-blue-100 p-2 rounded-full">
                     <User className="h-5 w-5 text-app-blue" />
@@ -91,11 +109,7 @@ const ClientsList = () => {
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div className="font-medium">{client.fantasia}</div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        client.status === 'Ativo' ? 'bg-green-100 text-green-800' : 
-                        client.status === 'Pendente' ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(client.status)}`}>
                         {client.status}
                       </span>
                     </div>

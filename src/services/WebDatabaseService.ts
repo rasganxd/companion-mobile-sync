@@ -1,4 +1,3 @@
-
 class WebDatabaseService {
   private static instance: WebDatabaseService;
   private storage: Record<string, any[]> = {
@@ -752,7 +751,30 @@ class WebDatabaseService {
     this.saveToStorage();
     return Promise.resolve();
   }
-
+  
+  // New method to save an order
+  async saveOrder(order: any): Promise<void> {
+    this.storage.orders.push(order);
+    this.saveToStorage();
+    return Promise.resolve();
+  }
+  
+  // New method to update client status
+  async updateClientStatus(clientId: string, status: string): Promise<void> {
+    const clientIndex = this.storage.clients.findIndex(client => client.id === clientId);
+    if (clientIndex !== -1) {
+      this.storage.clients[clientIndex].status = status;
+      this.saveToStorage();
+    }
+    return Promise.resolve();
+  }
+  
+  // New method to get client by ID
+  async getClientById(clientId: string): Promise<any | null> {
+    const client = this.storage.clients.find(client => client.id === clientId);
+    return Promise.resolve(client || null);
+  }
+  
   async closeDatabase(): Promise<void> {
     this.saveToStorage();
     return Promise.resolve();

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { PhoneCall, MapPin, FileText, User, Building2, MapPinned, Navigation, Info, ArrowLeft } from 'lucide-react';
@@ -80,9 +79,14 @@ const ClientDetails = () => {
   }, [clientId, navigate]);
 
   const handleInitiate = () => {
-    // Navigate to the activities list with client name
+    // Navigate to the activities list with client name and id
     if (client) {
-      navigate('/atividades', { state: { clientName: client.fantasia } });
+      navigate('/atividades', { 
+        state: { 
+          clientName: client.fantasia,
+          clientId: client.id
+        } 
+      });
     } else {
       // Fallback
       navigate('/atividades');
@@ -129,6 +133,23 @@ const ClientDetails = () => {
     );
   }
 
+  // Helper to get status color
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'ativo':
+      case 'positivado':
+        return 'text-green-600';
+      case 'negativado':
+        return 'text-red-600';
+      case 'pendente':
+        return 'text-yellow-600';
+      case 'inativo':
+        return 'text-gray-600';
+      default:
+        return 'text-app-blue';
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Detalhes do Cliente" showBackButton backgroundColor="blue" />
@@ -141,7 +162,9 @@ const ClientDetails = () => {
                 <div className="bg-white text-app-blue p-1 rounded-lg font-bold text-sm">
                   {client.codigo}
                 </div>
-                <span className="text-white text-sm">{client.status}</span>
+                <span className={`text-white text-sm ${getStatusColor(client.status)}`}>
+                  {client.status}
+                </span>
               </div>
               <FileText size={20} className="text-white" />
             </div>

@@ -6,8 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface OrderItem {
   id: number;
@@ -20,7 +23,7 @@ interface OrderItem {
 }
 
 interface Client {
-  id: number;
+  id: string;
   name: string;
 }
 
@@ -28,11 +31,13 @@ const OrderDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [redirecting, setRedirecting] = useState(false);
+  const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   // Create default state values
   const defaultState = {
     orderItems: [] as OrderItem[],
-    client: { id: 0, name: 'Cliente não selecionado' } as Client,
+    client: { id: '0', name: 'Cliente não selecionado' } as Client,
     paymentMethod: 'Não definido'
   };
   
@@ -78,11 +83,37 @@ const OrderDetails = () => {
     navigate(-1);
   };
 
-  const handleConfirm = () => {
-    // Save the order and redirect to clients list
-    // In a real app, this would send data to the server
-    toast.success("Pedido salvo com sucesso!");
-    navigate('/clientes-lista');
+  const handleConfirm = async () => {
+    try {
+      setIsLoading(true);
+      const db = getDatabaseAdapter();
+      
+      // Save the order
+      const order = {
+        id: Date.now().toString(),
+        client_id: client.id,
+        date: new Date().toISOString(),
+        payment_method: paymentMethod,
+        total: parseFloat(calculateTotal()),
+        items: orderItems,
+        status: "positivado",
+        message: message,
+        sync_status: "pending"
+      };
+      
+      await db.saveOrder(order);
+      
+      // Update client status to "positivado"
+      await db.updateClientStatus(client.id, "Ativo");
+      
+      toast.success("Pedido salvo com sucesso!");
+      navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
+    } catch (error) {
+      console.error("Error saving order:", error);
+      toast.error("Erro ao salvar pedido");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -168,11 +199,31 @@ const OrderDetails = () => {
           </CardContent>
         </Card>
         
+        <Card>
+          <CardContent className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <MessageSquare size={16} className="text-app-blue" />
+                <Label htmlFor="message" className="text-sm font-medium">Mensagem (opcional):</Label>
+              </div>
+              <Textarea 
+                id="message" 
+                placeholder="Adicione uma mensagem ao pedido..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
+        
         <div className="grid grid-cols-2 gap-3">
           <AppButton 
             variant="gray" 
             className="flex items-center justify-center h-10"
             onClick={handleCancel}
+            disabled={isLoading}
           >
             <X size={16} className="mr-2" />
             Cancelar
@@ -182,6 +233,7 @@ const OrderDetails = () => {
             variant="blue" 
             className="flex items-center justify-center h-10"
             onClick={handleConfirm}
+            disabled={isLoading}
           >
             <Check size={16} className="mr-2" />
             Confirmar

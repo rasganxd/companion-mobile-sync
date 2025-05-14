@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -13,6 +14,8 @@ import LastPurchases from "./pages/LastPurchases";
 import VisitRoutes from "./pages/VisitRoutes";
 import PlaceOrder from "./pages/PlaceOrder";
 import OrderDetails from "./pages/OrderDetails";
+import NegativeSale from "./pages/NegativeSale";
+import MessagePage from "./pages/MessagePage";
 import NotFound from "./pages/NotFound";
 import SyncSettings from "./pages/SyncSettings";
 import { getDatabaseAdapter } from "./services/DatabaseAdapter";
@@ -89,10 +92,10 @@ const App = () => {
             <Route path="/detalhes-pedido" element={<OrderDetails />} />
             <Route path="/sincronizacao" element={<SyncSettings />} />
             <Route path="/atividades" element={<Index />} />
+            <Route path="/negativar-venda" element={<NegativeSale />} />
+            <Route path="/mensagem" element={<MessagePage />} />
             
             {/* Rotas temporárias que redirecionam para a página principal */}
-            <Route path="/negativar-venda" element={<Navigate to="/" />} />
-            <Route path="/mensagem" element={<Navigate to="/" />} />
             <Route path="/capturar-posicao" element={<Navigate to="/" />} />
             
             {/* Rota de fallback para páginas não encontradas */}
