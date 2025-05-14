@@ -5,7 +5,8 @@ class WebDatabaseService {
     clients: [],
     orders: [],
     visit_routes: [],
-    sync_log: []
+    sync_log: [],
+    products: [] // Adding products array
   };
 
   private constructor() {
@@ -122,27 +123,123 @@ class WebDatabaseService {
         proximaVisita: "10/06/2025",
         restricao: "Bloqueado por inadimplência",
         sync_status: "synced"
+      },
+      // Novos clientes adicionados
+      {
+        id: "6",
+        codigo: "106",
+        status: "Ativo",
+        nome: "Carla Regina Monteiro",
+        fantasia: "SUPERMERCADO BOM PREÇO",
+        endereco: "Av. Brasil, 789",
+        comprador: "Carla",
+        bairro: "São Cristóvão",
+        cidade: "Chapecó",
+        telefone: ["(49)99765-4321", "(49)3322-5678", ""],
+        tipoFJ: "J",
+        diasMaxPrazo: "30",
+        canal: "001-SUPERMERCAD",
+        rotatividade: "Semanal",
+        proximaVisita: "22/05/2025",
+        restricao: "Livre",
+        sync_status: "synced"
+      },
+      {
+        id: "7",
+        codigo: "107",
+        status: "Ativo",
+        nome: "Paulo Roberto Silveira",
+        fantasia: "MERCADINHO DO PAULO",
+        endereco: "Rua XV de Novembro, 1523",
+        comprador: "Paulo",
+        bairro: "Centro",
+        cidade: "Xaxim",
+        telefone: ["(49)99876-1234", "", ""],
+        tipoFJ: "J",
+        diasMaxPrazo: "15",
+        canal: "001-SUPERMERCAD",
+        rotatividade: "Quinzenal",
+        proximaVisita: "28/05/2025",
+        restricao: "Livre",
+        sync_status: "synced"
+      },
+      {
+        id: "8",
+        codigo: "108",
+        status: "Pendente",
+        nome: "Mariana Costa e Silva",
+        fantasia: "PANIFICADORA SABOR DO PÃO",
+        endereco: "Av. Getúlio Vargas, 456",
+        comprador: "Mariana",
+        bairro: "Efapi",
+        cidade: "Chapecó",
+        telefone: ["(49)99832-9876", "", ""],
+        tipoFJ: "J",
+        diasMaxPrazo: "7",
+        canal: "003-PADARIAS",
+        rotatividade: "Semanal",
+        proximaVisita: "17/05/2025",
+        restricao: "Limite de crédito",
+        sync_status: "pending"
+      },
+      {
+        id: "9",
+        codigo: "109",
+        status: "Ativo",
+        nome: "Luiz Fernando Machado",
+        fantasia: "CONVENIÊNCIA 24 HORAS",
+        endereco: "Rua Pedro Álvares Cabral, 89",
+        comprador: "Luiz",
+        bairro: "Bela Vista",
+        cidade: "Chapecó",
+        telefone: ["(49)99867-5555", "(49)3323-7788", ""],
+        tipoFJ: "J",
+        diasMaxPrazo: "10",
+        canal: "002-CONVENIENC",
+        rotatividade: "Semanal",
+        proximaVisita: "19/05/2025",
+        restricao: "Livre",
+        sync_status: "synced"
+      },
+      {
+        id: "10",
+        codigo: "110",
+        status: "Ativo",
+        nome: "Beatriz Santos Oliveira",
+        fantasia: "RESTAURANTE SABOR CASEIRO",
+        endereco: "Av. Fernando Machado, 1234",
+        comprador: "Beatriz",
+        bairro: "Centro",
+        cidade: "Chapecó",
+        telefone: ["(49)99898-1111", "(49)3325-2222", ""],
+        tipoFJ: "J",
+        diasMaxPrazo: "20",
+        canal: "004-RESTAURANTE",
+        rotatividade: "Quinzenal",
+        proximaVisita: "24/05/2025",
+        restricao: "Livre",
+        sync_status: "synced"
       }
     ];
 
-    // Sample visit routes
+    // Sample visit routes - updated to include new clients
     this.storage.visit_routes = [
       {
         id: "1",
         day: "Segunda",
-        clients: ["1", "3"],
+        clients: ["1", "3", "6", "9"],
         sync_status: "synced"
       },
       {
         id: "2",
         day: "Terça",
-        clients: ["2"],
+        clients: ["2", "7", "10"],
         sync_status: "synced"
       },
       {
         id: "3",
         day: "Quarta",
-        clients: ["4"],
+        clients: ["4", "8"],
         sync_status: "synced"
       },
       {
@@ -154,12 +251,209 @@ class WebDatabaseService {
       {
         id: "5",
         day: "Sexta",
-        clients: ["1", "2"],
+        clients: ["1", "2", "6"],
         sync_status: "synced"
       }
     ];
 
-    // Sample orders
+    // Sample products data
+    this.storage.products = [
+      {
+        id: 101,
+        code: "REF001",
+        name: "Refrigerante Cola 2L",
+        price: 8.50,
+        unit: "Un",
+        category: "Bebidas",
+        stock: 150,
+        min_stock: 20,
+        supplier: "Bebidas Brasil",
+        sync_status: "synced"
+      },
+      {
+        id: 102,
+        code: "BIS001",
+        name: "Biscoito Cream Cracker 400g",
+        price: 5.30,
+        unit: "Pct",
+        category: "Biscoitos",
+        stock: 80,
+        min_stock: 15,
+        supplier: "Alimentos Nacional",
+        sync_status: "synced"
+      },
+      {
+        id: 103,
+        code: "LAC001",
+        name: "Leite Integral 1L",
+        price: 4.75,
+        unit: "Un",
+        category: "Laticínios",
+        stock: 120,
+        min_stock: 30,
+        supplier: "Laticínios Sul",
+        sync_status: "synced"
+      },
+      {
+        id: 104,
+        code: "CER001",
+        name: "Arroz Tipo 1 5kg",
+        price: 22.90,
+        unit: "Pct",
+        category: "Cereais",
+        stock: 75,
+        min_stock: 10,
+        supplier: "Cereais Brasil",
+        sync_status: "synced"
+      },
+      {
+        id: 105,
+        code: "CER002",
+        name: "Feijão Preto 1kg",
+        price: 8.75,
+        unit: "Pct",
+        category: "Cereais",
+        stock: 60,
+        min_stock: 15,
+        supplier: "Cereais Brasil",
+        sync_status: "synced"
+      },
+      {
+        id: 106,
+        code: "OLE001",
+        name: "Óleo de Soja 900ml",
+        price: 9.50,
+        unit: "Un",
+        category: "Óleos",
+        stock: 90,
+        min_stock: 20,
+        supplier: "Alimentos Nacional",
+        sync_status: "synced"
+      },
+      {
+        id: 107,
+        code: "LIM001",
+        name: "Detergente Líquido 500ml",
+        price: 2.90,
+        unit: "Un",
+        category: "Limpeza",
+        stock: 100,
+        min_stock: 25,
+        supplier: "Limpeza Total",
+        sync_status: "synced"
+      },
+      {
+        id: 108,
+        code: "LIM002",
+        name: "Sabão em Pó 1kg",
+        price: 15.50,
+        unit: "Pct",
+        category: "Limpeza",
+        stock: 70,
+        min_stock: 15,
+        supplier: "Limpeza Total",
+        sync_status: "synced"
+      },
+      // Novos produtos adicionados
+      {
+        id: 109,
+        code: "BEB001",
+        name: "Água Mineral 500ml",
+        price: 2.50,
+        unit: "Un",
+        category: "Bebidas",
+        stock: 200,
+        min_stock: 40,
+        supplier: "Bebidas Brasil",
+        sync_status: "synced"
+      },
+      {
+        id: 110,
+        code: "BEB002",
+        name: "Suco de Laranja 1L",
+        price: 7.90,
+        unit: "Un",
+        category: "Bebidas",
+        stock: 85,
+        min_stock: 20,
+        supplier: "Sucos Naturais",
+        sync_status: "synced"
+      },
+      {
+        id: 111,
+        code: "LAT001",
+        name: "Iogurte Natural 500g",
+        price: 6.50,
+        unit: "Un",
+        category: "Laticínios",
+        stock: 60,
+        min_stock: 15,
+        supplier: "Laticínios Sul",
+        sync_status: "synced"
+      },
+      {
+        id: 112,
+        code: "LAT002",
+        name: "Queijo Mussarela 500g",
+        price: 18.90,
+        unit: "Un",
+        category: "Laticínios",
+        stock: 45,
+        min_stock: 10,
+        supplier: "Laticínios Sul",
+        sync_status: "pending"
+      },
+      {
+        id: 113,
+        code: "CAR001",
+        name: "Linguiça Calabresa 500g",
+        price: 15.75,
+        unit: "Pct",
+        category: "Carnes",
+        stock: 40,
+        min_stock: 8,
+        supplier: "Frigorífico Central",
+        sync_status: "synced"
+      },
+      {
+        id: 114,
+        code: "CAR002",
+        name: "Peito de Frango 1kg",
+        price: 16.90,
+        unit: "Kg",
+        category: "Carnes",
+        stock: 35,
+        min_stock: 10,
+        supplier: "Frigorífico Central",
+        sync_status: "synced"
+      },
+      {
+        id: 115,
+        code: "HOR001",
+        name: "Batata 1kg",
+        price: 5.99,
+        unit: "Kg",
+        category: "Hortifruti",
+        stock: 80,
+        min_stock: 15,
+        supplier: "Hortifruti Verde",
+        sync_status: "synced"
+      },
+      {
+        id: 116,
+        code: "HOR002",
+        name: "Tomate 1kg",
+        price: 7.50,
+        unit: "Kg",
+        category: "Hortifruti",
+        stock: 60,
+        min_stock: 10,
+        supplier: "Hortifruti Verde",
+        sync_status: "pending"
+      }
+    ];
+
+    // Sample orders - updated and added more orders
     this.storage.orders = [
       {
         id: "1",
@@ -262,6 +556,119 @@ class WebDatabaseService {
           }
         ],
         sync_status: "pending"
+      },
+      // Novos pedidos
+      {
+        id: "4",
+        client_id: "3",
+        date: "2025-05-11T09:20:00.000Z",
+        payment_method: "À Vista",
+        total: 175.25,
+        items: [
+          {
+            id: 1,
+            productId: 109,
+            productName: "Água Mineral 500ml",
+            quantity: 30,
+            price: 2.50,
+            code: "BEB001",
+            unit: "Un"
+          },
+          {
+            id: 2,
+            productId: 110,
+            productName: "Suco de Laranja 1L",
+            quantity: 10,
+            price: 7.90,
+            code: "BEB002",
+            unit: "Un"
+          }
+        ],
+        sync_status: "synced"
+      },
+      {
+        id: "5",
+        client_id: "4",
+        date: "2025-05-08T11:30:00.000Z",
+        payment_method: "7 dias",
+        total: 282.50,
+        items: [
+          {
+            id: 1,
+            productId: 111,
+            productName: "Iogurte Natural 500g",
+            quantity: 15,
+            price: 6.50,
+            code: "LAT001",
+            unit: "Un"
+          },
+          {
+            id: 2,
+            productId: 112,
+            productName: "Queijo Mussarela 500g",
+            quantity: 10,
+            price: 18.90,
+            code: "LAT002",
+            unit: "Un"
+          }
+        ],
+        sync_status: "synced"
+      },
+      {
+        id: "6",
+        client_id: "6",
+        date: "2025-05-09T13:45:00.000Z",
+        payment_method: "15 dias",
+        total: 471.75,
+        items: [
+          {
+            id: 1,
+            productId: 113,
+            productName: "Linguiça Calabresa 500g",
+            quantity: 12,
+            price: 15.75,
+            code: "CAR001",
+            unit: "Pct"
+          },
+          {
+            id: 2,
+            productId: 114,
+            productName: "Peito de Frango 1kg",
+            quantity: 15,
+            price: 16.90,
+            code: "CAR002",
+            unit: "Kg"
+          }
+        ],
+        sync_status: "pending"
+      },
+      {
+        id: "7",
+        client_id: "7",
+        date: "2025-05-05T10:00:00.000Z",
+        payment_method: "À Vista",
+        total: 194.70,
+        items: [
+          {
+            id: 1,
+            productId: 115,
+            productName: "Batata 1kg",
+            quantity: 20,
+            price: 5.99,
+            code: "HOR001",
+            unit: "Kg"
+          },
+          {
+            id: 2,
+            productId: 116,
+            productName: "Tomate 1kg",
+            quantity: 12,
+            price: 7.50,
+            code: "HOR002",
+            unit: "Kg"
+          }
+        ],
+        sync_status: "synced"
       }
     ];
 
@@ -304,6 +711,10 @@ class WebDatabaseService {
       );
     }
     return Promise.resolve([...this.storage.orders]);
+  }
+
+  async getProducts(): Promise<any[]> {
+    return Promise.resolve([...this.storage.products]);
   }
 
   async getPendingSyncItems(table: string): Promise<any[]> {
