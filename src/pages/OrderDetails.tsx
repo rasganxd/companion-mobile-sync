@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
 import { ArrowLeft, Check, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface OrderItem {
   id: number;
@@ -26,11 +27,23 @@ interface Client {
 const OrderDetails = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orderItems, client, paymentMethod } = location.state as {
-    orderItems: OrderItem[];
-    client: Client;
-    paymentMethod: string;
+  
+  // Check if location.state exists, otherwise use default values
+  const orderState = location.state || { 
+    orderItems: [], 
+    client: { id: 0, name: 'Cliente não selecionado' },
+    paymentMethod: 'Não definido'
   };
+  
+  const { orderItems, client, paymentMethod } = orderState;
+  
+  // If there's no state, redirect to the order creation page
+  useEffect(() => {
+    if (!location.state) {
+      toast.error("Informações do pedido não encontradas");
+      navigate('/fazer-pedidos');
+    }
+  }, [location.state, navigate]);
 
   const calculateTotal = () => {
     return orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2);
@@ -44,7 +57,7 @@ const OrderDetails = () => {
   const handleConfirm = () => {
     // Save the order and redirect to clients list
     // In a real app, this would send data to the server
-    alert("Pedido salvo com sucesso!");
+    toast.success("Pedido salvo com sucesso!");
     navigate('/clientes-lista');
   };
 
@@ -111,6 +124,13 @@ const OrderDetails = () => {
                       <TableCell className="py-2 text-xs">R$ {(item.price * item.quantity).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
+                  {orderItems.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                        Nenhum item no pedido
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </ScrollArea>
