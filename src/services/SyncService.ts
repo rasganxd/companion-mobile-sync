@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import DatabaseService from './DatabaseService';
@@ -25,7 +24,7 @@ class SyncService {
   private pendingUploads: number = 0;
   private pendingDownloads: number = 0;
   private connected: boolean = false;
-  private autoSyncTimer: number | null = null;
+  private autoSyncTimer: ReturnType<typeof setInterval> | null = null;
 
   private onProgressCallback: ((progress: SyncProgress) => void) | null = null;
   private onStatusChangeCallback: ((status: SyncStatus) => void) | null = null;
