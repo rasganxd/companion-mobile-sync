@@ -1,5 +1,7 @@
 
 import WebDatabaseService from './WebDatabaseService';
+import SQLiteDatabaseService from './SQLiteDatabaseService';
+import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
   initDatabase(): Promise<void>;
@@ -18,8 +20,16 @@ interface DatabaseAdapter {
 
 // This function will determine which database implementation to use
 export function getDatabaseAdapter(): DatabaseAdapter {
-  // For now, we're only supporting web
-  return WebDatabaseService.getInstance();
+  // Check if running on native platform
+  const isNative = Capacitor.isNativePlatform();
+  
+  if (isNative) {
+    // Use SQLite implementation on native platforms
+    return SQLiteDatabaseService.getInstance();
+  } else {
+    // Use web implementation for web platforms
+    return WebDatabaseService.getInstance();
+  }
 }
 
 export default DatabaseAdapter;

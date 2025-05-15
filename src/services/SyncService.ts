@@ -1,7 +1,9 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
+import { Capacitor } from '@capacitor/core';
+import { Network } from '@capacitor/network';
+import { Preferences } from '@capacitor/preferences';
 
 export interface SyncProgress {
   total: number;
@@ -31,8 +33,13 @@ class SyncService {
   private onStatusChangeCallback: ((status: SyncStatus) => void) | null = null;
   
   private constructor() {
+    this.initializeServices();
+  }
+
+  private async initializeServices() {
+    await this.loadSettings();
+    this.setupNetworkListeners();
     this.checkConnection();
-    this.loadSettings();
   }
 
   static getInstance(): SyncService {
@@ -43,9 +50,34 @@ class SyncService {
   }
 
   private async loadSettings(): Promise<void> {
-    // In a real app, load from localStorage or preferences
-    // For now we just use defaults
-    this.setupAutoSync();
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Load settings from Preferences on native platforms
+        const settings = await Preferences.get({ key: 'sync_settings' });
+        if (settings.value) {
+          this.syncSettings = JSON.parse(settings.value);
+        }
+      } else {
+        // Load settings from localStorage on web
+        const savedSettings = localStorage.getItem('sync_settings');
+        if (savedSettings) {
+          this.syncSettings = JSON.parse(savedSettings);
+        }
+      }
+      this.setupAutoSync();
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  }
+
+  private setupNetworkListeners(): void {
+    if (Capacitor.isNativePlatform()) {
+      // Listen for network status changes on native platforms
+      Network.addListener('networkStatusChange', status => {
+        this.connected = status.connected;
+        this.notifyStatusChange();
+      });
+    }
   }
 
   private setupAutoSync(): void {
@@ -56,12 +88,20 @@ class SyncService {
 
     if (this.syncSettings.autoSync && this.syncSettings.syncEnabled) {
       const interval = this.syncSettings.syncInterval * 60 * 1000;
-      this.autoSyncTimer = setInterval(() => {
+      this.autoSyncTimer = setInterval(async () => {
         if (this.connected && !this.syncInProgress) {
           if (this.syncSettings.syncOnWifiOnly) {
-            // Here we would check if we're on WiFi
-            // For demo purposes, we assume we are
-            this.sync();
+            // Check if we're on WiFi when on native platforms
+            if (Capacitor.isNativePlatform()) {
+              const networkStatus = await Network.getStatus();
+              const isWifi = networkStatus.connectionType === 'wifi';
+              if (isWifi) {
+                this.sync();
+              }
+            } else {
+              // For web, we can't reliably check connection type
+              this.sync();
+            }
           } else {
             this.sync();
           }
@@ -72,8 +112,15 @@ class SyncService {
 
   private async checkConnection(): Promise<void> {
     try {
-      const response = await fetch(`${this.apiUrl}/ping`);
-      this.connected = response.ok;
+      if (Capacitor.isNativePlatform()) {
+        // Use Network API on native platforms
+        const status = await Network.getStatus();
+        this.connected = status.connected;
+      } else {
+        // Use fetch for web
+        const response = await fetch(`${this.apiUrl}/ping`);
+        this.connected = response.ok;
+      }
     } catch (error) {
       this.connected = false;
     }
@@ -132,7 +179,20 @@ class SyncService {
   async updateSyncSettings(settings: Partial<SyncSettings>): Promise<void> {
     this.syncSettings = { ...this.syncSettings, ...settings };
     this.setupAutoSync();
-    // In a real app, save to localStorage or preferences
+    
+    try {
+      // Save settings based on platform
+      if (Capacitor.isNativePlatform()) {
+        await Preferences.set({
+          key: 'sync_settings',
+          value: JSON.stringify(this.syncSettings)
+        });
+      } else {
+        localStorage.setItem('sync_settings', JSON.stringify(this.syncSettings));
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
   }
 
   async sync(): Promise<boolean> {
