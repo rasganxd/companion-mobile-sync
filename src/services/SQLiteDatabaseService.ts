@@ -36,9 +36,23 @@ class SQLiteDatabaseService implements DatabaseAdapter {
       const isDbExists = await this.sqliteConnection.isDatabase(this.dbName);
       
       if (isDbExists.result) {
-        this.db = await this.sqliteConnection.createConnection(this.dbName, false, 'no-encryption', 1);
+        // Quinto parâmetro como uma string vazia para corresponder à assinatura
+        this.db = await this.sqliteConnection.createConnection(
+          this.dbName, 
+          false, 
+          'no-encryption', 
+          1, 
+          ''
+        );
       } else {
-        this.db = await this.sqliteConnection.createConnection(this.dbName, false, 'no-encryption', 1);
+        // Quinto parâmetro como uma string vazia para corresponder à assinatura
+        this.db = await this.sqliteConnection.createConnection(
+          this.dbName, 
+          false, 
+          'no-encryption', 
+          1, 
+          ''
+        );
         await this.db.open();
         await this.createTables();
         await this.populateInitialData();
@@ -62,88 +76,78 @@ class SQLiteDatabaseService implements DatabaseAdapter {
     if (!this.db) throw new Error('Database not initialized');
 
     // Create clients table
-    await this.db.execute({
-      statements: `
-        CREATE TABLE IF NOT EXISTS clients (
-          id TEXT PRIMARY KEY,
-          codigo TEXT,
-          status TEXT,
-          nome TEXT,
-          fantasia TEXT,
-          endereco TEXT,
-          comprador TEXT,
-          bairro TEXT,
-          cidade TEXT,
-          telefone TEXT,
-          tipoFJ TEXT,
-          diasMaxPrazo TEXT,
-          canal TEXT,
-          rotatividade TEXT,
-          proximaVisita TEXT,
-          restricao TEXT,
-          sync_status TEXT
-        );
-      `
-    });
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        codigo TEXT,
+        status TEXT,
+        nome TEXT,
+        fantasia TEXT,
+        endereco TEXT,
+        comprador TEXT,
+        bairro TEXT,
+        cidade TEXT,
+        telefone TEXT,
+        tipoFJ TEXT,
+        diasMaxPrazo TEXT,
+        canal TEXT,
+        rotatividade TEXT,
+        proximaVisita TEXT,
+        restricao TEXT,
+        sync_status TEXT
+      );
+    `);
 
     // Create visit_routes table
-    await this.db.execute({
-      statements: `
-        CREATE TABLE IF NOT EXISTS visit_routes (
-          id TEXT PRIMARY KEY,
-          day TEXT,
-          clients TEXT,
-          sync_status TEXT
-        );
-      `
-    });
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS visit_routes (
+        id TEXT PRIMARY KEY,
+        day TEXT,
+        clients TEXT,
+        sync_status TEXT
+      );
+    `);
 
     // Create orders table
-    await this.db.execute({
-      statements: `
-        CREATE TABLE IF NOT EXISTS orders (
-          id TEXT PRIMARY KEY,
-          client_id TEXT,
-          date TEXT,
-          payment_method TEXT,
-          total REAL,
-          items TEXT,
-          sync_status TEXT,
-          FOREIGN KEY (client_id) REFERENCES clients(id)
-        );
-      `
-    });
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        client_id TEXT,
+        date TEXT,
+        payment_method TEXT,
+        total REAL,
+        items TEXT,
+        sync_status TEXT,
+        FOREIGN KEY (client_id) REFERENCES clients(id)
+      );
+    `);
 
     // Create products table
-    await this.db.execute({
-      statements: `
-        CREATE TABLE IF NOT EXISTS products (
-          id INTEGER PRIMARY KEY,
-          code TEXT,
-          name TEXT,
-          price REAL,
-          unit TEXT,
-          category TEXT,
-          stock INTEGER,
-          min_stock INTEGER,
-          supplier TEXT,
-          sync_status TEXT
-        );
-      `
-    });
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY,
+        code TEXT,
+        name TEXT,
+        price REAL,
+        unit TEXT,
+        category TEXT,
+        stock INTEGER,
+        min_stock INTEGER,
+        supplier TEXT,
+        sync_status TEXT
+      );
+    `);
 
     // Create sync_log table
-    await this.db.execute({
-      statements: `
-        CREATE TABLE IF NOT EXISTS sync_log (
-          id TEXT PRIMARY KEY,
-          sync_type TEXT,
-          sync_date TEXT,
-          status TEXT,
-          details TEXT
-        );
-      `
-    });
+    await this.db.execute(`
+      CREATE TABLE IF NOT EXISTS sync_log (
+        id TEXT PRIMARY KEY,
+        sync_type TEXT,
+        sync_date TEXT,
+        status TEXT,
+        details TEXT
+      );
+    `);
   }
 
   private async populateInitialData(): Promise<void> {
@@ -151,7 +155,8 @@ class SQLiteDatabaseService implements DatabaseAdapter {
 
     try {
       // Import sample data from WebDatabaseService
-      const webService = new WebDatabaseService();
+      // Usamos o getInstance estático para acessar WebDatabaseService
+      const webService = WebDatabaseService.getInstance();
       
       // Get sample data
       const clients = await webService.getClients();
@@ -462,7 +467,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   }
 }
 
-// For development purposes, we need to import WebDatabaseService to migrate data
+// Importar WebDatabaseService antes de usá-lo
 import WebDatabaseService from './WebDatabaseService';
 
 export default SQLiteDatabaseService;
