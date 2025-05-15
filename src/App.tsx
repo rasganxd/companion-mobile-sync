@@ -5,7 +5,6 @@ import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { Capacitor } from '@capacitor/core';
 import Index from "./pages/Index";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -19,7 +18,6 @@ import NegativeSale from "./pages/NegativeSale";
 import MessagePage from "./pages/MessagePage";
 import NotFound from "./pages/NotFound";
 import SyncSettings from "./pages/SyncSettings";
-import CapturePosition from "./pages/CapturePosition";
 import { getDatabaseAdapter } from "./services/DatabaseAdapter";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "./components/ui/button";
@@ -96,7 +94,9 @@ const App = () => {
             <Route path="/atividades" element={<Index />} />
             <Route path="/negativar-venda" element={<NegativeSale />} />
             <Route path="/mensagem" element={<MessagePage />} />
-            <Route path="/capturar-posicao" element={<CapturePosition />} />
+            
+            {/* Rotas temporárias que redirecionam para a página principal */}
+            <Route path="/capturar-posicao" element={<Navigate to="/" />} />
             
             {/* Rota de fallback para páginas não encontradas */}
             <Route path="*" element={<NotFound />} />
