@@ -1,5 +1,7 @@
 
 import WebDatabaseService from './WebDatabaseService';
+import SQLiteDatabaseService from './SQLiteDatabaseService';
+import { Platform } from 'react-native';
 
 interface DatabaseAdapter {
   initDatabase(): Promise<void>;
@@ -16,9 +18,20 @@ interface DatabaseAdapter {
   closeDatabase(): Promise<void>;
 }
 
-// This function will determine which database implementation to use
+// Esta função determinará qual implementação de banco de dados usar
 export function getDatabaseAdapter(): DatabaseAdapter {
-  // For now, we're only supporting web
+  // Verifica se estamos em ambiente nativo (Android ou iOS)
+  // Se o Platform.OS for 'android' ou 'ios', usamos SQLite, caso contrário, usamos WebDB
+  try {
+    // Se estamos no ambiente web, Platform será undefined ou 'web'
+    if (Platform?.OS === 'android' || Platform?.OS === 'ios') {
+      return SQLiteDatabaseService.getInstance();
+    }
+  } catch (e) {
+    console.log('Erro ao detectar plataforma ou inicializar SQLite:', e);
+  }
+  
+  // Fallback para WebDatabaseService
   return WebDatabaseService.getInstance();
 }
 

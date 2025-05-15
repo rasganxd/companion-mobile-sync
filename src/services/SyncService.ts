@@ -2,11 +2,27 @@
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
+import { Network } from '@capacitor/network';
 
 export interface SyncProgress {
   total: number;
   processed: number;
   type: 'upload' | 'download';
+}
+
+export interface SyncStatus {
+  lastSync: Date | null;
+  inProgress: boolean;
+  pendingUploads: number;
+  pendingDownloads: number;
+  connected: boolean;
+}
+
+export interface SyncSettings {
+  autoSync: boolean;
+  syncInterval: number;
+  syncOnWifiOnly: boolean;
+  syncEnabled: boolean;
 }
 
 class SyncService {
@@ -72,8 +88,15 @@ class SyncService {
 
   private async checkConnection(): Promise<void> {
     try {
-      const response = await fetch(`${this.apiUrl}/ping`);
-      this.connected = response.ok;
+      // Use a API Capacitor Network quando disponível, caso contrário use fetch
+      try {
+        const status = await Network.getStatus();
+        this.connected = status.connected;
+      } catch (e) {
+        // Fallback para método web se o Capacitor Network não estiver disponível
+        const response = await fetch(`${this.apiUrl}/ping`);
+        this.connected = response.ok;
+      }
     } catch (error) {
       this.connected = false;
     }
