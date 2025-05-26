@@ -15,6 +15,23 @@ const Login = () => {
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar campos obrigatórios
+    if (!username.trim()) {
+      toast.error('Código do vendedor é obrigatório');
+      return;
+    }
+    
+    if (!password.trim()) {
+      toast.error('Senha é obrigatória');
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast.error('Senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
@@ -30,51 +47,43 @@ const Login = () => {
         .from('sales_reps')
         .select('*')
         .eq('code', codeNumber)
+        .eq('active', true)
         .single();
 
       if (salesRepError || !salesRep) {
-        toast.error('Usuário não encontrado');
+        toast.error('Vendedor não encontrado ou inativo');
         return;
       }
 
-      // Create a temporary user session using the sales rep email or a generated one
+      // Create email based on sales rep data
       const tempEmail = salesRep.email || `salesrep_${salesRep.code}@company.local`;
-      const tempPassword = password || 'defaultpassword123';
 
-      // Try to sign in first, if it fails, try to sign up
-      let authResult = await supabase.auth.signInWithPassword({
+      // Try to sign in with the provided password - NO FALLBACKS
+      const { data: authResult, error: authError } = await supabase.auth.signInWithPassword({
         email: tempEmail,
-        password: tempPassword,
+        password: password,
       });
 
-      // If sign in fails, try to sign up the user
-      if (authResult.error) {
-        console.log('Sign in failed, trying to sign up:', authResult.error.message);
+      if (authError) {
+        console.error('Authentication failed:', authError.message);
         
-        authResult = await supabase.auth.signUp({
-          email: tempEmail,
-          password: tempPassword,
-          options: {
-            data: {
-              sales_rep_id: salesRep.id,
-              sales_rep_code: salesRep.code,
-              sales_rep_name: salesRep.name,
-            }
-          }
-        });
-
-        if (authResult.error) {
-          console.error('Sign up failed:', authResult.error);
-          // If both fail, we'll proceed with local storage only
-          toast.warning('Autenticação local ativada');
+        // Provide specific error messages
+        if (authError.message.includes('Invalid login credentials')) {
+          toast.error('Código ou senha incorretos');
+        } else if (authError.message.includes('Email not confirmed')) {
+          toast.error('Email não confirmado. Entre em contato com o administrador.');
         } else {
-          toast.success('Conta criada e logado com sucesso!');
+          toast.error('Erro de autenticação. Verifique suas credenciais.');
         }
-      } else {
-        toast.success('Login realizado com sucesso!');
+        return;
       }
 
-      // Store the authenticated sales rep data regardless of auth result
+      if (!authResult.user) {
+        toast.error('Falha na autenticação');
+        return;
+      }
+
+      // Store the authenticated sales rep data
       localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRep));
       
       toast.success(`Bem-vindo, ${salesRep.name}!`);
@@ -82,7 +91,7 @@ const Login = () => {
       
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Erro ao fazer login');
+      toast.error('Erro inesperado ao fazer login. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -110,7 +119,9 @@ const Login = () => {
           
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Código do Vendedor</label>
+              <label className="text-sm font-medium text-gray-700">
+                Código do Vendedor <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Input
                   type="number"
@@ -119,6 +130,7 @@ const Login = () => {
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
                   placeholder="Digite seu código"
                   required
+                  disabled={isLoading}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -130,19 +142,25 @@ const Login = () => {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Senha (opcional)</label>
+              <label className="text-sm font-medium text-gray-700">
+                Senha <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
-                  placeholder="Digite sua senha (opcional)"
+                  placeholder="Digite sua senha"
+                  required
+                  minLength={6}
+                  disabled={isLoading}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <KeyRound size={16} />
                 </div>
               </div>
+              <p className="text-xs text-gray-500">Mínimo de 6 caracteres</p>
             </div>
             
             <AppButton
@@ -150,11 +168,17 @@ const Login = () => {
               variant="blue"
               fullWidth
               className="mt-6 py-2.5 transition-all duration-200 transform hover:translate-y-[-2px]"
-              disabled={isLoading}
+              disabled={isLoading || !username.trim() || !password.trim()}
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </AppButton>
           </form>
+          
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Problemas para acessar? Entre em contato com o administrador.
+            </p>
+          </div>
         </div>
       </div>
       

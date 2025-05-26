@@ -186,28 +186,73 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          date: string | null
           description: string | null
+          driver_id: string | null
+          driver_name: string | null
           id: string
+          last_updated: string | null
           name: string
+          sales_rep_id: string | null
+          sales_rep_name: string | null
+          status: string | null
+          stops: Json | null
           updated_at: string
+          vehicle_id: string | null
+          vehicle_name: string | null
         }
         Insert: {
           active?: boolean
           created_at?: string
+          date?: string | null
           description?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           id?: string
+          last_updated?: string | null
           name: string
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string | null
+          stops?: Json | null
           updated_at?: string
+          vehicle_id?: string | null
+          vehicle_name?: string | null
         }
         Update: {
           active?: boolean
           created_at?: string
+          date?: string | null
           description?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           id?: string
+          last_updated?: string | null
           name?: string
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string | null
+          stops?: Json | null
           updated_at?: string
+          vehicle_id?: string | null
+          vehicle_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "delivery_routes_sales_rep_id_fkey"
+            columns: ["sales_rep_id"]
+            isOneToOne: false
+            referencedRelation: "sales_reps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_routes_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       load_items: {
         Row: {
@@ -1092,6 +1137,33 @@ export type Database = {
       }
       get_next_sales_rep_code: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      get_route_with_customers: {
+        Args: { p_route_id: string }
+        Returns: {
+          route_id: string
+          route_name: string
+          route_description: string
+          route_status: string
+          route_date: string
+          route_sales_rep_id: string
+          route_sales_rep_name: string
+          route_vehicle_id: string
+          route_vehicle_name: string
+          route_last_updated: string
+          customer_id: string
+          customer_name: string
+          customer_code: number
+          customer_address: string
+          customer_city: string
+          customer_state: string
+          customer_zip_code: string
+          customer_phone: string
+        }[]
+      }
+      sync_customers_to_route: {
+        Args: { p_route_id: string; p_sales_rep_id: string }
         Returns: number
       }
       validate_api_token: {
