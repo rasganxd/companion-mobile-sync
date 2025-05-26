@@ -1,5 +1,6 @@
+
 import React, { useEffect, useState } from 'react';
-import { Cloud, CloudOff, RefreshCw, Settings, QrCode } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useSync } from '@/hooks/useSync';
@@ -15,6 +16,7 @@ const SyncSettings = () => {
     syncStatus, 
     syncSettings, 
     syncProgress,
+    initError,
     startSync,
     checkConnection, 
     updateSettings 
@@ -58,7 +60,13 @@ const SyncSettings = () => {
     }
     
     toast.info("Iniciando sincronização...");
-    await startSync();
+    const success = await startSync();
+    
+    if (success) {
+      toast.success("Sincronização concluída com sucesso");
+    } else {
+      toast.error("Erro na sincronização");
+    }
   };
 
   return (
@@ -70,6 +78,21 @@ const SyncSettings = () => {
       />
       
       <div className="p-4 flex-1">
+        {/* Error Card */}
+        {initError && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="flex items-center">
+              <AlertTriangle size={20} className="text-red-500 mr-2" />
+              <h3 className="text-red-800 font-medium">Erro de Inicialização</h3>
+            </div>
+            <p className="text-red-700 text-sm mt-1">{initError}</p>
+            <p className="text-red-600 text-xs mt-2">
+              O app está usando armazenamento web como fallback. 
+              Para dispositivos móveis, certifique-se de que o Capacitor SQLite esteja configurado corretamente.
+            </p>
+          </div>
+        )}
+
         {/* Status Card */}
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex justify-between items-center">

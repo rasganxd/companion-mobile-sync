@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,7 +7,7 @@ class SQLiteDatabaseService {
   private static instance: SQLiteDatabaseService;
 
   private constructor() {
-    console.log('SQLiteDatabaseService constructor called');
+    console.log('📱 SQLiteDatabaseService constructor called');
   }
 
   static getInstance(): SQLiteDatabaseService {
@@ -20,11 +19,30 @@ class SQLiteDatabaseService {
 
   async initDatabase(): Promise<void> {
     try {
-      console.log('Initializing SQLite database with Capacitor...');
+      console.log('📱 Initializing SQLite database with Capacitor...');
       
+      // Verificar se estamos em ambiente compatível
+      if (typeof window === 'undefined') {
+        throw new Error('Window object not available - not in browser environment');
+      }
+
       // Check if SQLite is available
-      if (!(window as any).Capacitor || !CapacitorSQLite) {
-        throw new Error('Capacitor SQLite not available');
+      if (!(window as any).Capacitor) {
+        throw new Error('Capacitor not available - not in Capacitor environment');
+      }
+
+      if (!CapacitorSQLite) {
+        throw new Error('CapacitorSQLite plugin not available');
+      }
+
+      // Verificar se jeep-sqlite está presente para ambiente web
+      const isWeb = !(window as any).Capacitor.isNativePlatform || !(window as any).Capacitor.isNativePlatform();
+      if (isWeb) {
+        const jeepSqlite = document.querySelector('jeep-sqlite');
+        if (!jeepSqlite) {
+          throw new Error('jeep-sqlite element not found in DOM - required for web SQLite');
+        }
+        console.log('🌐 jeep-sqlite element found, proceeding with web SQLite');
       }
 
       this.sqliteConnection = new SQLiteConnection(CapacitorSQLite);
@@ -40,9 +58,9 @@ class SQLiteDatabaseService {
       
       await this.db.open();
       await this.createTables();
-      console.log('SQLite database initialized successfully');
+      console.log('✅ SQLite database initialized successfully');
     } catch (error) {
-      console.error('Error initializing SQLite database:', error);
+      console.error('❌ Error initializing SQLite database:', error);
       throw error;
     }
   }
@@ -104,7 +122,7 @@ class SQLiteDatabaseService {
     `;
 
     await this.db.execute(createTablesSQL);
-    console.log('Tables created successfully');
+    console.log('✅ Tables created successfully');
   }
 
   async getClients(): Promise<any[]> {
@@ -113,7 +131,7 @@ class SQLiteDatabaseService {
       const result = await this.db!.query('SELECT * FROM clients');
       return result.values || [];
     } catch (error) {
-      console.error('Error getting clients:', error);
+      console.error('❌ Error getting clients:', error);
       return [];
     }
   }
@@ -124,7 +142,7 @@ class SQLiteDatabaseService {
       const result = await this.db!.query('SELECT * FROM visit_routes');
       return result.values || [];
     } catch (error) {
-      console.error('Error getting visit routes:', error);
+      console.error('❌ Error getting visit routes:', error);
       return [];
     }
   }
@@ -143,7 +161,7 @@ class SQLiteDatabaseService {
       const result = await this.db!.query(query, values);
       return result.values || [];
     } catch (error) {
-      console.error('Error getting orders:', error);
+      console.error('❌ Error getting orders:', error);
       return [];
     }
   }
@@ -154,7 +172,7 @@ class SQLiteDatabaseService {
       const result = await this.db!.query('SELECT * FROM products');
       return result.values || [];
     } catch (error) {
-      console.error('Error getting products:', error);
+      console.error('❌ Error getting products:', error);
       return [];
     }
   }
@@ -168,7 +186,7 @@ class SQLiteDatabaseService {
       );
       return result.values || [];
     } catch (error) {
-      console.error(`Error getting pending ${table} items:`, error);
+      console.error(`❌ Error getting pending ${table} items:`, error);
       return [];
     }
   }
@@ -181,7 +199,7 @@ class SQLiteDatabaseService {
         [status, id]
       );
     } catch (error) {
-      console.error(`Error updating sync status for ${table}:`, error);
+      console.error(`❌ Error updating sync status for ${table}:`, error);
     }
   }
 
@@ -196,7 +214,7 @@ class SQLiteDatabaseService {
         [id, type, syncDate, status, details || '']
       );
     } catch (error) {
-      console.error('Error logging sync:', error);
+      console.error('❌ Error logging sync:', error);
     }
   }
 
@@ -211,7 +229,7 @@ class SQLiteDatabaseService {
         [id, order.client_id, order.order_date || now, order.total, order.status, 'pending', now]
       );
     } catch (error) {
-      console.error('Error saving order:', error);
+      console.error('❌ Error saving order:', error);
     }
   }
 
@@ -223,7 +241,7 @@ class SQLiteDatabaseService {
         [new Date().toISOString(), 'pending', new Date().toISOString(), clientId]
       );
     } catch (error) {
-      console.error('Error updating client status:', error);
+      console.error('❌ Error updating client status:', error);
     }
   }
 
@@ -240,7 +258,7 @@ class SQLiteDatabaseService {
       }
       return null;
     } catch (error) {
-      console.error('Error getting client by ID:', error);
+      console.error('❌ Error getting client by ID:', error);
       return null;
     }
   }
