@@ -34,6 +34,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/home" element={<Home />} />
             <Route path="/clients" element={<ClientsList />} />
+            <Route path="/clientes-lista" element={<ClientsList />} />
             <Route path="/client/:id" element={<ClientDetails />} />
             <Route path="/place-order" element={<PlaceOrder />} />
             <Route path="/new-order" element={<NewOrder />} />
@@ -41,6 +42,7 @@ function App() {
             <Route path="/order-details/:id" element={<OrderDetails />} />
             <Route path="/last-purchases" element={<LastPurchases />} />
             <Route path="/visit-routes" element={<VisitRoutes />} />
+            <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/negative-sale" element={<NegativeSale />} />
             <Route path="/message" element={<MessagePage />} />
             <Route path="/sync-settings" element={<SyncSettings />} />
