@@ -1,119 +1,55 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { QueryClient } from 'react-query';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { ThemeProvider } from "next-themes";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import Index from "./pages/Index";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import ClientDetails from "./pages/ClientDetails";
-import ClientsList from "./pages/ClientsList";
-import LastPurchases from "./pages/LastPurchases";
-import VisitRoutes from "./pages/VisitRoutes";
-import PlaceOrder from "./pages/PlaceOrder";
-import OrderDetails from "./pages/OrderDetails";
-import NegativeSale from "./pages/NegativeSale";
-import MessagePage from "./pages/MessagePage";
-import NotFound from "./pages/NotFound";
-import SyncSettings from "./pages/SyncSettings";
-import { getDatabaseAdapter } from "./services/DatabaseAdapter";
-import { AlertTriangle } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
-import QRScanPage from "./pages/QRScanPage";
+import Index from '@/pages/Index';
+import Login from '@/pages/Login';
+import Home from '@/pages/Home';
+import ClientsList from '@/pages/ClientsList';
+import ClientDetails from '@/pages/ClientDetails';
+import PlaceOrder from '@/pages/PlaceOrder';
+import LastPurchases from '@/pages/LastPurchases';
+import VisitRoutes from '@/pages/VisitRoutes';
+import NegativeSale from '@/pages/NegativeSale';
+import MessagePage from '@/pages/MessagePage';
+import SyncSettings from '@/pages/SyncSettings';
+import QRScanPage from '@/pages/QRScanPage';
+import NotFound from '@/pages/NotFound';
+import ApiSettings from '@/pages/ApiSettings';
+import NewOrder from '@/pages/NewOrder';
+import MyOrders from '@/pages/MyOrders';
+import OrderDetails from '@/pages/OrderDetails';
 
-const App = () => {
-  // Create QueryClient inside the component
-  const [queryClient] = useState(() => new QueryClient());
-  const [dbInitialized, setDbInitialized] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Initialize database on app startup
-    const initDb = async () => {
-      try {
-        console.log('Starting database initialization...');
-        const dbService = getDatabaseAdapter();
-        await dbService.initDatabase();
-        console.log('Database initialized successfully');
-        setDbInitialized(true);
-      } catch (err) {
-        console.error("Database initialization error:", err);
-        // Try to gracefully handle the error and still allow the app to work
-        console.log('Attempting to continue without database...');
-        setDbInitialized(true); // Allow app to continue
-        setError(null); // Don't show error to user, just log it
-      }
-    };
-
-    initDb();
-  }, []);
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <AlertTriangle className="h-5 w-5" />
-          <AlertTitle className="text-lg">Erro na inicialização</AlertTitle>
-          <AlertDescription className="mt-2">{error}</AlertDescription>
-          <Button 
-            className="mt-4 w-full" 
-            variant="destructive" 
-            onClick={() => window.location.reload()}
-          >
-            Tentar Novamente
-          </Button>
-        </Alert>
-      </div>
-    );
-  }
-
-  if (!dbInitialized) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-t-4 border-blue-500 border-solid rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-700">Carregando aplicativo...</p>
-        </div>
-      </div>
-    );
-  }
-
+function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} forcedTheme="light">
+    <QueryClient>
+      <div className="min-h-screen bg-gray-50">
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/menu" element={<Index />} />
-            <Route path="/rotas" element={<VisitRoutes />} />
-            <Route path="/clientes" element={<ClientDetails />} />
-            <Route path="/cliente-detalhes" element={<ClientDetails />} />
-            <Route path="/clientes-lista" element={<ClientsList />} />
-            <Route path="/ultimas-compras" element={<LastPurchases />} />
-            <Route path="/fazer-pedidos" element={<PlaceOrder />} />
-            <Route path="/detalhes-pedido" element={<OrderDetails />} />
-            <Route path="/sincronizacao" element={<SyncSettings />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/clients" element={<ClientsList />} />
+            <Route path="/client/:id" element={<ClientDetails />} />
+            <Route path="/place-order" element={<PlaceOrder />} />
+            <Route path="/new-order" element={<NewOrder />} />
+            <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/order-details/:id" element={<OrderDetails />} />
+            <Route path="/last-purchases" element={<LastPurchases />} />
+            <Route path="/visit-routes" element={<VisitRoutes />} />
+            <Route path="/negative-sale" element={<NegativeSale />} />
+            <Route path="/message" element={<MessagePage />} />
+            <Route path="/sync-settings" element={<SyncSettings />} />
+            <Route path="/api-settings" element={<ApiSettings />} />
             <Route path="/qr-scanner" element={<QRScanPage />} />
-            <Route path="/atividades" element={<Index />} />
-            <Route path="/negativar-venda" element={<NegativeSale />} />
-            <Route path="/mensagem" element={<MessagePage />} />
-            
-            {/* Rotas temporárias que redirecionam para a página principal */}
-            <Route path="/capturar-posicao" element={<Navigate to="/" />} />
-            
-            {/* Rota de fallback para páginas não encontradas */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />
-          <Sonner />
         </BrowserRouter>
-      </ThemeProvider>
-    </QueryClientProvider>
+      </div>
+    </QueryClient>
   );
-};
+}
 
 export default App;

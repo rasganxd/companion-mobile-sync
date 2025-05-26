@@ -139,6 +139,15 @@ const SyncSettings = () => {
             <QrCode size={16} className="mr-2" />
             Escanear QR para Atualizar
           </Button>
+          
+          <Button 
+            onClick={() => navigate('/api-settings')}
+            className="w-full mt-2"
+            variant="outline"
+          >
+            <Settings size={16} className="mr-2" />
+            Configurar API REST
+          </Button>
         </div>
         
         {/* Settings Card */}

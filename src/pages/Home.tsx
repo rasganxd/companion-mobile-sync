@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -9,6 +8,7 @@ import { RefreshCw, Upload, Download, Calendar, LogOut, User } from 'lucide-reac
 import { useSync } from '@/hooks/useSync';
 import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
+import { ShoppingCart, Plus, Package, Settings } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
@@ -38,6 +38,37 @@ const Home = () => {
   const handleLogout = () => {
     navigate('/login');
   };
+
+  const menuItems = [
+    {
+      title: "Fazer Pedido (Local)",
+      description: "Criar novos pedidos no banco local",
+      icon: <ShoppingCart size={32} />,
+      color: "bg-gradient-to-br from-green-400 to-green-600",
+      route: "/place-order"
+    },
+    {
+      title: "Novo Pedido (API)",
+      description: "Criar pedidos via API REST",
+      icon: <Plus size={32} />,
+      color: "bg-gradient-to-br from-emerald-400 to-emerald-600",
+      route: "/new-order"
+    },
+    {
+      title: "Meus Pedidos",
+      description: "Visualizar e gerenciar pedidos via API",
+      icon: <Package size={32} />,
+      color: "bg-gradient-to-br from-blue-400 to-blue-600",
+      route: "/my-orders"
+    },
+    {
+      title: "Configuração da API",
+      description: "Configurar integração com API REST",
+      icon: <Settings size={32} />,
+      color: "bg-gradient-to-br from-purple-400 to-purple-600",
+      route: "/api-settings"
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
