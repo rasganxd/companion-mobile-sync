@@ -1,7 +1,8 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
-import { QueryClient } from 'react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -21,9 +22,11 @@ import NewOrder from '@/pages/NewOrder';
 import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
 
+const queryClient = new QueryClient();
+
 function App() {
   return (
-    <QueryClient>
+    <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gray-50">
         <BrowserRouter>
           <Routes>
@@ -48,7 +51,7 @@ function App() {
           <Toaster />
         </BrowserRouter>
       </div>
-    </QueryClient>
+    </QueryClientProvider>
   );
 }
 

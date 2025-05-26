@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
@@ -137,7 +136,7 @@ const NewOrder = () => {
       <Header 
         title="Novo Pedido" 
         showBackButton={true} 
-        backgroundColor="green" 
+        backgroundColor="blue" 
       />
       
       <div className="p-4 flex-1">
