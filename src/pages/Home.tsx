@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -10,15 +11,35 @@ import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
 import { ShoppingCart, Plus, Package, Settings } from 'lucide-react';
 
+interface SalesRep {
+  id: string;
+  code: string;
+  name: string;
+  email?: string;
+  phone?: string;
+}
+
 const Home = () => {
   const navigate = useNavigate();
   const { syncStatus, startSync } = useSync();
-  const [vendedor, setVendedor] = useState({
-    id: 'V001',
-    nome: 'Carlos Silva',
-    email: 'carlos@example.com',
-    ultimoLogin: new Date().toLocaleDateString()
-  });
+  const [salesRep, setSalesRep] = useState<SalesRep | null>(null);
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const authenticatedSalesRep = localStorage.getItem('authenticated_sales_rep');
+    if (!authenticatedSalesRep) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const salesRepData = JSON.parse(authenticatedSalesRep);
+      setSalesRep(salesRepData);
+    } catch (error) {
+      console.error('Error parsing sales rep data:', error);
+      navigate('/login');
+    }
+  }, [navigate]);
 
   const handleTransmitirDados = async () => {
     toast.info("Iniciando transmissão de dados...");
@@ -36,6 +57,8 @@ const Home = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('authenticated_sales_rep');
+    localStorage.removeItem('api_config');
     navigate('/login');
   };
 
@@ -70,6 +93,17 @@ const Home = () => {
     }
   ];
 
+  if (!salesRep) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="animate-spin mx-auto mb-4" size={32} />
+          <p>Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
@@ -79,26 +113,28 @@ const Home = () => {
       />
       
       <div className="p-4 flex-1 flex flex-col gap-4">
-        {/* Card do Vendedor */}
+        {/* Card do Vendedor Autenticado */}
         <Card className="shadow-md">
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex items-center">
               <User size={18} className="mr-2 text-blue-500" />
-              Informações do Vendedor
+              Vendedor Logado
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center">
               <Avatar className="h-16 w-16 mr-4 bg-blue-100">
                 <AvatarFallback className="text-lg font-semibold text-blue-700">
-                  {vendedor.nome.split(' ').map(n => n[0]).join('')}
+                  {salesRep.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <h3 className="font-medium text-lg">{vendedor.nome}</h3>
-                <p className="text-sm text-gray-500">ID: {vendedor.id}</p>
-                <p className="text-sm text-gray-500">{vendedor.email}</p>
-                <p className="text-sm text-gray-500">Último acesso: {vendedor.ultimoLogin}</p>
+                <h3 className="font-medium text-lg">{salesRep.name}</h3>
+                <p className="text-sm text-gray-500">Código: {salesRep.code}</p>
+                <p className="text-sm text-gray-500">ID: {salesRep.id}</p>
+                {salesRep.email && (
+                  <p className="text-sm text-gray-500">{salesRep.email}</p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -153,7 +189,7 @@ const Home = () => {
             </Button>
             
             <Button 
-              onClick={() => navigate('/sincronizacao')}
+              onClick={() => navigate('/sync-settings')}
               className="w-full"
               variant="outline"
             >
@@ -165,7 +201,7 @@ const Home = () => {
         {/* Botões de Navegação */}
         <div className="grid grid-cols-1 gap-4">
           <Button 
-            onClick={() => navigate('/rotas')}
+            onClick={() => navigate('/visit-routes')}
             className="w-full"
             variant="secondary"
             size="lg"

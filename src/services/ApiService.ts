@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 
 export interface OrderItem {
@@ -56,7 +55,26 @@ class ApiService {
     }
   }
 
+  private getAuthenticatedSalesRepId(): string | null {
+    const authenticatedSalesRep = localStorage.getItem('authenticated_sales_rep');
+    if (authenticatedSalesRep) {
+      try {
+        const salesRep = JSON.parse(authenticatedSalesRep);
+        return salesRep.id;
+      } catch (error) {
+        console.error('Error parsing authenticated sales rep:', error);
+      }
+    }
+    return null;
+  }
+
   setConfig(config: ApiConfig): void {
+    // Use authenticated sales rep ID if available
+    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
+    if (authenticatedSalesRepId) {
+      config.salesRepId = authenticatedSalesRepId;
+    }
+    
     this.config = config;
     localStorage.setItem('api_config', JSON.stringify(config));
   }
@@ -125,6 +143,12 @@ class ApiService {
 
   // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
+    // Ensure we use the authenticated sales rep ID
+    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
+    if (authenticatedSalesRepId) {
+      order.sales_rep_id = authenticatedSalesRepId;
+    }
+    
     return await this.request<Order>('/orders', {
       method: 'POST',
       body: JSON.stringify(order),
@@ -141,8 +165,11 @@ class ApiService {
   } = {}): Promise<Order[]> {
     const params = new URLSearchParams();
     
-    // Always filter by current sales rep
-    if (this.config?.salesRepId) {
+    // Always filter by authenticated sales rep
+    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
+    if (authenticatedSalesRepId) {
+      params.append('sales_rep_id', `eq.${authenticatedSalesRepId}`);
+    } else if (this.config?.salesRepId) {
       params.append('sales_rep_id', `eq.${this.config.salesRepId}`);
     }
     
@@ -178,7 +205,6 @@ class ApiService {
     });
   }
 
-  // Order Items CRUD operations
   async createOrderItem(item: Omit<OrderItem, 'id'>): Promise<OrderItem> {
     return await this.request<OrderItem>('/order_items', {
       method: 'POST',

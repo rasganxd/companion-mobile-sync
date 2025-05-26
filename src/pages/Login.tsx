@@ -4,17 +4,51 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import AppButton from '@/components/AppButton';
 import { KeyRound, LogIn } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Em uma implementação real, aqui teríamos uma chamada para API
-    // Por enquanto, após login redirecionamos para a página inicial
-    navigate('/');
+    setIsLoading(true);
+
+    try {
+      // Query the sales_reps table to authenticate the user
+      const { data: salesRep, error } = await supabase
+        .from('sales_reps')
+        .select('*')
+        .eq('code', username)
+        .single();
+
+      if (error || !salesRep) {
+        toast.error('Usuário não encontrado');
+        return;
+      }
+
+      // Store the authenticated sales rep data
+      localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRep));
+      
+      // Update API configuration with the sales rep ID
+      const apiConfig = localStorage.getItem('api_config');
+      if (apiConfig) {
+        const config = JSON.parse(apiConfig);
+        config.salesRepId = salesRep.id;
+        localStorage.setItem('api_config', JSON.stringify(config));
+      }
+
+      toast.success(`Bem-vindo, ${salesRep.name}!`);
+      navigate('/home');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Erro ao fazer login');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -39,13 +73,14 @@ const Login = () => {
           
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Usuário</label>
+              <label className="text-sm font-medium text-gray-700">Código do Vendedor</label>
               <div className="relative">
                 <Input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
+                  placeholder="Digite seu código"
                   required
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -65,6 +100,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
+                  placeholder="Digite sua senha"
                   required
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
@@ -78,8 +114,9 @@ const Login = () => {
               variant="blue"
               fullWidth
               className="mt-6 py-2.5 transition-all duration-200 transform hover:translate-y-[-2px]"
+              disabled={isLoading}
             >
-              Entrar
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </AppButton>
           </form>
         </div>
