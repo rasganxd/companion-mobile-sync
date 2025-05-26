@@ -1,16 +1,14 @@
 
-import { openDatabase, SQLiteDatabase } from 'react-native-sqlite-storage';
-import DatabaseAdapter from './DatabaseAdapter';
+import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor/sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
-class SQLiteDatabaseService implements DatabaseAdapter {
-  private db: SQLiteDatabase | null = null;
+class SQLiteDatabaseService {
+  private db: SQLiteDBConnection | null = null;
+  private sqliteConnection: SQLiteConnection | null = null;
   private static instance: SQLiteDatabaseService;
 
   private constructor() {
-    // Private constructor for singleton pattern
-    // Initialize the SQLite database
-    this.initDatabase();
+    console.log('SQLiteDatabaseService constructor called');
   }
 
   static getInstance(): SQLiteDatabaseService {
@@ -22,28 +20,38 @@ class SQLiteDatabaseService implements DatabaseAdapter {
 
   async initDatabase(): Promise<void> {
     try {
-      // Configure SQLite
-      SQLiteDatabase.enablePromise(true);
+      console.log('Initializing SQLite database with Capacitor...');
       
-      // Open database
-      this.db = await openDatabase({
-        name: 'vendas_fortes.db',
-        location: 'default'
-      });
+      // Check if SQLite is available
+      if (!(window as any).Capacitor || !CapacitorSQLite) {
+        throw new Error('Capacitor SQLite not available');
+      }
+
+      this.sqliteConnection = new SQLiteConnection(CapacitorSQLite);
       
+      // Create or open database
+      this.db = await this.sqliteConnection.createConnection(
+        'vendas_fortes.db',
+        false,
+        'no-encryption',
+        1,
+        false
+      );
+      
+      await this.db.open();
       await this.createTables();
-      console.log('Database initialized successfully');
+      console.log('SQLite database initialized successfully');
     } catch (error) {
-      console.error('Error initializing database:', error);
+      console.error('Error initializing SQLite database:', error);
+      throw error;
     }
   }
 
   private async createTables(): Promise<void> {
     if (!this.db) return;
 
-    // Clients table
-    await this.db.executeSql(
-      `CREATE TABLE IF NOT EXISTS clients (
+    const createTablesSQL = `
+      CREATE TABLE IF NOT EXISTS clients (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         phone TEXT,
@@ -52,12 +60,9 @@ class SQLiteDatabaseService implements DatabaseAdapter {
         lastVisit TEXT,
         sync_status TEXT DEFAULT 'pending',
         updated_at TEXT
-      )`, []
-    );
+      );
 
-    // Orders table
-    await this.db.executeSql(
-      `CREATE TABLE IF NOT EXISTS orders (
+      CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         client_id TEXT NOT NULL,
         order_date TEXT NOT NULL,
@@ -66,12 +71,9 @@ class SQLiteDatabaseService implements DatabaseAdapter {
         sync_status TEXT DEFAULT 'pending',
         updated_at TEXT,
         FOREIGN KEY (client_id) REFERENCES clients (id)
-      )`, []
-    );
+      );
 
-    // Products table
-    await this.db.executeSql(
-      `CREATE TABLE IF NOT EXISTS products (
+      CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         description TEXT,
@@ -80,12 +82,9 @@ class SQLiteDatabaseService implements DatabaseAdapter {
         image_url TEXT,
         sync_status TEXT DEFAULT 'pending',
         updated_at TEXT
-      )`, []
-    );
+      );
 
-    // Visit routes table
-    await this.db.executeSql(
-      `CREATE TABLE IF NOT EXISTS visit_routes (
+      CREATE TABLE IF NOT EXISTS visit_routes (
         id TEXT PRIMARY KEY,
         day TEXT NOT NULL,
         visited INTEGER DEFAULT 0,
@@ -93,32 +92,26 @@ class SQLiteDatabaseService implements DatabaseAdapter {
         total INTEGER DEFAULT 0,
         sync_status TEXT DEFAULT 'pending',
         updated_at TEXT
-      )`, []
-    );
-    
-    // Sync log table
-    await this.db.executeSql(
-      `CREATE TABLE IF NOT EXISTS sync_log (
+      );
+      
+      CREATE TABLE IF NOT EXISTS sync_log (
         id TEXT PRIMARY KEY,
         sync_type TEXT NOT NULL,
         sync_date TEXT NOT NULL,
         status TEXT NOT NULL,
         details TEXT
-      )`, []
-    );
+      );
+    `;
 
+    await this.db.execute(createTablesSQL);
     console.log('Tables created successfully');
   }
 
   async getClients(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
-      const [results] = await this.db!.executeSql('SELECT * FROM clients', []);
-      const clients = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        clients.push(results.rows.item(i));
-      }
-      return clients;
+      const result = await this.db!.query('SELECT * FROM clients');
+      return result.values || [];
     } catch (error) {
       console.error('Error getting clients:', error);
       return [];
@@ -128,12 +121,8 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async getVisitRoutes(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
-      const [results] = await this.db!.executeSql('SELECT * FROM visit_routes', []);
-      const routes = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        routes.push(results.rows.item(i));
-      }
-      return routes;
+      const result = await this.db!.query('SELECT * FROM visit_routes');
+      return result.values || [];
     } catch (error) {
       console.error('Error getting visit routes:', error);
       return [];
@@ -144,19 +133,15 @@ class SQLiteDatabaseService implements DatabaseAdapter {
     if (!this.db) await this.initDatabase();
     try {
       let query = 'SELECT * FROM orders';
-      let params: string[] = [];
+      let values: string[] = [];
       
       if (clientId) {
         query += ' WHERE client_id = ?';
-        params.push(clientId);
+        values.push(clientId);
       }
       
-      const [results] = await this.db!.executeSql(query, params);
-      const orders = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        orders.push(results.rows.item(i));
-      }
-      return orders;
+      const result = await this.db!.query(query, values);
+      return result.values || [];
     } catch (error) {
       console.error('Error getting orders:', error);
       return [];
@@ -166,12 +151,8 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async getProducts(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
-      const [results] = await this.db!.executeSql('SELECT * FROM products', []);
-      const products = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        products.push(results.rows.item(i));
-      }
-      return products;
+      const result = await this.db!.query('SELECT * FROM products');
+      return result.values || [];
     } catch (error) {
       console.error('Error getting products:', error);
       return [];
@@ -181,14 +162,11 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async getPendingSyncItems(table: string): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
-      const [results] = await this.db!.executeSql(
-        `SELECT * FROM ${table} WHERE sync_status = 'pending'`, []
+      const result = await this.db!.query(
+        `SELECT * FROM ${table} WHERE sync_status = ?`, 
+        ['pending']
       );
-      const items = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        items.push(results.rows.item(i));
-      }
-      return items;
+      return result.values || [];
     } catch (error) {
       console.error(`Error getting pending ${table} items:`, error);
       return [];
@@ -198,7 +176,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending' | 'error'): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {
-      await this.db!.executeSql(
+      await this.db!.run(
         `UPDATE ${table} SET sync_status = ? WHERE id = ?`, 
         [status, id]
       );
@@ -213,7 +191,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
     const syncDate = new Date().toISOString();
     
     try {
-      await this.db!.executeSql(
+      await this.db!.run(
         'INSERT INTO sync_log (id, sync_type, sync_date, status, details) VALUES (?, ?, ?, ?, ?)',
         [id, type, syncDate, status, details || '']
       );
@@ -228,7 +206,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
     const now = new Date().toISOString();
     
     try {
-      await this.db!.executeSql(
+      await this.db!.run(
         'INSERT OR REPLACE INTO orders (id, client_id, order_date, total, status, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [id, order.client_id, order.order_date || now, order.total, order.status, 'pending', now]
       );
@@ -240,7 +218,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async updateClientStatus(clientId: string, status: string): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {
-      await this.db!.executeSql(
+      await this.db!.run(
         'UPDATE clients SET lastVisit = ?, sync_status = ?, updated_at = ? WHERE id = ?',
         [new Date().toISOString(), 'pending', new Date().toISOString(), clientId]
       );
@@ -252,13 +230,13 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async getClientById(clientId: string): Promise<any | null> {
     if (!this.db) await this.initDatabase();
     try {
-      const [results] = await this.db!.executeSql(
+      const result = await this.db!.query(
         'SELECT * FROM clients WHERE id = ?', 
         [clientId]
       );
       
-      if (results.rows.length > 0) {
-        return results.rows.item(0);
+      if (result.values && result.values.length > 0) {
+        return result.values[0];
       }
       return null;
     } catch (error) {
@@ -271,6 +249,9 @@ class SQLiteDatabaseService implements DatabaseAdapter {
     if (this.db) {
       await this.db.close();
       this.db = null;
+    }
+    if (this.sqliteConnection) {
+      this.sqliteConnection = null;
     }
   }
 }

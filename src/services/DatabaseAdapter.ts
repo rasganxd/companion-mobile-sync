@@ -19,26 +19,33 @@ interface DatabaseAdapter {
 
 // Esta função determinará qual implementação de banco de dados usar
 export function getDatabaseAdapter(): DatabaseAdapter {
-  // Detectar o ambiente atual sem depender diretamente de react-native
+  console.log('Determining database adapter...');
+  
+  // Detectar o ambiente atual
   const isMobileApp = (): boolean => {
     try {
       // Check if we're in a Capacitor environment
-      return !!(window as any).Capacitor;
+      const hasCapacitor = !!(window as any).Capacitor;
+      console.log('Capacitor environment detected:', hasCapacitor);
+      return hasCapacitor;
     } catch (e) {
+      console.log('Error checking Capacitor environment:', e);
       return false;
     }
   };
 
   try {
-    // Se estamos em um ambiente móvel (Capacitor), usamos SQLite
+    // Se estamos em um ambiente móvel (Capacitor), tenta usar SQLite
     if (isMobileApp()) {
+      console.log('Using SQLite database service for mobile');
       return SQLiteDatabaseService.getInstance();
     }
   } catch (e) {
-    console.log('Erro ao detectar plataforma ou inicializar SQLite:', e);
+    console.log('Erro ao detectar plataforma ou inicializar SQLite, usando WebDatabase:', e);
   }
   
   // Fallback para WebDatabaseService
+  console.log('Using Web database service');
   return WebDatabaseService.getInstance();
 }
 
