@@ -18,11 +18,18 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      // Convert username to number since code field is integer
+      const codeNumber = parseInt(username);
+      if (isNaN(codeNumber)) {
+        toast.error('Código deve ser um número válido');
+        return;
+      }
+
       // Query the sales_reps table to authenticate the user
       const { data: salesRep, error } = await supabase
         .from('sales_reps')
         .select('*')
-        .eq('code', username)
+        .eq('code', codeNumber)
         .single();
 
       if (error || !salesRep) {
@@ -76,7 +83,7 @@ const Login = () => {
               <label className="text-sm font-medium text-gray-700">Código do Vendedor</label>
               <div className="relative">
                 <Input
-                  type="text"
+                  type="number"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
