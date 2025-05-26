@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
@@ -22,6 +21,7 @@ import { getDatabaseAdapter } from "./services/DatabaseAdapter";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "./components/ui/alert";
+import QRScanPage from "./pages/QRScanPage";
 
 const App = () => {
   // Create QueryClient inside the component
@@ -91,6 +91,7 @@ const App = () => {
             <Route path="/fazer-pedidos" element={<PlaceOrder />} />
             <Route path="/detalhes-pedido" element={<OrderDetails />} />
             <Route path="/sincronizacao" element={<SyncSettings />} />
+            <Route path="/qr-scanner" element={<QRScanPage />} />
             <Route path="/atividades" element={<Index />} />
             <Route path="/negativar-venda" element={<NegativeSale />} />
             <Route path="/mensagem" element={<MessagePage />} />

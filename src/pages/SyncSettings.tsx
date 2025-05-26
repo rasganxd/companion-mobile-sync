@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { Cloud, CloudOff, RefreshCw, Settings } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, Settings, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useSync } from '@/hooks/useSync';
@@ -130,6 +129,15 @@ const SyncSettings = () => {
                 Sincronizar Agora
               </>
             )}
+          </Button>
+          
+          <Button 
+            onClick={() => navigate('/qr-scanner')}
+            className="w-full mt-2"
+            variant="outline"
+          >
+            <QrCode size={16} className="mr-2" />
+            Escanear QR para Atualizar
           </Button>
         </div>
         
