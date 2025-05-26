@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 
 export interface OrderItem {
@@ -90,7 +91,7 @@ class ApiService {
 
     return {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${this.config.apiKey}`,
+      'x-api-key': this.config.apiKey,
       'Accept': 'application/json'
     };
   }
