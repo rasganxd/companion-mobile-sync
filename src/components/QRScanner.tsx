@@ -30,42 +30,14 @@ const QRScanner = ({ onScanSuccess, onClose, isOpen }: QRScannerProps) => {
           source: CameraSource.Camera,
         });
         
-        // Para demonstração, simularemos a leitura do QR code com dados de configuração
-        const mockApiConfig = JSON.stringify({
-          type: 'api_mobile_config',
-          servidor: 'https://c8013aad-fbd9-489a-b9a1-377a842607bd.lovableproject.com',
-          ip_local: '200.53.23.19',
-          ip_publico: '200.53.23.19',
-          token: 'default-sales-rep-token-12345',
-          vendedor_id: 'default-sales-rep',
-          endpoints: {
-            download: '/api/mobile/download/default-sales-rep-17442809638',
-            upload: '/api/mobile/upload/default-sales-rep-17442809638'
-          }
-        });
-        
-        toast.success("QR Code de configuração escaneado!");
-        onScanSuccess(mockApiConfig);
+        // TODO: Implement actual QR code reading from image
+        // For now, we'll show an error since we need a QR code reader library
+        toast.error("Leitura de QR Code ainda não implementada para dispositivos móveis");
+        setError("Funcionalidade em desenvolvimento");
       } else {
-        // Web implementation - simula escaneamento com dados reais
-        const mockApiConfig = JSON.stringify({
-          type: 'api_mobile_config',
-          servidor: 'https://c8013aad-fbd9-489a-b9a1-377a842607bd.lovableproject.com',
-          ip_local: '200.53.23.19',
-          ip_publico: '200.53.23.19',
-          token: 'default-sales-rep-token-12345',
-          vendedor_id: 'default-sales-rep',
-          endpoints: {
-            download: '/api/mobile/download/default-sales-rep-17442809638',
-            upload: '/api/mobile/upload/default-sales-rep-17442809638'
-          }
-        });
-        
-        // Simula delay de escaneamento
-        setTimeout(() => {
-          toast.success("QR Code de configuração escaneado!");
-          onScanSuccess(mockApiConfig);
-        }, 2000);
+        // Web implementation - would need a QR code scanning library
+        toast.error("Scanner de QR Code precisa ser implementado com uma biblioteca específica");
+        setError("Scanner não disponível no navegador");
       }
     } catch (err) {
       console.error('Error scanning QR code:', err);
