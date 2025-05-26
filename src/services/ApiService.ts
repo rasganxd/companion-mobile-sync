@@ -1,5 +1,6 @@
 
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface OrderItem {
   id?: string;
@@ -14,29 +15,34 @@ export interface OrderItem {
 
 export interface Order {
   id?: string;
-  client_id: string;
-  client_name?: string;
+  customer_id: string;
+  customer_name?: string;
   sales_rep_id: string;
-  order_date: string;
+  date: string;
   status: 'pending' | 'processed' | 'cancelled' | 'delivered';
-  total_amount: number;
+  total: number;
   notes?: string;
   items?: OrderItem[];
 }
 
-export interface ApiConfig {
-  baseUrl: string;
-  apiKey: string;
-  salesRepId: string;
+export interface Customer {
+  id?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  sales_rep_id?: string;
 }
 
 class ApiService {
   private static instance: ApiService;
-  private config: ApiConfig | null = null;
+  private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/rest/v1';
+  private apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
 
-  private constructor() {
-    this.loadConfig();
-  }
+  private constructor() {}
 
   static getInstance(): ApiService {
     if (!ApiService.instance) {
@@ -45,18 +51,23 @@ class ApiService {
     return ApiService.instance;
   }
 
-  private loadConfig(): void {
-    const savedConfig = localStorage.getItem('api_config');
-    if (savedConfig) {
-      try {
-        this.config = JSON.parse(savedConfig);
-      } catch (error) {
-        console.error('Error loading API config:', error);
-      }
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'apikey': this.apiKey,
+      'Accept': 'application/json'
+    };
+
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`;
     }
+
+    return headers;
   }
 
-  private getAuthenticatedSalesRepId(): string | null {
+  private async getCurrentSalesRepId(): Promise<string | null> {
     const authenticatedSalesRep = localStorage.getItem('authenticated_sales_rep');
     if (authenticatedSalesRep) {
       try {
@@ -69,63 +80,35 @@ class ApiService {
     return null;
   }
 
-  setConfig(config: ApiConfig): void {
-    // Use authenticated sales rep ID if available
-    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
-    if (authenticatedSalesRepId) {
-      config.salesRepId = authenticatedSalesRepId;
-    }
-    
-    this.config = config;
-    localStorage.setItem('api_config', JSON.stringify(config));
-  }
-
-  getConfig(): ApiConfig | null {
-    return this.config;
-  }
-
-  private getHeaders(): Record<string, string> {
-    if (!this.config?.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
-    return {
-      'Content-Type': 'application/json',
-      'x-api-key': this.config.apiKey,
-      'Accept': 'application/json'
-    };
-  }
-
   private async request<T>(
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<T> {
-    if (!this.config?.baseUrl) {
-      throw new Error('URL base da API não configurada');
-    }
-
-    const url = `${this.config.baseUrl}/api/rest${endpoint}`;
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = await this.getAuthHeaders();
     
     try {
       const response = await fetch(url, {
         ...options,
         headers: {
-          ...this.getHeaders(),
+          ...headers,
           ...options.headers,
         },
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Não autorizado - verifique sua API Key');
+          throw new Error('Não autorizado - faça login novamente');
         }
         if (response.status === 403) {
           throw new Error('Acesso negado');
         }
-        throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Erro na API: ${response.status} - ${errorText}`);
       }
 
-      return await response.json();
+      const data = await response.json();
+      return Array.isArray(data) ? data : [data];
     } catch (error) {
       console.error('API request error:', error);
       throw error;
@@ -144,16 +127,17 @@ class ApiService {
 
   // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
-    // Ensure we use the authenticated sales rep ID
-    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
-    if (authenticatedSalesRepId) {
-      order.sales_rep_id = authenticatedSalesRepId;
+    const salesRepId = await this.getCurrentSalesRepId();
+    if (salesRepId) {
+      order.sales_rep_id = salesRepId;
     }
     
-    return await this.request<Order>('/orders', {
+    const response = await this.request<Order[]>('/orders', {
       method: 'POST',
       body: JSON.stringify(order),
     });
+    
+    return response[0];
   }
 
   async getOrders(filters: {
@@ -166,22 +150,20 @@ class ApiService {
   } = {}): Promise<Order[]> {
     const params = new URLSearchParams();
     
-    // Always filter by authenticated sales rep
-    const authenticatedSalesRepId = this.getAuthenticatedSalesRepId();
-    if (authenticatedSalesRepId) {
-      params.append('sales_rep_id', `eq.${authenticatedSalesRepId}`);
-    } else if (this.config?.salesRepId) {
-      params.append('sales_rep_id', `eq.${this.config.salesRepId}`);
+    // Sempre filtrar pelo vendedor autenticado
+    const salesRepId = await this.getCurrentSalesRepId();
+    if (salesRepId) {
+      params.append('sales_rep_id', `eq.${salesRepId}`);
     }
     
     if (filters.status) {
       params.append('status', `eq.${filters.status}`);
     }
     if (filters.start_date) {
-      params.append('order_date', `gte.${filters.start_date}`);
+      params.append('date', `gte.${filters.start_date}`);
     }
     if (filters.end_date) {
-      params.append('order_date', `lte.${filters.end_date}`);
+      params.append('date', `lte.${filters.end_date}`);
     }
     if (filters.limit) {
       params.append('limit', filters.limit.toString());
@@ -194,10 +176,12 @@ class ApiService {
   }
 
   async updateOrder(id: string, updates: Partial<Order>): Promise<Order> {
-    return await this.request<Order>(`/orders?id=eq.${id}`, {
+    const response = await this.request<Order[]>(`/orders?id=eq.${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     });
+    
+    return response[0];
   }
 
   async deleteOrder(id: string): Promise<void> {
@@ -207,10 +191,12 @@ class ApiService {
   }
 
   async createOrderItem(item: Omit<OrderItem, 'id'>): Promise<OrderItem> {
-    return await this.request<OrderItem>('/order_items', {
+    const response = await this.request<OrderItem[]>('/order_items', {
       method: 'POST',
       body: JSON.stringify(item),
     });
+    
+    return response[0];
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
@@ -218,20 +204,78 @@ class ApiService {
   }
 
   async createOrderWithItems(order: Omit<Order, 'id'>, items: Omit<OrderItem, 'id' | 'order_id'>[]): Promise<Order> {
-    // Create order first
+    // Criar pedido primeiro
     const createdOrder = await this.createOrder(order);
     
-    // Then create all items
-    const itemPromises = items.map(item => 
-      this.createOrderItem({
-        ...item,
-        order_id: createdOrder.id!
-      })
-    );
-    
-    await Promise.all(itemPromises);
+    // Depois criar todos os itens
+    if (items.length > 0) {
+      const itemPromises = items.map(item => 
+        this.createOrderItem({
+          ...item,
+          order_id: createdOrder.id!
+        })
+      );
+      
+      await Promise.all(itemPromises);
+    }
     
     return createdOrder;
+  }
+
+  // Customers CRUD operations
+  async getCustomers(filters: {
+    sales_rep_id?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<Customer[]> {
+    const params = new URLSearchParams();
+    
+    // Sempre filtrar pelo vendedor autenticado
+    const salesRepId = await this.getCurrentSalesRepId();
+    if (salesRepId) {
+      params.append('sales_rep_id', `eq.${salesRepId}`);
+    }
+    
+    if (filters.search) {
+      params.append('name', `ilike.%${filters.search}%`);
+    }
+    if (filters.limit) {
+      params.append('limit', filters.limit.toString());
+    }
+    if (filters.offset) {
+      params.append('offset', filters.offset.toString());
+    }
+
+    return await this.request<Customer[]>(`/customers?${params.toString()}`);
+  }
+
+  async createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
+    const salesRepId = await this.getCurrentSalesRepId();
+    if (salesRepId) {
+      customer.sales_rep_id = salesRepId;
+    }
+    
+    const response = await this.request<Customer[]>('/customers', {
+      method: 'POST',
+      body: JSON.stringify(customer),
+    });
+    
+    return response[0];
+  }
+
+  // Método para configurar a API (mantido para compatibilidade)
+  setConfig(config: { baseUrl: string; apiKey: string; salesRepId: string }): void {
+    // Método mantido para compatibilidade, mas não usado
+    console.log('setConfig called but using direct Supabase integration');
+  }
+
+  getConfig(): { baseUrl: string; apiKey: string; salesRepId: string } | null {
+    return {
+      baseUrl: this.baseUrl,
+      apiKey: this.apiKey,
+      salesRepId: 'supabase-auth'
+    };
   }
 }
 

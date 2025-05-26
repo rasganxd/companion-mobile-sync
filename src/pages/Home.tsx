@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -10,6 +9,7 @@ import { useSync } from '@/hooks/useSync';
 import { SyncStatusBadge } from '@/components/SyncComponents';
 import { toast } from 'sonner';
 import { ShoppingCart, Plus, Package, Settings } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SalesRep {
   id: string;
@@ -56,10 +56,21 @@ const Home = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authenticated_sales_rep');
-    localStorage.removeItem('api_config');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear local storage
+      localStorage.removeItem('authenticated_sales_rep');
+      localStorage.removeItem('api_config');
+      
+      toast.success('Logout realizado com sucesso');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Erro ao fazer logout');
+    }
   };
 
   const menuItems = [

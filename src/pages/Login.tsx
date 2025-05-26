@@ -26,30 +26,60 @@ const Login = () => {
       }
 
       // Query the sales_reps table to authenticate the user
-      const { data: salesRep, error } = await supabase
+      const { data: salesRep, error: salesRepError } = await supabase
         .from('sales_reps')
         .select('*')
         .eq('code', codeNumber)
         .single();
 
-      if (error || !salesRep) {
+      if (salesRepError || !salesRep) {
         toast.error('Usuário não encontrado');
         return;
       }
 
-      // Store the authenticated sales rep data
-      localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRep));
-      
-      // Update API configuration with the sales rep ID
-      const apiConfig = localStorage.getItem('api_config');
-      if (apiConfig) {
-        const config = JSON.parse(apiConfig);
-        config.salesRepId = salesRep.id;
-        localStorage.setItem('api_config', JSON.stringify(config));
+      // Create a temporary user session using the sales rep email or a generated one
+      const tempEmail = salesRep.email || `salesrep_${salesRep.code}@company.local`;
+      const tempPassword = password || 'defaultpassword123';
+
+      // Try to sign in first, if it fails, try to sign up
+      let authResult = await supabase.auth.signInWithPassword({
+        email: tempEmail,
+        password: tempPassword,
+      });
+
+      // If sign in fails, try to sign up the user
+      if (authResult.error) {
+        console.log('Sign in failed, trying to sign up:', authResult.error.message);
+        
+        authResult = await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword,
+          options: {
+            data: {
+              sales_rep_id: salesRep.id,
+              sales_rep_code: salesRep.code,
+              sales_rep_name: salesRep.name,
+            }
+          }
+        });
+
+        if (authResult.error) {
+          console.error('Sign up failed:', authResult.error);
+          // If both fail, we'll proceed with local storage only
+          toast.warning('Autenticação local ativada');
+        } else {
+          toast.success('Conta criada e logado com sucesso!');
+        }
+      } else {
+        toast.success('Login realizado com sucesso!');
       }
 
+      // Store the authenticated sales rep data regardless of auth result
+      localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRep));
+      
       toast.success(`Bem-vindo, ${salesRep.name}!`);
       navigate('/home');
+      
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro ao fazer login');
@@ -100,15 +130,14 @@ const Login = () => {
             </div>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Senha</label>
+              <label className="text-sm font-medium text-gray-700">Senha (opcional)</label>
               <div className="relative">
                 <Input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
-                  placeholder="Digite sua senha"
-                  required
+                  placeholder="Digite sua senha (opcional)"
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <KeyRound size={16} />
