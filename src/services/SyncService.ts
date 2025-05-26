@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
@@ -25,10 +24,21 @@ export interface SyncSettings {
   syncEnabled: boolean;
 }
 
+export interface ApiConfig {
+  baseUrl: string;
+  token: string;
+  vendorId: string;
+  endpoints: {
+    download: string;
+    upload: string;
+  };
+}
+
 class SyncService {
   private static instance: SyncService;
   private dbService = getDatabaseAdapter();
   private apiUrl: string = 'https://preview--vendas-fortes.lovable.app/api';
+  private apiConfig: ApiConfig | null = null;
   private syncInProgress: boolean = false;
   private syncSettings: SyncSettings = {
     autoSync: true,
@@ -49,6 +59,7 @@ class SyncService {
   private constructor() {
     this.checkConnection();
     this.loadSettings();
+    this.loadApiConfig();
   }
 
   static getInstance(): SyncService {
@@ -83,6 +94,27 @@ class SyncService {
           }
         }
       }, interval);
+    }
+  }
+
+  private async loadApiConfig(): Promise<void> {
+    try {
+      const savedConfig = localStorage.getItem('api_config');
+      if (savedConfig) {
+        const config = JSON.parse(savedConfig);
+        if (config.type === 'api_mobile_config') {
+          this.apiConfig = {
+            baseUrl: config.servidor,
+            token: config.token,
+            vendorId: config.vendedor_id,
+            endpoints: config.endpoints
+          };
+          this.apiUrl = this.apiConfig.baseUrl;
+          console.log('API configuration loaded from QR code:', this.apiConfig);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading API config:', error);
     }
   }
 
@@ -158,6 +190,12 @@ class SyncService {
     // In a real app, save to localStorage or preferences
   }
 
+  async updateApiConfig(config: ApiConfig): Promise<void> {
+    this.apiConfig = config;
+    this.apiUrl = config.baseUrl;
+    console.log('API configuration updated:', config);
+  }
+
   async sync(): Promise<boolean> {
     if (this.syncInProgress) return false;
     
@@ -200,7 +238,10 @@ class SyncService {
   }
 
   private async uploadData(): Promise<void> {
-    // For each table, get pending items and send to server
+    // Use configured endpoints if available
+    const baseUrl = this.apiConfig ? this.apiConfig.baseUrl : this.apiUrl;
+    const uploadEndpoint = this.apiConfig?.endpoints?.upload || '';
+    
     const tables = ['clients', 'orders', 'visit_routes'];
     let totalUploaded = 0;
     let totalToUpload = this.pendingUploads;
@@ -210,12 +251,21 @@ class SyncService {
       
       for (const item of pendingItems) {
         try {
-          // In a real implementation, send to actual API endpoint
-          const response = await fetch(`${this.apiUrl}/${table}`, {
+          const url = this.apiConfig ? 
+            `${baseUrl}${uploadEndpoint}/${table}` : 
+            `${baseUrl}/${table}`;
+            
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+          };
+          
+          if (this.apiConfig?.token) {
+            headers['Authorization'] = `Bearer ${this.apiConfig.token}`;
+          }
+
+          const response = await fetch(url, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify(item)
           });
 
@@ -227,7 +277,6 @@ class SyncService {
         } catch (error) {
           console.error(`Error uploading ${table} item:`, error);
           await this.dbService.updateSyncStatus(table, item.id, 'error');
-          // Continue with other items
         }
         
         totalUploaded++;
@@ -241,9 +290,26 @@ class SyncService {
   }
 
   private async downloadData(): Promise<void> {
-    // For demo purposes, we're not implementing full download sync
-    // In a real app, you'd query the server for changes since last sync
-    // and update local database accordingly
+    // Use configured download endpoint if available
+    if (this.apiConfig?.endpoints?.download) {
+      try {
+        const url = `${this.apiConfig.baseUrl}${this.apiConfig.endpoints.download}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${this.apiConfig.token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Downloaded data:', data);
+          // Process downloaded data here
+        }
+      } catch (error) {
+        console.error('Error downloading data:', error);
+      }
+    }
+    
     this.notifyProgress({
       total: 1,
       processed: 1,

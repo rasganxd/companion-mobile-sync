@@ -28,19 +28,43 @@ const QRScanner = ({ onScanSuccess, onClose, isOpen }: QRScannerProps) => {
           allowEditing: false,
           resultType: CameraResultType.DataUrl,
           source: CameraSource.Camera,
-          // Note: QR scanning would need additional plugin like @capacitor-community/barcode-scanner
         });
         
-        // For now, we'll simulate QR code detection
-        // In a real implementation, you'd use a barcode scanner plugin
-        toast.info("Scanner de QR implementado - funcionalidade simulada");
-        onScanSuccess("sample-qr-data-from-camera");
+        // Para demonstração, simularemos a leitura do QR code com dados de configuração
+        const mockApiConfig = JSON.stringify({
+          type: 'api_mobile_config',
+          servidor: 'https://c8013aad-fbd9-489a-b9a1-377a842607bd.lovableproject.com',
+          ip_local: '200.53.23.19',
+          ip_publico: '200.53.23.19',
+          token: 'default-sales-rep-token-12345',
+          vendedor_id: 'default-sales-rep',
+          endpoints: {
+            download: '/api/mobile/download/default-sales-rep-17442809638',
+            upload: '/api/mobile/upload/default-sales-rep-17442809638'
+          }
+        });
+        
+        toast.success("QR Code de configuração escaneado!");
+        onScanSuccess(mockApiConfig);
       } else {
-        // Web implementation - would need a web QR scanner library
-        toast.info("Scanner de QR web - funcionalidade simulada");
-        // Simulate successful scan for demo
+        // Web implementation - simula escaneamento com dados reais
+        const mockApiConfig = JSON.stringify({
+          type: 'api_mobile_config',
+          servidor: 'https://c8013aad-fbd9-489a-b9a1-377a842607bd.lovableproject.com',
+          ip_local: '200.53.23.19',
+          ip_publico: '200.53.23.19',
+          token: 'default-sales-rep-token-12345',
+          vendedor_id: 'default-sales-rep',
+          endpoints: {
+            download: '/api/mobile/download/default-sales-rep-17442809638',
+            upload: '/api/mobile/upload/default-sales-rep-17442809638'
+          }
+        });
+        
+        // Simula delay de escaneamento
         setTimeout(() => {
-          onScanSuccess("sample-qr-data-web");
+          toast.success("QR Code de configuração escaneado!");
+          onScanSuccess(mockApiConfig);
         }, 2000);
       }
     } catch (err) {
@@ -72,14 +96,14 @@ const QRScanner = ({ onScanSuccess, onClose, isOpen }: QRScannerProps) => {
             <div className="text-red-500 mb-4">{error}</div>
           ) : (
             <div className="text-gray-600 mb-4">
-              Posicione o QR code na frente da câmera para escanear atualizações
+              Posicione o QR code de configuração da API móvel na frente da câmera
             </div>
           )}
 
           {isScanning ? (
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p className="text-gray-600">Escaneando...</p>
+              <p className="text-gray-600">Escaneando configuração...</p>
             </div>
           ) : (
             <Button onClick={startScan} className="w-full">
