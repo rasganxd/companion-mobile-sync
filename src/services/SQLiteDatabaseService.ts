@@ -1,5 +1,5 @@
 
-import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor/sqlite';
+import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
 class SQLiteDatabaseService {
