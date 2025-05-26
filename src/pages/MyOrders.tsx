@@ -208,9 +208,9 @@ const MyOrders = () => {
                       <h3 className="font-semibold text-lg">
                         Pedido #{order.id?.substring(0, 8)}
                       </h3>
-                      <p className="text-gray-600">{order.client_name}</p>
+                      <p className="text-gray-600">{order.customer_name}</p>
                       <p className="text-sm text-gray-500">
-                        {formatDate(order.order_date)}
+                        {formatDate(order.date)}
                       </p>
                     </div>
                     
@@ -219,7 +219,7 @@ const MyOrders = () => {
                         {statusOptions.find(s => s.value === order.status)?.label}
                       </Badge>
                       <p className="font-bold text-lg mt-1">
-                        {formatCurrency(order.total_amount)}
+                        {formatCurrency(order.total)}
                       </p>
                     </div>
                   </div>

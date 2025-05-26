@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
@@ -16,9 +17,9 @@ const NewOrder = () => {
   const apiService = ApiService.getInstance();
   
   const [order, setOrder] = useState<Partial<Order>>({
-    client_id: '',
-    client_name: '',
-    order_date: new Date().toISOString().split('T')[0],
+    customer_id: '',
+    customer_name: '',
+    date: new Date().toISOString().split('T')[0],
     status: 'pending',
     notes: ''
   });
@@ -77,7 +78,7 @@ const NewOrder = () => {
   };
 
   const validateOrder = (): boolean => {
-    if (!order.client_id || !order.client_name) {
+    if (!order.customer_id || !order.customer_name) {
       toast.error('Cliente é obrigatório');
       return false;
     }
@@ -110,12 +111,12 @@ const NewOrder = () => {
     setIsLoading(true);
     try {
       const orderData: Omit<Order, 'id'> = {
-        client_id: order.client_id!,
-        client_name: order.client_name,
+        customer_id: order.customer_id!,
+        customer_name: order.customer_name,
         sales_rep_id: config.salesRepId,
-        order_date: order.order_date!,
+        date: order.date!,
         status: 'pending',
-        total_amount: calculateOrderTotal(),
+        total: calculateOrderTotal(),
         notes: order.notes
       };
 
@@ -147,22 +148,22 @@ const NewOrder = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="clientId">ID do Cliente</Label>
+              <Label htmlFor="customerId">ID do Cliente</Label>
               <Input
-                id="clientId"
+                id="customerId"
                 placeholder="Digite o ID do cliente"
-                value={order.client_id}
-                onChange={(e) => setOrder(prev => ({ ...prev, client_id: e.target.value }))}
+                value={order.customer_id}
+                onChange={(e) => setOrder(prev => ({ ...prev, customer_id: e.target.value }))}
               />
             </div>
             
             <div>
-              <Label htmlFor="clientName">Nome do Cliente</Label>
+              <Label htmlFor="customerName">Nome do Cliente</Label>
               <Input
-                id="clientName"
+                id="customerName"
                 placeholder="Digite o nome do cliente"
-                value={order.client_name}
-                onChange={(e) => setOrder(prev => ({ ...prev, client_name: e.target.value }))}
+                value={order.customer_name}
+                onChange={(e) => setOrder(prev => ({ ...prev, customer_name: e.target.value }))}
               />
             </div>
             
@@ -171,8 +172,8 @@ const NewOrder = () => {
               <Input
                 id="orderDate"
                 type="date"
-                value={order.order_date}
-                onChange={(e) => setOrder(prev => ({ ...prev, order_date: e.target.value }))}
+                value={order.date}
+                onChange={(e) => setOrder(prev => ({ ...prev, date: e.target.value }))}
               />
             </div>
             

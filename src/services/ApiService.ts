@@ -37,6 +37,12 @@ export interface Customer {
   sales_rep_id?: string;
 }
 
+export interface ApiConfig {
+  baseUrl: string;
+  apiKey: string;
+  salesRepId: string;
+}
+
 class ApiService {
   private static instance: ApiService;
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/rest/v1';
@@ -108,7 +114,7 @@ class ApiService {
       }
 
       const data = await response.json();
-      return Array.isArray(data) ? data : [data];
+      return Array.isArray(data) ? data as T : [data] as T;
     } catch (error) {
       console.error('API request error:', error);
       throw error;
@@ -265,12 +271,12 @@ class ApiService {
   }
 
   // Método para configurar a API (mantido para compatibilidade)
-  setConfig(config: { baseUrl: string; apiKey: string; salesRepId: string }): void {
+  setConfig(config: ApiConfig): void {
     // Método mantido para compatibilidade, mas não usado
     console.log('setConfig called but using direct Supabase integration');
   }
 
-  getConfig(): { baseUrl: string; apiKey: string; salesRepId: string } | null {
+  getConfig(): ApiConfig | null {
     return {
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
