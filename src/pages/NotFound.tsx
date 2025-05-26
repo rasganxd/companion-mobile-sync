@@ -1,15 +1,12 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+
+import React from "react";
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
+  // Remove the useLocation and useEffect hooks that are causing the context error
+  // Instead, use a simple approach that doesn't rely on router context
+  React.useEffect(() => {
+    console.error("404 Error: User attempted to access non-existent route:", window.location.pathname);
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
