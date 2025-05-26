@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera } from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { QrCode, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -26,8 +26,8 @@ const QRScanner = ({ onScanSuccess, onClose, isOpen }: QRScannerProps) => {
         const image = await Camera.getPhoto({
           quality: 90,
           allowEditing: false,
-          resultType: 'dataUrl',
-          source: 'camera',
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
           // Note: QR scanning would need additional plugin like @capacitor-community/barcode-scanner
         });
         
