@@ -1,8 +1,20 @@
 
 import { useNavigation } from '@/contexts/NavigationContext';
+import { useNavigate } from 'react-router-dom';
 
 export const useAppNavigation = () => {
-  const { navigateTo, goBack, canGoBack, getCurrentPath } = useNavigation();
+  const { navigateTo: contextNavigateTo, goBack, canGoBack, getCurrentPath } = useNavigation();
+  const navigate = useNavigate();
+
+  const navigateTo = (path: string, state?: any) => {
+    if (state) {
+      // Usar navigate do React Router quando há estado
+      navigate(path, { state });
+    } else {
+      // Usar contexto de navegação quando não há estado
+      contextNavigateTo(path);
+    }
+  };
 
   const navigateToHome = () => navigateTo('/home');
   const navigateToClients = (day?: string) => {

@@ -6,13 +6,19 @@ interface MenuCardProps {
   icon: React.ReactNode;
   title: string;
   to: string;
+  state?: any;
 }
 
-const MenuCard = ({ icon, title, to }: MenuCardProps) => {
+const MenuCard = ({ icon, title, to, state }: MenuCardProps) => {
   const { navigateTo } = useAppNavigation();
 
   const handleClick = () => {
-    navigateTo(to);
+    if (state) {
+      // Se há estado, usar navigate do React Router diretamente para passar o state
+      navigateTo(to, state);
+    } else {
+      navigateTo(to);
+    }
   };
 
   return (
