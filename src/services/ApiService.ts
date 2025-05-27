@@ -40,7 +40,7 @@ export interface Customer {
 export interface ApiConfig {
   baseUrl: string;
   apiKey: string;
-  salesRepId: string;
+  salesRepId: string; // Mantido para compatibilidade, mas não usado
 }
 
 class ApiService {
@@ -71,19 +71,6 @@ class ApiService {
     }
 
     return headers;
-  }
-
-  private async getCurrentSalesRepId(): Promise<string | null> {
-    const authenticatedSalesRep = localStorage.getItem('authenticated_sales_rep');
-    if (authenticatedSalesRep) {
-      try {
-        const salesRep = JSON.parse(authenticatedSalesRep);
-        return salesRep.id;
-      } catch (error) {
-        console.error('Error parsing authenticated sales rep:', error);
-      }
-    }
-    return null;
   }
 
   private async request<T>(
@@ -133,11 +120,7 @@ class ApiService {
 
   // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
-    const salesRepId = await this.getCurrentSalesRepId();
-    if (salesRepId) {
-      order.sales_rep_id = salesRepId;
-    }
-    
+    // Removido: sales_rep_id é automaticamente inferido pelo RLS via auth.uid()
     const response = await this.request<Order[]>('/orders', {
       method: 'POST',
       body: JSON.stringify(order),
@@ -147,7 +130,6 @@ class ApiService {
   }
 
   async getOrders(filters: {
-    sales_rep_id?: string;
     status?: string;
     start_date?: string;
     end_date?: string;
@@ -156,11 +138,7 @@ class ApiService {
   } = {}): Promise<Order[]> {
     const params = new URLSearchParams();
     
-    // Sempre filtrar pelo vendedor autenticado
-    const salesRepId = await this.getCurrentSalesRepId();
-    if (salesRepId) {
-      params.append('sales_rep_id', `eq.${salesRepId}`);
-    }
+    // Removido: sales_rep_id filtro manual - RLS cuida automaticamente
     
     if (filters.status) {
       params.append('status', `eq.${filters.status}`);
@@ -230,18 +208,13 @@ class ApiService {
 
   // Customers CRUD operations
   async getCustomers(filters: {
-    sales_rep_id?: string;
     search?: string;
     limit?: number;
     offset?: number;
   } = {}): Promise<Customer[]> {
     const params = new URLSearchParams();
     
-    // Sempre filtrar pelo vendedor autenticado
-    const salesRepId = await this.getCurrentSalesRepId();
-    if (salesRepId) {
-      params.append('sales_rep_id', `eq.${salesRepId}`);
-    }
+    // Removido: sales_rep_id filtro manual - RLS cuida automaticamente
     
     if (filters.search) {
       params.append('name', `ilike.%${filters.search}%`);
@@ -257,11 +230,7 @@ class ApiService {
   }
 
   async createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
-    const salesRepId = await this.getCurrentSalesRepId();
-    if (salesRepId) {
-      customer.sales_rep_id = salesRepId;
-    }
-    
+    // Removido: sales_rep_id é automaticamente inferido pelo RLS via auth.uid()
     const response = await this.request<Customer[]>('/customers', {
       method: 'POST',
       body: JSON.stringify(customer),
@@ -273,14 +242,14 @@ class ApiService {
   // Método para configurar a API (mantido para compatibilidade)
   setConfig(config: ApiConfig): void {
     // Método mantido para compatibilidade, mas não usado
-    console.log('setConfig called but using direct Supabase integration');
+    console.log('setConfig called - using direct Supabase integration with auth.uid()');
   }
 
   getConfig(): ApiConfig | null {
     return {
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
-      salesRepId: 'supabase-auth'
+      salesRepId: 'auto-supabase-auth' // Indicador de que usa auth automático
     };
   }
 }

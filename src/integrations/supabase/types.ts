@@ -868,6 +868,7 @@ export type Database = {
       sales_reps: {
         Row: {
           active: boolean
+          auth_user_id: string | null
           code: number
           created_at: string
           email: string | null
@@ -878,6 +879,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          auth_user_id?: string | null
           code: number
           created_at?: string
           email?: string | null
@@ -888,6 +890,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          auth_user_id?: string | null
           code?: number
           created_at?: string
           email?: string | null

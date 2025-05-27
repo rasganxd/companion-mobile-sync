@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Server, Key, User, CheckCircle, XCircle } from 'lucide-react';
+import { Server, CheckCircle, XCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ const ApiSettings = () => {
   const [config, setConfig] = useState<ApiConfig>({
     baseUrl: '',
     apiKey: '',
-    salesRepId: ''
+    salesRepId: '' // Mantido para compatibilidade, mas não usado
   });
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,8 +63,8 @@ const ApiSettings = () => {
   };
 
   const saveConfig = () => {
-    if (!config.baseUrl || !config.apiKey || !config.salesRepId) {
-      toast.error('Todos os campos são obrigatórios');
+    if (!config.baseUrl || !config.apiKey) {
+      toast.error('URL base e API Key são obrigatórios');
       return;
     }
 
@@ -108,16 +108,6 @@ const ApiSettings = () => {
                 placeholder="sua-api-key-aqui"
                 value={config.apiKey}
                 onChange={(e) => handleInputChange('apiKey', e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="salesRepId">ID do Vendedor</Label>
-              <Input
-                id="salesRepId"
-                placeholder="seu-id-de-vendedor"
-                value={config.salesRepId}
-                onChange={(e) => handleInputChange('salesRepId', e.target.value)}
               />
             </div>
           </CardContent>
@@ -171,8 +161,15 @@ const ApiSettings = () => {
           <ul className="text-sm text-gray-600 space-y-1">
             <li>• A URL base é o endereço do seu projeto Desktop no Lovable</li>
             <li>• A API Key deve ser gerada nas configurações do projeto Desktop</li>
-            <li>• O ID do vendedor deve corresponder ao seu ID no sistema Desktop</li>
           </ul>
+          
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>✅ Autenticação Automática:</strong> O sistema agora usa automaticamente 
+              sua autenticação Supabase para filtrar os dados. Não é mais necessário configurar 
+              ID do vendedor - isso é feito automaticamente pelo JWT token.
+            </p>
+          </div>
         </div>
       </div>
     </div>
