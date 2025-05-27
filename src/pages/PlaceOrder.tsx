@@ -434,15 +434,15 @@ const PlaceOrder = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <Header 
         title="Digitação de Pedidos"
         backgroundColor="blue"
         showBackButton
       />
       
-      {/* Client Info Bar */}
-      <div className="bg-app-blue text-white px-3 py-2 text-sm">
+      {/* Client Info Bar - Reduced padding */}
+      <div className="bg-app-blue text-white px-3 py-1.5 text-sm">
         {selectedClient.id ? (
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -470,16 +470,16 @@ const PlaceOrder = () => {
         )}
       </div>
       
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* Product Section */}
-        <div className="flex-1 p-3 overflow-y-auto">
+      <div className="flex flex-col flex-1 min-h-0">
+        {/* Product Section - Reduced padding and margins */}
+        <div className="flex-1 p-2 min-h-0">
           <Card className="h-full">
-            <CardContent className="p-3">
-              {/* Product Header - Updated to be more neutral and compact */}
-              <div className="bg-gray-100 border border-gray-200 p-2 rounded-lg mb-3">
+            <CardContent className="p-2">
+              {/* Product Header - More compact */}
+              <div className="bg-gray-100 border border-gray-200 p-1.5 rounded-lg mb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className="bg-gray-500 h-6 w-6 flex items-center justify-center mr-2 text-white rounded-full text-xs">
+                    <div className="bg-gray-500 h-5 w-5 flex items-center justify-center mr-2 text-white rounded-full text-xs">
                       <span className="font-bold">{currentProductIndex + 1}</span>
                     </div>
                     <div className="flex-1">
@@ -512,24 +512,73 @@ const PlaceOrder = () => {
           </Card>
         </div>
         
-        {/* Order Items Table */}
-        <OrderItemsTable 
-          orderItems={orderItems}
-          onRemoveItem={handleRemoveItem}
-          calculateTotal={calculateTotal}
-        />
+        {/* Order Items Table - Fixed height and compact */}
+        <div className="bg-white border-t border-gray-200 flex-shrink-0">
+          <div className="p-2">
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center">
+                <Package size={14} className="mr-1 text-app-blue" />
+                <h3 className="text-sm font-semibold text-app-blue">
+                  Itens ({orderItems.length})
+                </h3>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-600">Total:</div>
+                <div className="text-sm font-bold text-green-600">
+                  R$ {calculateTotal()}
+                </div>
+              </div>
+            </div>
+            
+            <div className="h-20">
+              <ScrollArea className="h-full">
+                {orderItems.length > 0 ? (
+                  <div className="space-y-1">
+                    {orderItems.map((item) => (
+                      <div key={item.id} className="bg-gray-50 p-1.5 rounded border border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 mr-1">
+                            <div className="font-medium text-xs text-gray-900 truncate">
+                              {item.productName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Qtd: {item.quantity} {item.unit}
+                            </div>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-5 w-5 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={() => onRemoveItem(item.id)}
+                          >
+                            <Trash2 size={10} />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-2 text-gray-500">
+                    <Package size={16} className="mx-auto mb-1 text-gray-300" />
+                    <p className="text-xs">Nenhum item adicionado</p>
+                  </div>
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+        </div>
         
-        {/* Action Buttons */}
-        <div className="p-3 bg-white border-t shadow-lg">
-          {/* Se há itens no carrinho, mostrar botão de limpar carrinho */}
+        {/* Action Buttons - More compact */}
+        <div className="p-2 bg-white border-t shadow-lg flex-shrink-0">
+          {/* Clear cart button if there are items */}
           {orderItems.length > 0 && (
-            <div className="mb-2">
+            <div className="mb-1.5">
               <AppButton 
                 variant="gray" 
-                className="flex items-center justify-center h-8 text-xs w-full text-red-600 border-red-200 hover:bg-red-50"
+                className="flex items-center justify-center h-7 text-xs w-full text-red-600 border-red-200 hover:bg-red-50"
                 onClick={handleClearCart}
               >
-                <Trash2 size={14} className="mr-1" />
+                <Trash2 size={12} className="mr-1" />
                 Limpar Carrinho
               </AppButton>
             </div>
@@ -538,34 +587,34 @@ const PlaceOrder = () => {
           <div className="grid grid-cols-3 gap-2">
             <AppButton 
               variant="gray" 
-              className={`flex items-center justify-center h-8 text-xs ${
+              className={`flex items-center justify-center h-7 text-xs ${
                 orderItems.length > 0 
                   ? 'opacity-50 cursor-not-allowed' 
                   : ''
               }`}
               onClick={handleGoBack}
             >
-              <ArrowLeft size={14} className="mr-1" />
+              <ArrowLeft size={12} className="mr-1" />
               Voltar
             </AppButton>
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-8 text-xs"
+              className="flex items-center justify-center h-7 text-xs"
               onClick={handleViewOrder}
               disabled={orderItems.length === 0}
             >
-              <Eye size={14} className="mr-1" />
+              <Eye size={12} className="mr-1" />
               Gravar
             </AppButton>
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+              className="flex items-center justify-center h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
               onClick={handleFinishOrder}
               disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
             >
-              <ShoppingCart size={14} className="mr-1" />
+              <ShoppingCart size={12} className="mr-1" />
               {isSubmitting ? 'Salvando...' : 'Finalizar'}
             </AppButton>
           </div>

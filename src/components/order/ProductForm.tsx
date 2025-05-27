@@ -70,46 +70,46 @@ const ProductForm: React.FC<ProductFormProps> = ({
   }, []);
 
   return (
-    <div className="space-y-4">
-      {/* Product Navigation */}
-      <div className="bg-gray-50 p-3 rounded-lg">
+    <div className="space-y-2">
+      {/* Product Navigation - More compact */}
+      <div className="bg-gray-50 p-2 rounded-lg">
         <ProductNavigation 
           onProductChange={onProductChange} 
           onProductSearch={onProductSearch} 
         />
       </div>
       
-      {/* Product Details Grid */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Product Details Grid - Smaller spacing */}
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="block mb-1 text-xs font-medium text-gray-700">Unidade:</Label>
+          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Unidade:</Label>
           <Input
             value={product.unit || 'UN'}
             readOnly
-            className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
+            className="h-7 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
           />
         </div>
         
         <div>
-          <Label className="block mb-1 text-xs font-medium text-gray-700">Preço Unitário:</Label>
+          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Preço Unitário:</Label>
           <Input
             value={`R$ ${product.cost?.toFixed(2) || '0,00'}`}
             readOnly
-            className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
+            className="h-7 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
           />
         </div>
       </div>
       
-      {/* Payment Table */}
+      {/* Payment Table - More compact */}
       <div>
-        <Label className="block mb-1 text-xs font-medium text-gray-700">Tabela de Pagamento:</Label>
+        <Label className="block mb-0.5 text-xs font-medium text-gray-700">Tabela de Pagamento:</Label>
         <Select value={paymentMethod} onValueChange={onPaymentMethodChange}>
-          <SelectTrigger className="h-8 w-full bg-white border border-gray-300 text-xs">
+          <SelectTrigger className="h-7 w-full bg-white border border-gray-300 text-xs">
             <SelectValue placeholder="Selecione uma tabela" />
           </SelectTrigger>
           <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
             {paymentTables.map((table) => (
-              <SelectItem key={table.id} value={table.name} className="hover:bg-gray-100 py-2">
+              <SelectItem key={table.id} value={table.name} className="hover:bg-gray-100 py-1.5">
                 <div>
                   <div className="font-medium text-xs">{table.name}</div>
                   {table.description && (
