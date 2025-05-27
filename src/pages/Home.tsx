@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Route, Package, BarChart3, Settings, QrCode, Send } from 'lucide-react';
+import { Users, Route, Package, BarChart3, Settings, Send } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -54,11 +54,6 @@ const Home = () => {
           icon={<Settings size={32} />}
           title="Configurações"
           to="/sync-settings"
-        />
-        <MenuCard
-          icon={<QrCode size={32} />}
-          title="QR Scanner"
-          to="/qr-scanner"
         />
         
         {/* Transmit Orders Card with Badge */}
