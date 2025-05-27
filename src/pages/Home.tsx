@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Route, Package, BarChart3, Settings, Send } from 'lucide-react';
+import { Route, Package, BarChart3, Settings, Send } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -83,11 +82,6 @@ const Home = () => {
       </div>
       
       <div className="flex-1 p-4 grid grid-cols-2 gap-4">
-        <MenuCard
-          icon={<Users size={32} />}
-          title="Clientes"
-          to="/clientes-lista"
-        />
         <MenuCard
           icon={<Route size={32} />}
           title="Rotas"
