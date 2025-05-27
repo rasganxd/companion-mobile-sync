@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Progress } from '@/components/ui/progress';
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface RouteData {
@@ -20,50 +20,83 @@ const VisitRoutes = () => {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Mapeamento dos dias da semana
+  const dayMapping: { [key: string]: string } = {
+    'monday': 'Segunda',
+    'tuesday': 'Terça', 
+    'wednesday': 'Quarta',
+    'thursday': 'Quinta',
+    'friday': 'Sexta',
+    'saturday': 'Sábado',
+    'sunday': 'Domingo'
+  };
+
   useEffect(() => {
     const loadRoutesData = async () => {
       try {
         setLoading(true);
-        const db = getDatabaseAdapter();
-        await db.initDatabase();
         
-        // Get visit routes and clients data
-        const visitRoutes = await db.getVisitRoutes();
-        const allClients = await db.getClients();
+        console.log('🔍 Fetching customers from Supabase...');
         
-        console.log('📊 Loaded visit routes:', visitRoutes);
-        console.log('👥 Loaded clients:', allClients);
+        // Buscar clientes ativos com dias de visita definidos
+        const { data: customers, error } = await supabase
+          .from('customers')
+          .select('id, name, visit_days')
+          .eq('active', true)
+          .not('visit_days', 'is', null);
         
-        // Define all days of the week
+        if (error) {
+          console.error('❌ Error fetching customers:', error);
+          throw error;
+        }
+        
+        console.log('👥 Loaded customers:', customers);
+        
+        // Definir todos os dias da semana
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         
-        // Process routes data
+        // Processar dados das rotas
         const processedRoutes: RouteData[] = weekDays.map(day => {
-          const dayRoute = visitRoutes.find(route => route.day === day);
+          // Encontrar a chave em inglês correspondente ao dia em português
+          const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
           
-          if (dayRoute && dayRoute.clients && Array.isArray(dayRoute.clients)) {
-            const dayClients = dayRoute.clients;
-            const total = dayClients.length;
-            
-            // For now, assume no visits completed (can be enhanced later)
-            const visited = 0;
-            const remaining = total;
-            
+          if (!englishDay) {
             return {
               day,
-              visited,
-              remaining,
-              total,
-              clients: dayClients
+              visited: 0,
+              remaining: 0,
+              total: 0,
+              clients: []
             };
           }
           
+          // Filtrar clientes que têm esse dia nas suas visit_days
+          const dayClients = customers?.filter(customer => 
+            customer.visit_days && 
+            Array.isArray(customer.visit_days) && 
+            customer.visit_days.includes(englishDay)
+          ) || [];
+          
+          const clientNames = dayClients.map(client => client.name);
+          const total = clientNames.length;
+          
+          // Para agora, assumir que nenhuma visita foi completada (pode ser melhorado depois)
+          const visited = 0;
+          const remaining = total;
+          
+          console.log(`📅 ${day} (${englishDay}):`, {
+            clients: clientNames,
+            total,
+            visited,
+            remaining
+          });
+          
           return {
             day,
-            visited: 0,
-            remaining: 0,
-            total: 0,
-            clients: []
+            visited,
+            remaining,
+            total,
+            clients: clientNames
           };
         });
         
@@ -74,7 +107,7 @@ const VisitRoutes = () => {
         console.error('❌ Error loading routes data:', error);
         toast.error('Erro ao carregar dados das rotas');
         
-        // Fallback to empty data
+        // Fallback para dados vazios
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         setRoutes(weekDays.map(day => ({
           day,
@@ -92,7 +125,7 @@ const VisitRoutes = () => {
   }, []);
 
   const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
-  const totalNegatives = 0; // This can be enhanced later with actual negative sales data
+  const totalNegatives = 0; // Pode ser melhorado depois com dados reais de vendas negativas
 
   const handleDaySelect = (day: string) => {
     console.log(`🗓️ Selected day: ${day}`);
