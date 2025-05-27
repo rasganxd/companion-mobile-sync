@@ -1,7 +1,9 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
 import { Network } from '@capacitor/network';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface SyncProgress {
   total: number;
@@ -22,6 +24,15 @@ export interface SyncSettings {
   syncInterval: number;
   syncOnWifiOnly: boolean;
   syncEnabled: boolean;
+}
+
+export interface SyncUpdate {
+  id: string;
+  description: string | null;
+  data_types: string[];
+  created_at: string;
+  metadata: Record<string, any>;
+  created_by_user: string | null;
 }
 
 export interface ApiConfig {
@@ -118,6 +129,61 @@ class SyncService {
     }
   }
 
+  async checkForActiveUpdates(): Promise<SyncUpdate | null> {
+    try {
+      console.log('🔍 Checking for active sync updates...');
+      
+      const { data, error } = await supabase
+        .from('sync_updates')
+        .select('id, description, data_types, created_at, metadata, created_by_user')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking for active updates:', error);
+        return null;
+      }
+
+      if (data && data.length > 0) {
+        console.log('✅ Found active sync update:', data[0]);
+        return data[0] as SyncUpdate;
+      }
+
+      console.log('ℹ️ No active sync updates found');
+      return null;
+    } catch (error) {
+      console.error('Error checking for active updates:', error);
+      return null;
+    }
+  }
+
+  async consumeUpdate(updateId: string): Promise<boolean> {
+    try {
+      console.log('🔄 Consuming sync update:', updateId);
+      
+      const { error } = await supabase
+        .from('sync_updates')
+        .update({ 
+          is_active: false, 
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', updateId);
+
+      if (error) {
+        console.error('Error consuming update:', error);
+        return false;
+      }
+
+      console.log('✅ Successfully consumed sync update');
+      return true;
+    } catch (error) {
+      console.error('Error consuming update:', error);
+      return false;
+    }
+  }
+
   private async checkConnection(): Promise<void> {
     try {
       // Use a API Capacitor Network quando disponível, caso contrário use fetch
@@ -210,14 +276,30 @@ class SyncService {
         return false;
       }
 
+      // Check for active updates before proceeding
+      const activeUpdate = await this.checkForActiveUpdates();
+      if (!activeUpdate) {
+        toast.info("Nenhuma atualização disponível");
+        return false;
+      }
+
+      console.log('🔄 Starting sync with active update:', activeUpdate.id);
+      toast.info("Iniciando sincronização...");
+
       // Count pending items for upload
       await this.countPendingItems();
 
       // Upload pending data to server
       await this.uploadData();
 
-      // Download new data from server
-      await this.downloadData();
+      // Download new data from server based on active update
+      await this.downloadData(activeUpdate);
+
+      // Mark update as consumed
+      const consumed = await this.consumeUpdate(activeUpdate.id);
+      if (!consumed) {
+        console.warn('Failed to mark update as consumed');
+      }
 
       // Update last sync time
       this.lastSync = new Date();
@@ -289,7 +371,9 @@ class SyncService {
     }
   }
 
-  private async downloadData(): Promise<void> {
+  private async downloadData(activeUpdate: SyncUpdate): Promise<void> {
+    console.log('📥 Downloading data for update:', activeUpdate.id);
+    
     // Use configured download endpoint if available
     if (this.apiConfig?.endpoints?.download) {
       try {
@@ -303,7 +387,7 @@ class SyncService {
         if (response.ok) {
           const data = await response.json();
           console.log('Downloaded data:', data);
-          // Process downloaded data here
+          // Process downloaded data here based on activeUpdate.data_types
         }
       } catch (error) {
         console.error('Error downloading data:', error);

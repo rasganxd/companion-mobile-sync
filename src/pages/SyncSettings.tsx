@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useSync } from '@/hooks/useSync';
@@ -17,9 +17,12 @@ const SyncSettings = () => {
     syncSettings, 
     syncProgress,
     initError,
+    activeUpdate,
+    checkingUpdates,
     startSync,
     checkConnection, 
-    updateSettings 
+    updateSettings,
+    checkForUpdates
   } = useSync();
   
   const [lastSyncText, setLastSyncText] = useState<string>('Nunca');
@@ -33,6 +36,11 @@ const SyncSettings = () => {
     }
   }, [syncStatus.lastSync]);
 
+  // Check for updates on component mount
+  useEffect(() => {
+    checkForUpdates();
+  }, [checkForUpdates]);
+
   const handleToggleAutoSync = async () => {
     await updateSettings({ autoSync: !syncSettings.autoSync });
   };
@@ -43,6 +51,15 @@ const SyncSettings = () => {
 
   const handleToggleSyncEnabled = async () => {
     await updateSettings({ syncEnabled: !syncSettings.syncEnabled });
+  };
+
+  const handleCheckUpdates = async () => {
+    const update = await checkForUpdates();
+    if (update) {
+      toast.success("Atualização disponível!");
+    } else {
+      toast.info("Nenhuma atualização disponível");
+    }
   };
 
   const handleSyncNow = async () => {
@@ -59,6 +76,11 @@ const SyncSettings = () => {
       }
     }
     
+    if (!activeUpdate) {
+      toast.info("Nenhuma atualização disponível para sincronizar");
+      return;
+    }
+    
     toast.info("Iniciando sincronização...");
     const success = await startSync();
     
@@ -67,6 +89,11 @@ const SyncSettings = () => {
     } else {
       toast.error("Erro na sincronização");
     }
+  };
+
+  const formatUpdateDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
   };
 
   return (
@@ -92,6 +119,55 @@ const SyncSettings = () => {
             </p>
           </div>
         )}
+
+        {/* Update Status Card */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Atualizações</h2>
+            <Button 
+              onClick={handleCheckUpdates}
+              disabled={checkingUpdates}
+              variant="outline"
+              size="sm"
+            >
+              {checkingUpdates ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin mr-2" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw size={16} className="mr-2" />
+                  Verificar
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {activeUpdate ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-center mb-2">
+                <CheckCircle size={20} className="text-green-500 mr-2" />
+                <span className="font-medium text-green-800">Atualização Disponível</span>
+              </div>
+              <div className="text-sm text-green-700">
+                <p><strong>Descrição:</strong> {activeUpdate.description || 'Atualização de dados'}</p>
+                <p><strong>Tipos:</strong> {activeUpdate.data_types.join(', ')}</p>
+                <p><strong>Criada em:</strong> {formatUpdateDate(activeUpdate.created_at)}</p>
+                {activeUpdate.created_by_user && (
+                  <p><strong>Criada por:</strong> {activeUpdate.created_by_user}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <div className="flex items-center">
+                <Clock size={20} className="text-gray-500 mr-2" />
+                <span className="text-gray-700">Nenhuma atualização disponível</span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Status Card */}
         <div className="bg-white rounded-lg shadow p-4 mb-4">
@@ -137,7 +213,7 @@ const SyncSettings = () => {
           
           <Button 
             onClick={handleSyncNow}
-            disabled={syncStatus.inProgress}
+            disabled={syncStatus.inProgress || !activeUpdate}
             className="w-full mt-4"
             variant="default"
           >
@@ -145,6 +221,11 @@ const SyncSettings = () => {
               <>
                 <RefreshCw size={16} className="animate-spin mr-2" />
                 Sincronizando...
+              </>
+            ) : !activeUpdate ? (
+              <>
+                <RefreshCw size={16} className="mr-2" />
+                Nenhuma Atualização Disponível
               </>
             ) : (
               <>

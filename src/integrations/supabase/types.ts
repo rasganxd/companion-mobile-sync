@@ -1059,6 +1059,42 @@ export type Database = {
           },
         ]
       }
+      sync_updates: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by_user: string | null
+          data_types: string[]
+          description: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by_user?: string | null
+          data_types?: string[]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by_user?: string | null
+          data_types?: string[]
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           active: boolean

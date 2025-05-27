@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import SyncService, { SyncProgress } from '../services/SyncService';
+import SyncService, { SyncProgress, SyncUpdate } from '../services/SyncService';
 
 interface SyncStatus {
   lastSync: Date | null;
@@ -33,6 +33,8 @@ export const useSync = () => {
   });
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const [activeUpdate, setActiveUpdate] = useState<SyncUpdate | null>(null);
+  const [checkingUpdates, setCheckingUpdates] = useState<boolean>(false);
 
   const syncService = SyncService.getInstance();
 
@@ -63,11 +65,37 @@ export const useSync = () => {
     };
   }, []);
 
+  const checkForUpdates = useCallback(async () => {
+    try {
+      console.log('🔍 Checking for available updates...');
+      setCheckingUpdates(true);
+      setInitError(null);
+      
+      const update = await syncService.checkForActiveUpdates();
+      setActiveUpdate(update);
+      
+      return update;
+    } catch (error) {
+      console.error('❌ Error checking for updates:', error);
+      setInitError(error instanceof Error ? error.message : 'Error checking updates');
+      return null;
+    } finally {
+      setCheckingUpdates(false);
+    }
+  }, []);
+
   const startSync = useCallback(async () => {
     try {
       console.log('🔄 Starting sync...');
       setInitError(null);
-      return await syncService.sync();
+      const result = await syncService.sync();
+      
+      // If sync was successful, clear the active update
+      if (result) {
+        setActiveUpdate(null);
+      }
+      
+      return result;
     } catch (error) {
       console.error('❌ Error during sync:', error);
       setInitError(error instanceof Error ? error.message : 'Sync error');
@@ -99,8 +127,11 @@ export const useSync = () => {
     syncSettings,
     syncProgress,
     initError,
+    activeUpdate,
+    checkingUpdates,
     startSync,
     checkConnection,
-    updateSettings
+    updateSettings,
+    checkForUpdates
   };
 };
