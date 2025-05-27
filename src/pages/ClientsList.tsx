@@ -5,19 +5,20 @@ import { ArrowLeft, User } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Client {
   id: string;
-  nome: string;
-  fantasia: string;
-  codigo: string;
-  status: string;
-  telefone?: string[];
-  endereco?: string;
-  bairro?: string;
-  cidade?: string;
+  name: string;
+  company_name?: string;
+  code?: number;
+  active: boolean;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  visit_days?: string[];
 }
 
 const ClientsList = () => {
@@ -27,38 +28,58 @@ const ClientsList = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Mapeamento dos dias da semana
+  const dayMapping: { [key: string]: string } = {
+    'monday': 'Segunda',
+    'tuesday': 'Terça', 
+    'wednesday': 'Quarta',
+    'thursday': 'Quinta',
+    'friday': 'Sexta',
+    'saturday': 'Sábado',
+    'sunday': 'Domingo'
+  };
+  
   useEffect(() => {
     const loadClients = async () => {
       try {
         setLoading(true);
         console.log(`📅 Loading clients for: ${day}`);
         
-        const db = getDatabaseAdapter();
-        await db.initDatabase();
+        // Encontrar a chave em inglês correspondente ao dia em português
+        const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
         
-        // Get the visit routes for the day
-        const routes = await db.getVisitRoutes();
-        console.log('🗺️ All routes:', routes);
-        
-        const dayRoute = routes.find(route => route.day === day);
-        console.log(`🗓️ Route for ${day}:`, dayRoute);
-        
-        if (dayRoute && dayRoute.clients && Array.isArray(dayRoute.clients) && dayRoute.clients.length > 0) {
-          // Get all clients
-          const allClients = await db.getClients();
-          console.log('👥 All clients:', allClients);
-          
-          // Filter clients for this route
-          const routeClients = allClients.filter(client => 
-            dayRoute.clients.includes(client.id)
-          );
-          
-          console.log(`✅ Filtered clients for ${day}:`, routeClients);
-          setClients(routeClients);
-        } else {
-          console.log(`ℹ️ No clients found for ${day}`);
+        if (!englishDay) {
+          console.log(`❌ No English day found for ${day}`);
           setClients([]);
+          return;
         }
+        
+        console.log(`🔍 Fetching customers for ${day} (${englishDay}) from Supabase...`);
+        
+        // Buscar clientes ativos com dias de visita definidos para o dia específico
+        const { data: customers, error } = await supabase
+          .from('customers')
+          .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
+          .eq('active', true)
+          .not('visit_days', 'is', null);
+        
+        if (error) {
+          console.error('❌ Error fetching customers:', error);
+          throw error;
+        }
+        
+        console.log('👥 All customers fetched:', customers);
+        
+        // Filtrar clientes que têm esse dia nas suas visit_days
+        const dayClients = customers?.filter(customer => 
+          customer.visit_days && 
+          Array.isArray(customer.visit_days) && 
+          customer.visit_days.includes(englishDay)
+        ) || [];
+        
+        console.log(`✅ Filtered clients for ${day} (${englishDay}):`, dayClients);
+        setClients(dayClients);
+        
       } catch (error) {
         console.error('❌ Error loading clients:', error);
         toast.error("Falha ao carregar lista de clientes");
@@ -81,22 +102,11 @@ const ClientsList = () => {
     navigate('/visit-routes');
   };
   
-  // Helper to determine status color
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'ativo':
-        return 'bg-green-100 text-green-800';
-      case 'positivado':
-        return 'bg-green-100 text-green-800';
-      case 'negativado':
-        return 'bg-red-100 text-red-800';
-      case 'pendente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'inativo':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
+  // Helper to determine status color - usando 'active' como status
+  const getStatusColor = (active: boolean) => {
+    return active 
+      ? 'bg-green-100 text-green-800'
+      : 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -127,16 +137,16 @@ const ClientsList = () => {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
-                      <div className="font-medium">{client.fantasia || client.nome}</div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(client.status)}`}>
-                        {client.status || 'N/A'}
+                      <div className="font-medium">{client.company_name || client.name}</div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(client.active)}`}>
+                        {client.active ? 'Ativo' : 'Inativo'}
                       </span>
                     </div>
-                    <div className="text-sm text-gray-500">{client.nome}</div>
+                    <div className="text-sm text-gray-500">{client.name}</div>
                     <div className="text-xs text-gray-400 mt-1">
-                      Código: {client.codigo || 'N/A'}
-                      {client.endereco && (
-                        <span className="ml-2">• {client.endereco}</span>
+                      Código: {client.code || 'N/A'}
+                      {client.address && (
+                        <span className="ml-2">• {client.address}</span>
                       )}
                     </div>
                   </div>
