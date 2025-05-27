@@ -344,7 +344,7 @@ const PlaceOrder = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header 
           title="Digitação de Pedidos"
           backgroundColor="blue"
@@ -361,7 +361,7 @@ const PlaceOrder = () => {
 
   if (products.length === 0) {
     return (
-      <div className="h-screen flex flex-col bg-gray-50">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header 
           title="Digitação de Pedidos"
           backgroundColor="blue"
@@ -378,36 +378,74 @@ const PlaceOrder = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Header 
         title="Digitação de Pedidos"
         backgroundColor="blue"
         showBackButton
       />
       
-      <div className="bg-app-blue text-white px-3 py-1 text-xs">
+      {/* Client Info Bar */}
+      <div className="bg-app-blue text-white px-4 py-3 text-sm">
         {selectedClient.id ? (
-          <>
-            <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.name}
-            {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
-              <span className="ml-1">({selectedClient.company_name})</span>
-            )}
-          </>
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.name}
+              {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
+                <div className="text-xs text-blue-100 mt-1">{selectedClient.company_name}</div>
+              )}
+            </div>
+            <AppButton 
+              variant="outline" 
+              className="text-xs px-2 py-1 h-auto border-white text-white hover:bg-white hover:text-app-blue"
+              onClick={handleClientSearch}
+            >
+              Alterar
+            </AppButton>
+          </div>
         ) : (
-          <span className="text-yellow-200">Nenhum cliente selecionado - Use o botão "Con" para selecionar</span>
+          <div className="flex items-center justify-between">
+            <span className="text-yellow-200">Nenhum cliente selecionado</span>
+            <AppButton 
+              variant="outline" 
+              className="text-xs px-3 py-1 h-auto border-yellow-200 text-yellow-200 hover:bg-yellow-200 hover:text-app-blue"
+              onClick={handleClientSearch}
+            >
+              Selecionar Cliente
+            </AppButton>
+          </div>
         )}
       </div>
       
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 p-3">
+        {/* Product Section */}
+        <div className="flex-1 p-4 overflow-y-auto">
           <Card className="h-full">
-            <CardContent className="p-3 flex flex-col h-full">
-              <div className="bg-gray-100 p-2 rounded-md mb-3 flex items-center">
-                <div className="bg-app-purple h-7 w-7 flex items-center justify-center mr-2 text-white rounded-full">
-                  <span className="text-sm font-bold">{currentProductIndex + 1}</span>
-                </div>
-                <div className="flex-1 font-bold text-app-blue text-sm truncate">
-                  {currentProduct?.name || 'Nenhum produto'}
+            <CardContent className="p-4">
+              {/* Product Header */}
+              <div className="bg-gradient-to-r from-app-purple to-app-blue p-4 rounded-lg mb-4 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="bg-white bg-opacity-20 h-10 w-10 flex items-center justify-center mr-3 text-white rounded-full">
+                      <span className="text-sm font-bold">{currentProductIndex + 1}</span>
+                    </div>
+                    <div>
+                      <div className="font-bold text-lg truncate">
+                        {currentProduct?.name || 'Nenhum produto'}
+                      </div>
+                      <div className="text-sm text-blue-100">
+                        Código: {currentProduct?.code || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold">
+                      R$ {currentProduct?.price.toFixed(2) || '0,00'}
+                    </div>
+                    <div className="text-xs text-blue-100">
+                      Estoque: {currentProduct?.stock || 0}
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -427,41 +465,45 @@ const PlaceOrder = () => {
           </Card>
         </div>
         
+        {/* Order Items Table */}
         <OrderItemsTable 
           orderItems={orderItems}
           onRemoveItem={handleRemoveItem}
           calculateTotal={calculateTotal}
         />
         
-        <div className="p-2 grid grid-cols-3 gap-2 border-t bg-white">
-          <AppButton 
-            variant="blue" 
-            className="flex items-center justify-center h-9 text-xs"
-            onClick={handleGoBack}
-          >
-            <ArrowLeft size={14} className="mr-1" />
-            Voltar
-          </AppButton>
-          
-          <AppButton 
-            variant="blue" 
-            className="flex items-center justify-center h-9 text-xs"
-            onClick={handleViewOrder}
-            disabled={orderItems.length === 0}
-          >
-            <Eye size={14} className="mr-1" />
-            Gravar
-          </AppButton>
-          
-          <AppButton 
-            variant="blue" 
-            className="flex items-center justify-center h-9 text-xs"
-            onClick={handleFinishOrder}
-            disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
-          >
-            <ShoppingCart size={14} className="mr-1" />
-            {isSubmitting ? 'Salvando...' : 'Finalizar'}
-          </AppButton>
+        {/* Action Buttons */}
+        <div className="p-4 bg-white border-t shadow-lg">
+          <div className="grid grid-cols-3 gap-3">
+            <AppButton 
+              variant="outline" 
+              className="flex items-center justify-center h-12 text-sm border-gray-300"
+              onClick={handleGoBack}
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Voltar
+            </AppButton>
+            
+            <AppButton 
+              variant="blue" 
+              className="flex items-center justify-center h-12 text-sm"
+              onClick={handleViewOrder}
+              disabled={orderItems.length === 0}
+            >
+              <Eye size={16} className="mr-2" />
+              Gravar
+            </AppButton>
+            
+            <AppButton 
+              variant="blue" 
+              className="flex items-center justify-center h-12 text-sm bg-green-600 hover:bg-green-700"
+              onClick={handleFinishOrder}
+              disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
+            >
+              <ShoppingCart size={16} className="mr-2" />
+              {isSubmitting ? 'Salvando...' : 'Finalizar'}
+            </AppButton>
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface ProductNavigationProps {
@@ -14,29 +14,55 @@ const ProductNavigation: React.FC<ProductNavigationProps> = ({
   onProductSearch
 }) => {
   return (
-    <div>
-      <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
-      <div className="flex gap-1">
+    <div className="space-y-3">
+      <Label className="block text-sm font-medium text-gray-700">Navegação de Produtos:</Label>
+      
+      {/* Search Button */}
+      <Button 
+        variant="outline" 
+        className="w-full h-12 bg-white border-2 border-app-blue text-app-blue hover:bg-app-blue hover:text-white text-sm font-medium" 
+        onClick={onProductSearch}
+      >
+        <Search size={16} className="mr-2" /> 
+        Consultar Produtos
+      </Button>
+      
+      {/* Navigation Buttons */}
+      <div className="grid grid-cols-4 gap-2">
         <Button 
           variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" 
+          className="h-12 bg-gray-50 border border-gray-300 text-sm hover:bg-gray-100" 
+          onClick={() => onProductChange('first')}
+          title="Primeiro produto"
+        >
+          <ChevronsLeft size={16} />
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="h-12 bg-gray-50 border border-gray-300 text-sm hover:bg-gray-100" 
           onClick={() => onProductChange('prev')}
+          title="Produto anterior"
         >
-          &lt;
+          <ChevronLeft size={16} />
         </Button>
+        
         <Button 
           variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" 
-          onClick={onProductSearch}
-        >
-          <Search size={14} className="mr-1" /> Con
-        </Button>
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" 
+          className="h-12 bg-gray-50 border border-gray-300 text-sm hover:bg-gray-100" 
           onClick={() => onProductChange('next')}
+          title="Próximo produto"
         >
-          &gt;
+          <ChevronRight size={16} />
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="h-12 bg-gray-50 border border-gray-300 text-sm hover:bg-gray-100" 
+          onClick={() => onProductChange('last')}
+          title="Último produto"
+        >
+          <ChevronsRight size={16} />
         </Button>
       </div>
     </div>
