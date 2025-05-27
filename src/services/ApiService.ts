@@ -17,7 +17,7 @@ export interface Order {
   id?: string;
   customer_id: string;
   customer_name?: string;
-  sales_rep_id: string;
+  sales_rep_id?: string;
   date: string;
   status: 'pending' | 'processed' | 'cancelled' | 'delivered';
   total: number;
@@ -120,10 +120,15 @@ class ApiService {
 
   // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
-    // Removido: sales_rep_id é automaticamente inferido pelo RLS via auth.uid()
+    // Remove sales_rep_id se estiver vazio - será automaticamente inferido pelo RLS via auth.uid()
+    const cleanOrder = { ...order };
+    if (cleanOrder.sales_rep_id === '' || !cleanOrder.sales_rep_id) {
+      delete cleanOrder.sales_rep_id;
+    }
+    
     const response = await this.request<Order[]>('/orders', {
       method: 'POST',
-      body: JSON.stringify(order),
+      body: JSON.stringify(cleanOrder),
     });
     
     return response[0];

@@ -7,7 +7,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
 import { ArrowLeft, Send, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ApiService from '@/services/ApiService';
 
@@ -20,7 +19,7 @@ interface PendingOrder {
   status: string;
   items?: any[];
   sync_status: 'pending_sync' | 'synced' | 'error';
-  reason?: string; // For negative sales
+  reason?: string;
   notes?: string;
   payment_method?: string;
 }
@@ -52,7 +51,6 @@ const TransmitOrders = () => {
       setSelectedOrders(orderIds);
     } catch (error) {
       console.error('Error loading pending orders:', error);
-      toast.error('Erro ao carregar pedidos pendentes');
     } finally {
       setIsLoading(false);
     }
@@ -63,10 +61,6 @@ const TransmitOrders = () => {
       const apiService = ApiService.getInstance();
       const connected = await apiService.testConnection();
       setIsConnected(connected);
-      
-      if (!connected) {
-        toast.error('Sem conexão com o servidor');
-      }
     } catch (error) {
       console.error('Connection check failed:', error);
       setIsConnected(false);
@@ -94,12 +88,10 @@ const TransmitOrders = () => {
 
   const transmitSelectedOrders = async () => {
     if (selectedOrders.size === 0) {
-      toast.error('Selecione pelo menos um pedido para transmitir');
       return;
     }
 
     if (!isConnected) {
-      toast.error('Sem conexão com o servidor. Verifique sua internet.');
       return;
     }
 
@@ -122,11 +114,10 @@ const TransmitOrders = () => {
               customer_id: order.customer_id,
               customer_name: order.customer_name,
               total: 0,
-              status: 'cancelled' as const, // Use specific type
+              status: 'cancelled' as const,
               notes: `Motivo: ${order.reason}. ${order.notes || ''}`,
               date: order.date,
-              source_project: 'mobile',
-              sales_rep_id: '' // Will be auto-filled by RLS
+              source_project: 'mobile'
             };
             
             await apiService.createOrder(negativeOrder);
@@ -136,45 +127,37 @@ const TransmitOrders = () => {
               customer_id: order.customer_id,
               customer_name: order.customer_name,
               total: order.total,
-              status: 'pending' as const, // Use specific type
+              status: 'pending' as const,
               payment_method: order.payment_method || 'N/A',
               notes: order.notes || '',
               date: order.date,
-              source_project: 'mobile',
-              sales_rep_id: '' // Will be auto-filled by RLS
+              source_project: 'mobile'
             };
             
             const items = order.items || [];
             await apiService.createOrderWithItems(orderData, items);
           }
           
-          // Mark as synced locally
+          // Mark as synced locally ONLY if transmission was successful
           await db.updateSyncStatus('orders', order.id, 'synced');
           successCount++;
           
           console.log('✅ Order transmitted successfully:', order.id);
         } catch (error) {
           console.error('❌ Error transmitting order:', order.id, error);
-          await db.updateSyncStatus('orders', order.id, 'error');
+          // NÃO marcar como erro - manter como pending_sync para nova tentativa
           errorCount++;
         }
       }
 
-      // Show results
-      if (successCount > 0) {
-        toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
-      }
-      
-      if (errorCount > 0) {
-        toast.error(`${errorCount} pedido(s) falharam na transmissão`);
-      }
+      // Show results without toast notifications
+      console.log(`Transmissão concluída: ${successCount} sucesso, ${errorCount} erros`);
 
       // Reload pending orders
       await loadPendingOrders();
       
     } catch (error) {
       console.error('Error during transmission:', error);
-      toast.error('Erro durante a transmissão');
     } finally {
       setIsTransmitting(false);
     }
