@@ -1,60 +1,30 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { Label } from '@/components/ui/label';
-
 interface ProductNavigationProps {
   onProductChange: (direction: 'prev' | 'next' | 'first' | 'last') => void;
   onClientSearch: () => void;
 }
-
 const ProductNavigation: React.FC<ProductNavigationProps> = ({
   onProductChange,
   onClientSearch
 }) => {
-  return (
-    <div>
+  return <div>
       <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
       <div className="flex gap-1">
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-          onClick={() => onProductChange('first')}
-        >
-          &lt;&lt;
-        </Button>
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-          onClick={() => onProductChange('prev')}
-        >
+        
+        <Button variant="outline" className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" onClick={() => onProductChange('prev')}>
           &lt;
         </Button>
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-          onClick={onClientSearch}
-        >
+        <Button variant="outline" className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" onClick={onClientSearch}>
           <Search size={14} className="mr-1" /> Con
         </Button>
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-          onClick={() => onProductChange('next')}
-        >
+        <Button variant="outline" className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm" onClick={() => onProductChange('next')}>
           &gt;
         </Button>
-        <Button 
-          variant="outline" 
-          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-          onClick={() => onProductChange('last')}
-        >
-          &gt;&gt;
-        </Button>
+        
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ProductNavigation;
