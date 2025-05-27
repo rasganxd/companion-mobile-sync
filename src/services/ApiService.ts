@@ -130,6 +130,7 @@ class ApiService {
   }
 
   async getOrders(filters: {
+    customer_id?: string;
     status?: string;
     start_date?: string;
     end_date?: string;
@@ -140,6 +141,9 @@ class ApiService {
     
     // Removido: sales_rep_id filtro manual - RLS cuida automaticamente
     
+    if (filters.customer_id) {
+      params.append('customer_id', `eq.${filters.customer_id}`);
+    }
     if (filters.status) {
       params.append('status', `eq.${filters.status}`);
     }
