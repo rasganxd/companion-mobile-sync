@@ -24,14 +24,14 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   return (
-    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Quantidade:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Quantidade:</Label>
             <Input 
               type="number" 
-              className="h-12 text-center text-lg font-medium border-2 border-gray-300 focus:border-app-blue" 
+              className="h-8 text-center text-sm font-medium border border-gray-300 focus:border-app-blue" 
               value={quantity} 
               onChange={e => onQuantityChange(e.target.value)}
               placeholder="0"
@@ -41,10 +41,10 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           </div>
           
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Valor Unit.:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Valor Unit.:</Label>
             <Input 
               type="text" 
-              className="h-12 text-center text-lg font-medium bg-gray-100 border-2 border-gray-300" 
+              className="h-8 text-center text-sm font-medium bg-gray-100 border border-gray-300" 
               value={`R$ ${price.toFixed(2)}`} 
               readOnly 
             />
@@ -52,9 +52,9 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         </div>
         
         <div>
-          <Label className="block mb-2 text-sm font-medium text-gray-700">Total do Item:</Label>
-          <div className="bg-white p-3 rounded-md border-2 border-green-300 text-center">
-            <span className="text-xl font-bold text-green-600">
+          <Label className="block mb-1 text-xs font-medium text-gray-700">Total do Item:</Label>
+          <div className="bg-white p-2 rounded-md border border-green-300 text-center">
+            <span className="text-sm font-bold text-green-600">
               R$ {calculateTotal()}
             </span>
           </div>
@@ -62,10 +62,10 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         
         <Button 
           variant="default" 
-          className="w-full h-14 bg-green-600 hover:bg-green-700 text-white text-lg font-medium"
+          className="w-full h-8 bg-green-600 hover:bg-green-700 text-white text-xs font-medium"
           onClick={onAddItem}
         >
-          <Plus size={20} className="mr-2" />
+          <Plus size={16} className="mr-1" />
           Adicionar ao Pedido
         </Button>
       </div>

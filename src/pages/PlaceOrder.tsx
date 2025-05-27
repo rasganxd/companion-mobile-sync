@@ -242,7 +242,16 @@ const PlaceOrder = () => {
       toast.error("Adicione pelo menos um item ao pedido");
       return;
     }
-    navigate('/detalhes-pedido', { state: { orderItems, client: selectedClient, paymentMethod } });
+    navigate('/order-review', { 
+      state: { 
+        orderItems, 
+        client: selectedClient, 
+        paymentMethod,
+        clientId: location.state?.clientId,
+        clientName: location.state?.clientName,
+        day: location.state?.day
+      } 
+    });
   };
 
   const handleClientSearch = () => {
@@ -386,7 +395,7 @@ const PlaceOrder = () => {
       />
       
       {/* Client Info Bar */}
-      <div className="bg-app-blue text-white px-4 py-3 text-sm">
+      <div className="bg-app-blue text-white px-3 py-2 text-sm">
         {selectedClient.id ? (
           <div className="flex items-center justify-between">
             <div className="flex-1">
@@ -396,8 +405,8 @@ const PlaceOrder = () => {
               )}
             </div>
             <AppButton 
-              variant="outline" 
-              className="text-xs px-2 py-1 h-auto border-white text-white hover:bg-white hover:text-app-blue"
+              variant="gray" 
+              className="text-xs px-2 py-1 h-6 border-white text-app-blue bg-white hover:bg-gray-100"
               onClick={handleClientSearch}
             >
               Alterar
@@ -407,8 +416,8 @@ const PlaceOrder = () => {
           <div className="flex items-center justify-between">
             <span className="text-yellow-200">Nenhum cliente selecionado</span>
             <AppButton 
-              variant="outline" 
-              className="text-xs px-3 py-1 h-auto border-yellow-200 text-yellow-200 hover:bg-yellow-200 hover:text-app-blue"
+              variant="gray" 
+              className="text-xs px-2 py-1 h-6 border-yellow-200 text-app-blue bg-yellow-200 hover:bg-yellow-100"
               onClick={handleClientSearch}
             >
               Selecionar Cliente
@@ -419,27 +428,27 @@ const PlaceOrder = () => {
       
       <div className="flex flex-col flex-1 overflow-hidden">
         {/* Product Section */}
-        <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex-1 p-3 overflow-y-auto">
           <Card className="h-full">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               {/* Product Header */}
-              <div className="bg-gradient-to-r from-app-purple to-app-blue p-4 rounded-lg mb-4 text-white">
+              <div className="bg-gradient-to-r from-app-purple to-app-blue p-3 rounded-lg mb-3 text-white">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className="bg-white bg-opacity-20 h-10 w-10 flex items-center justify-center mr-3 text-white rounded-full">
-                      <span className="text-sm font-bold">{currentProductIndex + 1}</span>
+                    <div className="bg-white bg-opacity-20 h-8 w-8 flex items-center justify-center mr-2 text-white rounded-full">
+                      <span className="text-xs font-bold">{currentProductIndex + 1}</span>
                     </div>
                     <div>
-                      <div className="font-bold text-lg truncate">
+                      <div className="font-bold text-sm truncate">
                         {currentProduct?.name || 'Nenhum produto'}
                       </div>
-                      <div className="text-sm text-blue-100">
+                      <div className="text-xs text-blue-100">
                         Código: {currentProduct?.code || 'N/A'}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold">
+                    <div className="text-sm font-bold">
                       R$ {currentProduct?.price.toFixed(2) || '0,00'}
                     </div>
                     <div className="text-xs text-blue-100">
@@ -473,34 +482,34 @@ const PlaceOrder = () => {
         />
         
         {/* Action Buttons */}
-        <div className="p-4 bg-white border-t shadow-lg">
-          <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 bg-white border-t shadow-lg">
+          <div className="grid grid-cols-3 gap-2">
             <AppButton 
-              variant="outline" 
-              className="flex items-center justify-center h-12 text-sm border-gray-300"
+              variant="gray" 
+              className="flex items-center justify-center h-8 text-xs"
               onClick={handleGoBack}
             >
-              <ArrowLeft size={16} className="mr-2" />
+              <ArrowLeft size={14} className="mr-1" />
               Voltar
             </AppButton>
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-12 text-sm"
+              className="flex items-center justify-center h-8 text-xs"
               onClick={handleViewOrder}
               disabled={orderItems.length === 0}
             >
-              <Eye size={16} className="mr-2" />
+              <Eye size={14} className="mr-1" />
               Gravar
             </AppButton>
             
             <AppButton 
               variant="blue" 
-              className="flex items-center justify-center h-12 text-sm bg-green-600 hover:bg-green-700"
+              className="flex items-center justify-center h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
               onClick={handleFinishOrder}
               disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
             >
-              <ShoppingCart size={16} className="mr-2" />
+              <ShoppingCart size={14} className="mr-1" />
               {isSubmitting ? 'Salvando...' : 'Finalizar'}
             </AppButton>
           </div>

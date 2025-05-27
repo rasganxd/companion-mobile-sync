@@ -69,9 +69,9 @@ const ProductForm: React.FC<ProductFormProps> = ({
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Product Navigation */}
-      <div className="bg-gray-50 p-4 rounded-lg">
+      <div className="bg-gray-50 p-3 rounded-lg">
         <ProductNavigation 
           onProductChange={onProductChange} 
           onProductSearch={onProductSearch} 
@@ -79,43 +79,43 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </div>
       
       {/* Product Details Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-3">
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Unidade:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Unidade:</Label>
             <Input
               value={product.unit || 'UN'}
               readOnly
-              className="h-12 w-full bg-gray-100 border border-gray-300 text-sm cursor-not-allowed"
+              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
             />
           </div>
           
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Preço Unitário:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Preço Unitário:</Label>
             <Input
               value={`R$ ${product.cost?.toFixed(2) || '0,00'}`}
               readOnly
-              className="h-12 w-full bg-gray-100 border border-gray-300 text-sm cursor-not-allowed"
+              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
             />
           </div>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Estoque:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Estoque:</Label>
             <Input
               value={product.stock || 0}
               readOnly
-              className="h-12 w-full bg-gray-100 border border-gray-300 text-sm cursor-not-allowed"
+              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
             />
           </div>
           
           <div>
-            <Label className="block mb-2 text-sm font-medium text-gray-700">Código:</Label>
+            <Label className="block mb-1 text-xs font-medium text-gray-700">Código:</Label>
             <Input
               value={product.code || 'N/A'}
               readOnly
-              className="h-12 w-full bg-gray-100 border border-gray-300 text-sm cursor-not-allowed"
+              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
             />
           </div>
         </div>
@@ -123,16 +123,16 @@ const ProductForm: React.FC<ProductFormProps> = ({
       
       {/* Payment Table */}
       <div>
-        <Label className="block mb-2 text-sm font-medium text-gray-700">Tabela de Pagamento:</Label>
+        <Label className="block mb-1 text-xs font-medium text-gray-700">Tabela de Pagamento:</Label>
         <Select value={paymentMethod} onValueChange={onPaymentMethodChange}>
-          <SelectTrigger className="h-12 w-full bg-white border border-gray-300 text-sm">
+          <SelectTrigger className="h-8 w-full bg-white border border-gray-300 text-xs">
             <SelectValue placeholder="Selecione uma tabela" />
           </SelectTrigger>
           <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
             {paymentTables.map((table) => (
-              <SelectItem key={table.id} value={table.name} className="hover:bg-gray-100 py-3">
+              <SelectItem key={table.id} value={table.name} className="hover:bg-gray-100 py-2">
                 <div>
-                  <div className="font-medium">{table.name}</div>
+                  <div className="font-medium text-xs">{table.name}</div>
                   {table.description && (
                     <div className="text-xs text-gray-500">{table.description}</div>
                   )}

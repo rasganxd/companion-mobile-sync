@@ -11,6 +11,7 @@ import Home from '@/pages/Home';
 import ClientsList from '@/pages/ClientsList';
 import ClientDetails from '@/pages/ClientDetails';
 import PlaceOrder from '@/pages/PlaceOrder';
+import OrderReview from '@/pages/OrderReview';
 import LastPurchases from '@/pages/LastPurchases';
 import VisitRoutes from '@/pages/VisitRoutes';
 import NegativeSale from '@/pages/NegativeSale';
@@ -45,6 +46,7 @@ function App() {
               <Route path="/clientes-lista" element={<ClientsList />} />
               <Route path="/client/:id" element={<ClientDetails />} />
               <Route path="/place-order" element={<PlaceOrder />} />
+              <Route path="/order-review" element={<OrderReview />} />
               <Route path="/my-orders" element={<MyOrders />} />
               <Route path="/order-details/:id" element={<OrderDetails />} />
               <Route path="/ultimas-compras" element={<LastPurchases />} />
