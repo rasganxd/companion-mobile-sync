@@ -20,6 +20,7 @@ import NotFound from '@/pages/NotFound';
 import ApiSettings from '@/pages/ApiSettings';
 import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
+import TransmitOrders from '@/pages/TransmitOrders';
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ function App() {
             <Route path="/sync-settings" element={<SyncSettings />} />
             <Route path="/api-settings" element={<ApiSettings />} />
             <Route path="/qr-scanner" element={<QRScanPage />} />
+            <Route path="/transmit-orders" element={<TransmitOrders />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Toaster />

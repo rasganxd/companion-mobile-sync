@@ -9,12 +9,16 @@ interface DatabaseAdapter {
   getOrders(clientId?: string): Promise<any[]>;
   getProducts(): Promise<any[]>;
   getPendingSyncItems(table: string): Promise<any[]>;
-  updateSyncStatus(table: string, id: string, status: 'synced' | 'pending' | 'error'): Promise<void>;
+  updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error'): Promise<void>;
   logSync(type: string, status: string, details?: string): Promise<void>;
   saveOrder(order: any): Promise<void>;
   updateClientStatus(clientId: string, status: string): Promise<void>;
   getClientById(clientId: string): Promise<any | null>;
   closeDatabase(): Promise<void>;
+  // New methods for offline flow
+  getPendingOrders(): Promise<any[]>;
+  markOrderAsTransmitted(orderId: string): Promise<void>;
+  getOfflineOrdersCount(): Promise<number>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ProductForm from '@/components/order/ProductForm';
 import OrderItemsTable from '@/components/order/OrderItemsTable';
 import ClientSearchDialog from '@/components/order/ClientSearchDialog';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface OrderItem {
   id: number;
@@ -233,59 +234,42 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
     
     try {
-      // Get next order code
-      const { data: codeData, error: codeError } = await supabase
-        .rpc('get_next_order_code');
+      const db = getDatabaseAdapter();
+      
+      // Create order locally with offline status
+      const orderData = {
+        id: `local_${Date.now()}`, // Local ID prefix
+        customer_id: selectedClient.id,
+        customer_name: selectedClient.company_name || selectedClient.name,
+        total: parseFloat(calculateTotal()),
+        status: 'pending',
+        payment_method: paymentMethod,
+        date: new Date().toISOString(),
+        sync_status: 'pending_sync', // Offline status
+        source_project: 'mobile',
+        items: orderItems.map(item => ({
+          product_name: item.productName,
+          product_code: parseInt(item.code) || null,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.price * item.quantity
+        }))
+      };
 
-      if (codeError) {
-        console.error("Error getting order code:", codeError);
-        throw new Error("Erro ao gerar código do pedido");
-      }
-
-      // Create order with code
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          code: codeData,
-          customer_id: selectedClient.id,
-          customer_name: selectedClient.company_name || selectedClient.name,
-          total: parseFloat(calculateTotal()),
-          status: 'pending',
-          payment_method: paymentMethod,
-          source_project: 'mobile'
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        console.error("Error creating order:", orderError);
-        throw new Error("Erro ao criar pedido");
-      }
-
-      // Create order items
-      const orderItemsData = orderItems.map(item => ({
-        order_id: orderData.id,
-        product_name: item.productName,
-        product_code: parseInt(item.code) || null,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.price * item.quantity
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsData);
-
-      if (itemsError) {
-        console.error("Error creating order items:", itemsError);
-        throw new Error("Erro ao criar itens do pedido");
-      }
-
-      toast.success("Pedido criado com sucesso!");
+      // Save order locally
+      await db.saveOrder(orderData);
+      
+      console.log('📱 Order saved locally:', orderData);
+      toast.success("Pedido salvo localmente! Use 'Transmitir Pedidos' para enviar ao servidor.");
+      
+      // Clear form
+      setOrderItems([]);
+      setSelectedClient({ id: '', name: '', company_name: '' });
+      
       navigate('/clientes-lista');
     } catch (error) {
-      console.error("Error creating order:", error);
-      toast.error(error instanceof Error ? error.message : "Erro ao criar pedido");
+      console.error("Error saving order locally:", error);
+      toast.error("Erro ao salvar pedido localmente");
     } finally {
       setIsSubmitting(false);
     }
@@ -424,7 +408,7 @@ const PlaceOrder = () => {
             disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
           >
             <ShoppingCart size={14} className="mr-1" />
-            {isSubmitting ? 'Finalizando...' : 'Finalizar'}
+            {isSubmitting ? 'Salvando...' : 'Finalizar'}
           </AppButton>
         </div>
       </div>

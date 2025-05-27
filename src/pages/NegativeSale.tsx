@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 
 const NegativeSale = () => {
   const navigate = useNavigate();
@@ -23,11 +23,7 @@ const NegativeSale = () => {
   
   useEffect(() => {
     if (!clientId) {
-      toast({
-        title: "Erro",
-        description: "Nenhum cliente selecionado",
-        variant: "destructive"
-      });
+      toast.error("Nenhum cliente selecionado");
       navigate(-1);
     }
   }, [clientId, navigate]);
@@ -38,11 +34,7 @@ const NegativeSale = () => {
 
   const handleConfirm = async () => {
     if (!reason) {
-      toast({
-        title: "Erro",
-        description: "Por favor selecione um motivo",
-        variant: "destructive"
-      });
+      toast.error("Por favor selecione um motivo");
       return;
     }
 
@@ -50,37 +42,34 @@ const NegativeSale = () => {
       setIsLoading(true);
       const db = getDatabaseAdapter();
       
-      // Create a negative sale record
+      // Create a negative sale record locally
       const order = {
-        id: Date.now().toString(),
-        client_id: clientId,
+        id: `neg_${Date.now()}`, // Local ID with negative prefix
+        customer_id: clientId,
+        customer_name: clientName,
         date: new Date().toISOString(),
         status: "negativado",
         reason: reason,
-        message: message,
+        notes: message,
         items: [],
         total: 0,
-        sync_status: "pending"
+        sync_status: "pending_sync", // Offline status
+        source_project: "mobile",
+        payment_method: "N/A"
       };
       
       await db.saveOrder(order);
       
-      // Update client status
+      // Update client status locally
       await db.updateClientStatus(clientId, "Negativado");
       
-      toast({
-        title: "Sucesso",
-        description: "Venda negativada com sucesso"
-      });
+      console.log('📱 Negative sale saved locally:', order);
+      toast.success("Venda negativada localmente! Use 'Transmitir Pedidos' para enviar ao servidor.");
       
       navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
     } catch (error) {
       console.error("Error saving negative sale:", error);
-      toast({
-        title: "Erro",
-        description: "Falha ao registrar venda negativada",
-        variant: "destructive"
-      });
+      toast.error("Falha ao registrar venda negativada localmente");
     } finally {
       setIsLoading(false);
     }
@@ -176,4 +165,3 @@ const NegativeSale = () => {
 };
 
 export default NegativeSale;
-
