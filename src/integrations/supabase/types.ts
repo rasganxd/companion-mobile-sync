@@ -423,6 +423,7 @@ export type Database = {
           discount: number | null
           due_date: string | null
           id: string
+          imported: boolean | null
           mobile_order_id: string | null
           notes: string | null
           payment_method: string | null
@@ -454,6 +455,7 @@ export type Database = {
           discount?: number | null
           due_date?: string | null
           id?: string
+          imported?: boolean | null
           mobile_order_id?: string | null
           notes?: string | null
           payment_method?: string | null
@@ -485,6 +487,7 @@ export type Database = {
           discount?: number | null
           due_date?: string | null
           id?: string
+          imported?: boolean | null
           mobile_order_id?: string | null
           notes?: string | null
           payment_method?: string | null

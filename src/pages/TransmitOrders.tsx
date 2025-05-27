@@ -122,7 +122,7 @@ const TransmitOrders = () => {
               customer_id: order.customer_id,
               customer_name: order.customer_name,
               total: 0,
-              status: 'negativado',
+              status: 'cancelled' as const, // Use specific type
               notes: `Motivo: ${order.reason}. ${order.notes || ''}`,
               date: order.date,
               source_project: 'mobile',
@@ -136,7 +136,7 @@ const TransmitOrders = () => {
               customer_id: order.customer_id,
               customer_name: order.customer_name,
               total: order.total,
-              status: order.status,
+              status: 'pending' as const, // Use specific type
               payment_method: order.payment_method || 'N/A',
               notes: order.notes || '',
               date: order.date,
