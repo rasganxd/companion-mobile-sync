@@ -83,16 +83,72 @@ const VisitRoutes = () => {
         console.log('👥 Loaded customers:', customers);
         console.log('📋 Local orders for today:', todayLocalOrders);
         
-        // Definir todos os dias da semana
-        const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        // PRIMEIRO: Calcular totais únicos por cliente (não por dia)
+        const uniqueClientStats = new Map<string, {
+          hasPositive: boolean;
+          hasNegative: boolean;
+          totalSales: number;
+        }>();
         
+        // Processar cada cliente único uma vez
+        customers?.forEach(customer => {
+          const clientOrders = todayLocalOrders.filter(order => order.customer_id === customer.id);
+          
+          if (clientOrders.length > 0) {
+            const hasPositive = clientOrders.some(order => 
+              order.status === 'pending' || 
+              order.status === 'processed' || 
+              order.status === 'delivered'
+            );
+            const hasNegative = clientOrders.some(order => order.status === 'cancelled');
+            
+            const positiveOrdersValue = clientOrders
+              .filter(order => 
+                order.status === 'pending' || 
+                order.status === 'processed' || 
+                order.status === 'delivered'
+              )
+              .reduce((sum, order) => sum + (order.total || 0), 0);
+            
+            uniqueClientStats.set(customer.id, {
+              hasPositive,
+              hasNegative,
+              totalSales: hasPositive ? positiveOrdersValue : 0
+            });
+          }
+        });
+        
+        // Calcular totais gerais únicos
         let totalSales = 0;
         let totalPositivados = 0;
         let totalNegativados = 0;
-        let totalPendentes = 0;
         let positivadosValue = 0;
         
-        // Processar dados das rotas
+        uniqueClientStats.forEach(stats => {
+          if (stats.hasPositive) {
+            totalPositivados++;
+            totalSales += stats.totalSales;
+            positivadosValue += stats.totalSales;
+          } else if (stats.hasNegative) {
+            totalNegativados++;
+          }
+        });
+        
+        // Calcular pendentes (clientes sem pedidos locais)
+        const clientsWithOrders = new Set(todayLocalOrders.map(order => order.customer_id));
+        const totalPendentes = (customers?.length || 0) - clientsWithOrders.size;
+        
+        console.log('💰 Unique client stats:', {
+          totalSales,
+          totalPositivados,
+          totalNegativados,
+          totalPendentes,
+          uniqueClientStats: Array.from(uniqueClientStats.entries())
+        });
+        
+        // SEGUNDO: Processar dados das rotas por dia (para exibição na tabela)
+        const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        
         const processedRoutes: RouteData[] = weekDays.map(day => {
           // Encontrar a chave em inglês correspondente ao dia em português
           const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
@@ -121,36 +177,20 @@ const VisitRoutes = () => {
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
           
-          // Calcular status dos clientes baseado nos pedidos locais
+          // Calcular status dos clientes baseado nos pedidos locais PARA ESTE DIA
           let positivados = 0;
           let negativados = 0;
           let pendentes = 0;
           let dayTotalSales = 0;
           
           dayClients.forEach(client => {
-            const clientOrders = todayLocalOrders.filter(order => order.customer_id === client.id);
+            const clientStats = uniqueClientStats.get(client.id);
             
-            if (clientOrders.length > 0) {
-              // Cliente tem pedidos locais - verificar status
-              const hasPositive = clientOrders.some(order => 
-                order.status === 'pending' || 
-                order.status === 'processed' || 
-                order.status === 'delivered'
-              );
-              const hasNegative = clientOrders.some(order => order.status === 'cancelled');
-              
-              if (hasPositive) {
+            if (clientStats) {
+              if (clientStats.hasPositive) {
                 positivados++;
-                // Somar apenas pedidos positivos
-                const positiveOrdersValue = clientOrders
-                  .filter(order => 
-                    order.status === 'pending' || 
-                    order.status === 'processed' || 
-                    order.status === 'delivered'
-                  )
-                  .reduce((sum, order) => sum + (order.total || 0), 0);
-                dayTotalSales += positiveOrdersValue;
-              } else if (hasNegative) {
+                dayTotalSales += clientStats.totalSales;
+              } else if (clientStats.hasNegative) {
                 negativados++;
               }
             } else {
@@ -158,13 +198,6 @@ const VisitRoutes = () => {
               pendentes++;
             }
           });
-          
-          // Acumular totais gerais
-          totalPositivados += positivados;
-          totalNegativados += negativados;
-          totalPendentes += pendentes;
-          totalSales += dayTotalSales;
-          positivadosValue += dayTotalSales;
           
           console.log(`📅 ${day} (${englishDay}):`, {
             clients: clientNames,
@@ -197,8 +230,8 @@ const VisitRoutes = () => {
           positivadosValue
         });
         
-        console.log('📋 Processed routes with local data:', processedRoutes);
-        console.log('💰 Sales data from local orders:', {
+        console.log('📋 Processed routes by day:', processedRoutes);
+        console.log('💰 Final unique sales data:', {
           totalSales,
           totalPositivados,
           totalNegativados,
