@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User } from 'lucide-react';
@@ -19,6 +20,8 @@ interface Client {
   city?: string;
   state?: string;
   visit_days?: string[];
+  status?: 'positivado' | 'negativado' | 'pendente';
+  orderTotal?: number;
 }
 
 const ClientsList = () => {
@@ -58,18 +61,16 @@ const ClientsList = () => {
         console.log(`🔍 Fetching customers for ${day} (${englishDay}) from Supabase...`);
         
         // Buscar clientes ativos com dias de visita definidos para o dia específico
-        const { data: customers, error } = await supabase
+        const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
           .eq('active', true)
           .not('visit_days', 'is', null);
         
-        if (error) {
-          console.error('❌ Error fetching customers:', error);
-          throw error;
+        if (customersError) {
+          console.error('❌ Error fetching customers:', customersError);
+          throw customersError;
         }
-        
-        console.log('👥 All customers fetched:', customers);
         
         // Filtrar clientes que têm esse dia nas suas visit_days
         const dayClients = customers?.filter(customer => 
@@ -78,12 +79,68 @@ const ClientsList = () => {
           customer.visit_days.includes(englishDay)
         ) || [];
         
-        console.log(`✅ Filtered clients for ${day} (${englishDay}):`, dayClients);
-        setClients(dayClients);
+        // Buscar pedidos do dia atual para estes clientes
+        const today = new Date().toISOString().split('T')[0];
+        const clientIds = dayClients.map(client => client.id);
+        
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('customer_id, status, total, date')
+          .in('customer_id', clientIds)
+          .gte('date', today)
+          .lt('date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        
+        if (ordersError) {
+          console.error('❌ Error fetching orders:', ordersError);
+          // Continuar sem os dados de pedidos
+        }
+        
+        console.log('👥 Day clients:', dayClients);
+        console.log('📋 Orders for today:', orders);
+        
+        // Determinar status de cada cliente baseado nos pedidos
+        const clientsWithStatus = dayClients.map(client => {
+          const clientOrders = orders?.filter(order => order.customer_id === client.id) || [];
+          
+          let status: 'positivado' | 'negativado' | 'pendente' = 'pendente';
+          let orderTotal = 0;
+          
+          if (clientOrders.length > 0) {
+            // Cliente tem pedidos - verificar status
+            const hasPositive = clientOrders.some(order => 
+              order.status === 'pending' || 
+              order.status === 'processed' || 
+              order.status === 'delivered'
+            );
+            const hasNegative = clientOrders.some(order => order.status === 'cancelled');
+            
+            if (hasPositive) {
+              status = 'positivado';
+              // Calcular total apenas dos pedidos positivos
+              orderTotal = clientOrders
+                .filter(order => 
+                  order.status === 'pending' || 
+                  order.status === 'processed' || 
+                  order.status === 'delivered'
+                )
+                .reduce((sum, order) => sum + (order.total || 0), 0);
+            } else if (hasNegative) {
+              status = 'negativado';
+            }
+          }
+          
+          return {
+            ...client,
+            status,
+            orderTotal
+          };
+        });
+        
+        console.log(`✅ Clients with status for ${day}:`, clientsWithStatus);
+        setClients(clientsWithStatus);
         
       } catch (error) {
         console.error('❌ Error loading clients:', error);
-        toast.error("Falha ao carregar lista de clientes");
         setClients([]);
       } finally {
         setLoading(false);
@@ -112,11 +169,33 @@ const ClientsList = () => {
     goBack();
   };
   
-  // Helper to determine status color - usando 'active' como status
-  const getStatusColor = (active: boolean) => {
-    return active 
-      ? 'bg-green-100 text-green-800'
-      : 'bg-gray-100 text-gray-800';
+  // Helper to determine status color and text
+  const getStatusInfo = (client: Client) => {
+    switch (client.status) {
+      case 'positivado':
+        return {
+          color: 'bg-green-100 text-green-800',
+          text: 'Positivado'
+        };
+      case 'negativado':
+        return {
+          color: 'bg-red-100 text-red-800',
+          text: 'Negativado'
+        };
+      case 'pendente':
+      default:
+        return {
+          color: 'bg-gray-100 text-gray-800',
+          text: 'Pendente'
+        };
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   return (
@@ -136,32 +215,41 @@ const ClientsList = () => {
                 {clients.length} cliente{clients.length !== 1 ? 's' : ''} encontrado{clients.length !== 1 ? 's' : ''} para {day}
               </div>
               
-              {clients.map(client => (
-                <div 
-                  key={client.id}
-                  className="bg-white rounded-lg shadow p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => handleClientSelect(client)}
-                >
-                  <div className="bg-blue-100 p-2 rounded-full">
-                    <User className="h-5 w-5 text-app-blue" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <div className="font-medium">{client.company_name || client.name}</div>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(client.active)}`}>
-                        {client.active ? 'Ativo' : 'Inativo'}
-                      </span>
+              {clients.map(client => {
+                const statusInfo = getStatusInfo(client);
+                
+                return (
+                  <div 
+                    key={client.id}
+                    className="bg-white rounded-lg shadow p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handleClientSelect(client)}
+                  >
+                    <div className="bg-blue-100 p-2 rounded-full">
+                      <User className="h-5 w-5 text-app-blue" />
                     </div>
-                    <div className="text-sm text-gray-500">{client.name}</div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Código: {client.code || 'N/A'}
-                      {client.address && (
-                        <span className="ml-2">• {client.address}</span>
-                      )}
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <div className="font-medium">{client.company_name || client.name}</div>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusInfo.color}`}>
+                          {statusInfo.text}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500">{client.name}</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        Código: {client.code || 'N/A'}
+                        {client.address && (
+                          <span className="ml-2">• {client.address}</span>
+                        )}
+                        {client.status === 'positivado' && client.orderTotal && client.orderTotal > 0 && (
+                          <span className="ml-2 text-green-600 font-medium">
+                            • {formatCurrency(client.orderTotal)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center text-gray-500 py-8">

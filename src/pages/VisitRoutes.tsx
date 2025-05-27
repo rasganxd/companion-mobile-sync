@@ -13,11 +13,30 @@ interface RouteData {
   remaining: number;
   total: number;
   clients: string[];
+  positivados: number;
+  negativados: number;
+  pendentes: number;
+  totalSales: number;
+}
+
+interface SalesData {
+  totalSales: number;
+  totalPositivados: number;
+  totalNegativados: number;
+  totalPendentes: number;
+  positivadosValue: number;
 }
 
 const VisitRoutes = () => {
   const navigate = useNavigate();
   const [routes, setRoutes] = useState<RouteData[]>([]);
+  const [salesData, setSalesData] = useState<SalesData>({
+    totalSales: 0,
+    totalPositivados: 0,
+    totalNegativados: 0,
+    totalPendentes: 0,
+    positivadosValue: 0
+  });
   const [loading, setLoading] = useState(true);
   
   // Mapeamento dos dias da semana
@@ -36,24 +55,44 @@ const VisitRoutes = () => {
       try {
         setLoading(true);
         
-        console.log('🔍 Fetching customers from Supabase...');
+        console.log('🔍 Fetching customers and orders from Supabase...');
         
         // Buscar clientes ativos com dias de visita definidos
-        const { data: customers, error } = await supabase
+        const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, visit_days')
           .eq('active', true)
           .not('visit_days', 'is', null);
         
-        if (error) {
-          console.error('❌ Error fetching customers:', error);
-          throw error;
+        if (customersError) {
+          console.error('❌ Error fetching customers:', customersError);
+          throw customersError;
+        }
+        
+        // Buscar pedidos do dia atual
+        const today = new Date().toISOString().split('T')[0];
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select('customer_id, status, total, date')
+          .gte('date', today)
+          .lt('date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        
+        if (ordersError) {
+          console.error('❌ Error fetching orders:', ordersError);
+          throw ordersError;
         }
         
         console.log('👥 Loaded customers:', customers);
+        console.log('📋 Loaded orders:', orders);
         
         // Definir todos os dias da semana
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        
+        let totalSales = 0;
+        let totalPositivados = 0;
+        let totalNegativados = 0;
+        let totalPendentes = 0;
+        let positivadosValue = 0;
         
         // Processar dados das rotas
         const processedRoutes: RouteData[] = weekDays.map(day => {
@@ -66,7 +105,11 @@ const VisitRoutes = () => {
               visited: 0,
               remaining: 0,
               total: 0,
-              clients: []
+              clients: [],
+              positivados: 0,
+              negativados: 0,
+              pendentes: 0,
+              totalSales: 0
             };
           }
           
@@ -80,32 +123,85 @@ const VisitRoutes = () => {
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
           
-          // Para agora, assumir que nenhuma visita foi completada (pode ser melhorado depois)
-          const visited = 0;
-          const remaining = total;
+          // Calcular status dos clientes baseado nos pedidos
+          let positivados = 0;
+          let negativados = 0;
+          let pendentes = 0;
+          let dayTotalSales = 0;
+          
+          dayClients.forEach(client => {
+            const clientOrders = orders?.filter(order => order.customer_id === client.id) || [];
+            
+            if (clientOrders.length > 0) {
+              // Cliente tem pedidos - verificar status
+              const hasPositive = clientOrders.some(order => order.status === 'pending' || order.status === 'processed' || order.status === 'delivered');
+              const hasNegative = clientOrders.some(order => order.status === 'cancelled');
+              
+              if (hasPositive) {
+                positivados++;
+                // Somar apenas pedidos positivos
+                const positiveOrdersValue = clientOrders
+                  .filter(order => order.status === 'pending' || order.status === 'processed' || order.status === 'delivered')
+                  .reduce((sum, order) => sum + (order.total || 0), 0);
+                dayTotalSales += positiveOrdersValue;
+              } else if (hasNegative) {
+                negativados++;
+              }
+            } else {
+              // Cliente sem pedidos = pendente
+              pendentes++;
+            }
+          });
+          
+          // Acumular totais gerais
+          totalPositivados += positivados;
+          totalNegativados += negativados;
+          totalPendentes += pendentes;
+          totalSales += dayTotalSales;
+          positivadosValue += dayTotalSales;
           
           console.log(`📅 ${day} (${englishDay}):`, {
             clients: clientNames,
             total,
-            visited,
-            remaining
+            positivados,
+            negativados,
+            pendentes,
+            totalSales: dayTotalSales
           });
           
           return {
             day,
-            visited,
-            remaining,
+            visited: positivados + negativados,
+            remaining: pendentes,
             total,
-            clients: clientNames
+            clients: clientNames,
+            positivados,
+            negativados,
+            pendentes,
+            totalSales: dayTotalSales
           };
         });
         
         setRoutes(processedRoutes);
+        setSalesData({
+          totalSales,
+          totalPositivados,
+          totalNegativados,
+          totalPendentes,
+          positivadosValue
+        });
+        
         console.log('📋 Processed routes:', processedRoutes);
+        console.log('💰 Sales data:', {
+          totalSales,
+          totalPositivados,
+          totalNegativados,
+          totalPendentes,
+          positivadosValue
+        });
         
       } catch (error) {
         console.error('❌ Error loading routes data:', error);
-        toast.error('Erro ao carregar dados das rotas');
         
         // Fallback para dados vazios
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -114,7 +210,11 @@ const VisitRoutes = () => {
           visited: 0,
           remaining: 0,
           total: 0,
-          clients: []
+          clients: [],
+          positivados: 0,
+          negativados: 0,
+          pendentes: 0,
+          totalSales: 0
         })));
       } finally {
         setLoading(false);
@@ -124,16 +224,16 @@ const VisitRoutes = () => {
     loadRoutesData();
   }, []);
 
-  const totalVisits = routes.reduce((sum, route) => sum + route.total, 0);
-  const totalNegatives = 0; // Pode ser melhorado depois com dados reais de vendas negativas
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
   const handleDaySelect = (day: string) => {
     console.log(`🗓️ Selected day: ${day}`);
     navigate('/clientes-lista', { state: { day } });
-  };
-
-  const handleGoBack = () => {
-    navigate('/home');
   };
 
   if (loading) {
@@ -163,11 +263,36 @@ const VisitRoutes = () => {
       />
       
       <div className="p-3 flex-1">
+        {/* Cards de resumo */}
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1 text-sm">Total de Vendas</h3>
+            <div className="text-lg font-bold text-green-600">{formatCurrency(salesData.totalSales)}</div>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1 text-sm">Positivados</h3>
+            <div className="text-lg font-bold text-green-600">{salesData.totalPositivados}</div>
+            <div className="text-xs text-gray-500">{formatCurrency(salesData.positivadosValue)}</div>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1 text-sm">Negativados</h3>
+            <div className="text-lg font-bold text-red-500">{salesData.totalNegativados}</div>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
+            <h3 className="text-gray-700 font-medium mb-1 text-sm">Pendentes</h3>
+            <div className="text-lg font-bold text-gray-600">{salesData.totalPendentes}</div>
+          </div>
+        </div>
+
         {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-4 gap-2 mb-1 font-medium text-center text-sm bg-app-blue text-white p-2 rounded-t-lg shadow-sm">
+        <div className="grid grid-cols-5 gap-2 mb-1 font-medium text-center text-sm bg-app-blue text-white p-2 rounded-t-lg shadow-sm">
           <div className="text-left">Dia</div>
-          <div>Visitados</div>
-          <div>Restantes</div>
+          <div>Positivo</div>
+          <div>Negativo</div>
+          <div>Pendente</div>
           <div>Total</div>
         </div>
         
@@ -176,7 +301,7 @@ const VisitRoutes = () => {
           {routes.map((route, index) => (
             <div 
               key={index} 
-              className={`grid grid-cols-4 gap-2 py-3 px-3 bg-white rounded-lg font-medium text-center shadow-sm border border-slate-100 ${
+              className={`grid grid-cols-5 gap-2 py-3 px-3 bg-white rounded-lg font-medium text-center shadow-sm border border-slate-100 ${
                 route.total > 0 
                   ? 'cursor-pointer hover:bg-slate-100 transition-colors' 
                   : 'opacity-60'
@@ -191,24 +316,12 @@ const VisitRoutes = () => {
                   </div>
                 )}
               </div>
-              <div className="text-green-600">{route.visited}</div>
-              <div className="text-blue-600">{route.remaining}</div>
+              <div className="text-green-600">{route.positivados}</div>
+              <div className="text-red-600">{route.negativados}</div>
+              <div className="text-gray-600">{route.pendentes}</div>
               <div className="text-gray-800 font-bold">{route.total}</div>
             </div>
           ))}
-        </div>
-        
-        {/* Totais e info em cards */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1">Total de Visitas</h3>
-            <div className="text-xl font-bold text-app-blue">{totalVisits}</div>
-          </div>
-          
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1">Vendas Negativas</h3>
-            <div className="text-xl font-bold text-red-500">{totalNegatives}</div>
-          </div>
         </div>
       </div>
     </div>

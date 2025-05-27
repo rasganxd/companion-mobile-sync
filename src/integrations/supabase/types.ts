@@ -723,6 +723,8 @@ export type Database = {
           group_id: string | null
           has_subunit: boolean | null
           id: string
+          max_price: number | null
+          min_price: number | null
           min_stock: number | null
           name: string
           price: number
@@ -743,6 +745,8 @@ export type Database = {
           group_id?: string | null
           has_subunit?: boolean | null
           id?: string
+          max_price?: number | null
+          min_price?: number | null
           min_stock?: number | null
           name: string
           price: number
@@ -763,6 +767,8 @@ export type Database = {
           group_id?: string | null
           has_subunit?: boolean | null
           id?: string
+          max_price?: number | null
+          min_price?: number | null
           min_stock?: number | null
           name?: string
           price?: number
