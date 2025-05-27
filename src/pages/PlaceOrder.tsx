@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ProductForm from '@/components/order/ProductForm';
 import OrderItemsTable from '@/components/order/OrderItemsTable';
 import ClientSearchDialog from '@/components/order/ClientSearchDialog';
+import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface OrderItem {
@@ -53,6 +54,11 @@ const PlaceOrder = () => {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Novos estados para busca de produtos
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   
   // Load client data and products from Supabase
   useEffect(() => {
@@ -122,6 +128,25 @@ const PlaceOrder = () => {
   }, [location.state]);
   
   const currentProduct = products[currentProductIndex] || null;
+  
+  // Nova função para filtrar produtos
+  const handleProductSearchChange = (value: string) => {
+    setProductSearchQuery(value);
+    
+    if (!value.trim()) {
+      setFilteredProducts(products);
+      return;
+    }
+    
+    const lowercasedValue = value.toLowerCase();
+    const filtered = products.filter(
+      product => 
+        product.name.toLowerCase().includes(lowercasedValue) || 
+        (product.code && product.code.toString().includes(value))
+    );
+    
+    setFilteredProducts(filtered);
+  };
   
   // Filter clients based on search query
   const handleSearchChange = useCallback((value: string) => {
@@ -212,6 +237,21 @@ const PlaceOrder = () => {
     setSearchQuery('');
     setFilteredClients(clients);
     setSearchOpen(true);
+  };
+
+  const handleProductSearch = () => {
+    setProductSearchQuery('');
+    setFilteredProducts(products);
+    setProductSearchOpen(true);
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    const productIndex = products.findIndex(p => p.id === product.id);
+    if (productIndex !== -1) {
+      setCurrentProductIndex(productIndex);
+    }
+    setProductSearchOpen(false);
+    toast.success(`Produto ${product.name} selecionado`);
   };
 
   const handleSelectClient = (client: Client) => {
@@ -367,7 +407,7 @@ const PlaceOrder = () => {
                   paymentMethod={paymentMethod}
                   onPaymentMethodChange={setPaymentMethod}
                   onProductChange={handleProductChange}
-                  onClientSearch={handleClientSearch}
+                  onProductSearch={handleProductSearch}
                   onAddItem={handleAddItem}
                 />
               )}
@@ -420,6 +460,15 @@ const PlaceOrder = () => {
         onSearchChange={handleSearchChange}
         filteredClients={filteredClients}
         onSelectClient={handleSelectClient}
+      />
+
+      <ProductSearchDialog 
+        open={productSearchOpen}
+        onOpenChange={setProductSearchOpen}
+        searchQuery={productSearchQuery}
+        onSearchChange={handleProductSearchChange}
+        filteredProducts={filteredProducts}
+        onSelectProduct={handleSelectProduct}
       />
     </div>
   );
