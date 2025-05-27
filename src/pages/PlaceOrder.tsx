@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -59,6 +58,7 @@ const PlaceOrder = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        console.log('🛒 PlaceOrder - received state:', location.state);
         
         // Fetch products
         const { data: productsData, error: productsError } = await supabase
@@ -85,13 +85,27 @@ const PlaceOrder = () => {
         // Set selected client if passed via location state
         if (location.state && location.state.clientId) {
           const clientId = location.state.clientId;
+          const clientName = location.state.clientName;
+          
+          console.log('🎯 Auto-selecting client:', { clientId, clientName });
+          
+          // Try to find the client in the fetched data first
           const client = clientsData?.find(c => c.id === clientId);
           
           if (client) {
+            console.log('✅ Client found in database:', client);
             setSelectedClient(client);
+            toast.success(`Cliente ${client.company_name || client.name} selecionado automaticamente`);
           } else {
-            console.error("Client not found:", clientId);
-            toast.error("Cliente não encontrado");
+            // If not found in database, create a temporary client object with the passed data
+            console.log('⚠️ Client not found in database, using passed data');
+            const tempClient = {
+              id: clientId,
+              name: clientName,
+              company_name: clientName
+            };
+            setSelectedClient(tempClient);
+            toast.success(`Cliente ${clientName} selecionado automaticamente`);
           }
         }
         
@@ -192,14 +206,6 @@ const PlaceOrder = () => {
     }
     navigate('/detalhes-pedido', { state: { orderItems, client: selectedClient, paymentMethod } });
   };
-  
-  const handleGoBack = () => {
-    if (location.state && location.state.clientId) {
-      navigate('/client/' + location.state.clientId, { state: { clientId: location.state.clientId } });
-    } else {
-      navigate('/clientes-lista');
-    }
-  };
 
   const handleClientSearch = () => {
     setSearchQuery('');
@@ -284,6 +290,21 @@ const PlaceOrder = () => {
       setIsSubmitting(false);
     }
   };
+  
+  const handleGoBack = () => {
+    // Navigate back to activities list with client data
+    if (location.state && location.state.clientId) {
+      navigate('/', { 
+        state: { 
+          clientId: location.state.clientId, 
+          clientName: location.state.clientName,
+          day: location.state.day
+        } 
+      });
+    } else {
+      navigate('/clientes-lista');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -332,7 +353,9 @@ const PlaceOrder = () => {
         {selectedClient.id ? (
           <>
             <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.name}
-            {selectedClient.company_name && <span className="ml-1">({selectedClient.company_name})</span>}
+            {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
+              <span className="ml-1">({selectedClient.company_name})</span>
+            )}
           </>
         ) : (
           <span className="text-yellow-200">Nenhum cliente selecionado - Use o botão "Con" para selecionar</span>

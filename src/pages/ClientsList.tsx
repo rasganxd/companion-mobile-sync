@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, User } from 'lucide-react';
@@ -94,7 +93,14 @@ const ClientsList = () => {
   
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
-    navigate('/client/' + client.id, { state: { clientId: client.id } });
+    // Navegar para a tela de atividades (Index) passando os dados do cliente
+    navigate('/', { 
+      state: { 
+        clientId: client.id, 
+        clientName: client.company_name || client.name,
+        day: day
+      } 
+    });
   };
   
   const handleGoBack = () => {

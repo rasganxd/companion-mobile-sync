@@ -40,11 +40,15 @@ function App() {
             <Route path="/new-order" element={<NewOrder />} />
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/order-details/:id" element={<OrderDetails />} />
+            <Route path="/ultimas-compras" element={<LastPurchases />} />
             <Route path="/last-purchases" element={<LastPurchases />} />
             <Route path="/visit-routes" element={<VisitRoutes />} />
             <Route path="/rotas" element={<VisitRoutes />} />
+            <Route path="/negativar-venda" element={<NegativeSale />} />
             <Route path="/negative-sale" element={<NegativeSale />} />
+            <Route path="/mensagem" element={<MessagePage />} />
             <Route path="/message" element={<MessagePage />} />
+            <Route path="/capturar-posicao" element={<MessagePage />} />
             <Route path="/sync-settings" element={<SyncSettings />} />
             <Route path="/api-settings" element={<ApiSettings />} />
             <Route path="/qr-scanner" element={<QRScanPage />} />
