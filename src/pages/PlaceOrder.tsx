@@ -46,7 +46,7 @@ const PlaceOrder = () => {
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [quantity, setQuantity] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client>({ id: '', name: '', company_name: '' });
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,6 +76,18 @@ const PlaceOrder = () => {
         if (productsError) throw productsError;
         
         setProducts(productsData || []);
+        
+        // Fetch payment tables to set default paymentMethod
+        const { data: paymentTablesData, error: paymentTablesError } = await supabase
+          .from('payment_tables')
+          .select('name')
+          .eq('active', true)
+          .order('name')
+          .limit(1);
+        
+        if (!paymentTablesError && paymentTablesData && paymentTablesData.length > 0) {
+          setPaymentMethod(paymentTablesData[0].name);
+        }
         
         // Fetch all clients for search
         const { data: clientsData, error: clientsError } = await supabase
