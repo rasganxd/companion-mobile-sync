@@ -10,7 +10,6 @@ import Home from '@/pages/Home';
 import ClientsList from '@/pages/ClientsList';
 import ClientDetails from '@/pages/ClientDetails';
 import PlaceOrder from '@/pages/PlaceOrder';
-import LastPurchases from '@/pages/LastPurchases';
 import VisitRoutes from '@/pages/VisitRoutes';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
@@ -18,7 +17,6 @@ import SyncSettings from '@/pages/SyncSettings';
 import QRScanPage from '@/pages/QRScanPage';
 import NotFound from '@/pages/NotFound';
 import ApiSettings from '@/pages/ApiSettings';
-import NewOrder from '@/pages/NewOrder';
 import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
 
@@ -37,11 +35,8 @@ function App() {
             <Route path="/clientes-lista" element={<ClientsList />} />
             <Route path="/client/:id" element={<ClientDetails />} />
             <Route path="/place-order" element={<PlaceOrder />} />
-            <Route path="/new-order" element={<NewOrder />} />
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/order-details/:id" element={<OrderDetails />} />
-            <Route path="/ultimas-compras" element={<LastPurchases />} />
-            <Route path="/last-purchases" element={<LastPurchases />} />
             <Route path="/visit-routes" element={<VisitRoutes />} />
             <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/negativar-venda" element={<NegativeSale />} />
