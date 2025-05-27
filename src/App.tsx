@@ -10,6 +10,7 @@ import Home from '@/pages/Home';
 import ClientsList from '@/pages/ClientsList';
 import ClientDetails from '@/pages/ClientDetails';
 import PlaceOrder from '@/pages/PlaceOrder';
+import LastPurchases from '@/pages/LastPurchases';
 import VisitRoutes from '@/pages/VisitRoutes';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
@@ -37,6 +38,7 @@ function App() {
             <Route path="/place-order" element={<PlaceOrder />} />
             <Route path="/my-orders" element={<MyOrders />} />
             <Route path="/order-details/:id" element={<OrderDetails />} />
+            <Route path="/ultimas-compras" element={<LastPurchases />} />
             <Route path="/visit-routes" element={<VisitRoutes />} />
             <Route path="/rotas" element={<VisitRoutes />} />
             <Route path="/negativar-venda" element={<NegativeSale />} />

@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Package2, ThumbsDown, Mail, Compass } from 'lucide-react';
+import { Package2, ThumbsDown, Box, Mail, Compass } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -31,6 +31,12 @@ const Index = () => {
           icon={<ThumbsDown size={32} color="red" />}
           title="Negativar Venda"
           to="/negativar-venda"
+          state={{ clientName, clientId, day }}
+        />
+        <MenuCard
+          icon={<Box size={32} color="orange" />}
+          title="Últimas Compras"
+          to="/ultimas-compras"
           state={{ clientName, clientId, day }}
         />
         <MenuCard
