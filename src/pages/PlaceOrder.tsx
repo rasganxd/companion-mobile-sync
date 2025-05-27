@@ -101,6 +101,17 @@ const PlaceOrder = () => {
         setClients(clientsData || []);
         setFilteredClients(clientsData || []);
         
+        // Initialize order items with existing items if coming from OrderReview
+        if (location.state?.existingOrderItems) {
+          console.log('🔄 Restoring existing order items:', location.state.existingOrderItems);
+          setOrderItems(location.state.existingOrderItems);
+        }
+        
+        // Set payment method if provided
+        if (location.state?.paymentMethod) {
+          setPaymentMethod(location.state.paymentMethod);
+        }
+        
         // Set selected client if passed via location state
         if (location.state && location.state.clientId) {
           const clientId = location.state.clientId;
