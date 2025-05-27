@@ -1,41 +1,29 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { useNavigation } from '@/contexts/NavigationContext';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 
 interface MenuCardProps {
   icon: React.ReactNode;
   title: string;
   to: string;
-  variant?: 'primary' | 'secondary';
-  state?: any;
 }
 
-const MenuCard = ({ icon, title, to, variant = 'primary', state }: MenuCardProps) => {
-  const { navigateTo } = useNavigation();
-  
+const MenuCard = ({ icon, title, to }: MenuCardProps) => {
+  const { navigateTo } = useAppNavigation();
+
   const handleClick = () => {
-    console.log(`🎯 MenuCard clicked: ${title} -> ${to}`);
     navigateTo(to);
   };
-  
+
   return (
-    <div
+    <div 
+      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-shadow duration-200 aspect-square min-h-[120px]"
       onClick={handleClick}
-      className={cn(
-        "rounded-lg shadow p-4 flex flex-col items-center justify-center gap-2 min-h-[120px] transition-all cursor-pointer",
-        variant === 'primary' 
-          ? "bg-white hover:bg-gray-100 border border-gray-200 hover:shadow-md" 
-          : "bg-app-blue text-white hover:bg-app-blue-dark border border-app-blue-dark"
-      )}
     >
-      <div className="w-12 h-12 flex items-center justify-center">
+      <div className="text-blue-600 mb-3">
         {icon}
       </div>
-      <span className={cn(
-        "text-center font-medium",
-        variant === 'secondary' && "text-white"
-      )}>
+      <span className="text-sm font-medium text-gray-800 text-center leading-tight">
         {title}
       </span>
     </div>
