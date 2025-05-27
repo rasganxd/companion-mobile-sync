@@ -442,21 +442,21 @@ const PlaceOrder = () => {
         <div className="flex-1 p-3 overflow-y-auto">
           <Card className="h-full">
             <CardContent className="p-3">
-              {/* Product Header */}
-              <div className="bg-gradient-to-r from-app-purple to-app-blue p-3 rounded-lg mb-3 text-white">
+              {/* Product Header - Updated to be more neutral and compact */}
+              <div className="bg-gray-100 border border-gray-200 p-2 rounded-lg mb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className="bg-white bg-opacity-20 h-8 w-8 flex items-center justify-center mr-2 text-white rounded-full">
-                      <span className="text-xs font-bold">{currentProductIndex + 1}</span>
+                    <div className="bg-gray-500 h-6 w-6 flex items-center justify-center mr-2 text-white rounded-full text-xs">
+                      <span className="font-bold">{currentProductIndex + 1}</span>
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-sm truncate max-w-[200px]">
+                      <div className="font-medium text-sm text-gray-800 truncate max-w-[200px]">
                         {currentProduct?.name || 'Nenhum produto'}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold">
+                    <div className="text-sm font-bold text-gray-800">
                       R$ {currentProduct?.price.toFixed(2) || '0,00'}
                     </div>
                   </div>
