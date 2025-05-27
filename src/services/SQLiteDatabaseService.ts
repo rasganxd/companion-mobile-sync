@@ -1,3 +1,4 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -76,19 +77,26 @@ class SQLiteDatabaseService {
         address TEXT,
         email TEXT,
         lastVisit TEXT,
-        sync_status TEXT DEFAULT 'pending',
+        sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT
       );
 
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
-        client_id TEXT NOT NULL,
+        customer_id TEXT NOT NULL,
+        customer_name TEXT,
         order_date TEXT NOT NULL,
         total REAL NOT NULL,
         status TEXT NOT NULL,
-        sync_status TEXT DEFAULT 'pending',
+        sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT,
-        FOREIGN KEY (client_id) REFERENCES clients (id)
+        notes TEXT,
+        payment_method TEXT,
+        reason TEXT,
+        items TEXT,
+        date TEXT,
+        source_project TEXT DEFAULT 'mobile',
+        FOREIGN KEY (customer_id) REFERENCES clients (id)
       );
 
       CREATE TABLE IF NOT EXISTS products (
@@ -98,7 +106,7 @@ class SQLiteDatabaseService {
         price REAL NOT NULL,
         stock INTEGER NOT NULL,
         image_url TEXT,
-        sync_status TEXT DEFAULT 'pending',
+        sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT
       );
 
@@ -108,7 +116,7 @@ class SQLiteDatabaseService {
         visited INTEGER DEFAULT 0,
         remaining INTEGER DEFAULT 0,
         total INTEGER DEFAULT 0,
-        sync_status TEXT DEFAULT 'pending',
+        sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT
       );
       
@@ -154,7 +162,7 @@ class SQLiteDatabaseService {
       let values: string[] = [];
       
       if (clientId) {
-        query += ' WHERE client_id = ?';
+        query += ' WHERE customer_id = ?';
         values.push(clientId);
       }
       
@@ -182,16 +190,27 @@ class SQLiteDatabaseService {
     try {
       const result = await this.db!.query(
         `SELECT * FROM ${table} WHERE sync_status = ?`, 
-        ['pending']
+        ['pending_sync']
       );
-      return result.values || [];
+      
+      const items = result.values || [];
+      
+      // Parse items field for orders if it exists
+      if (table === 'orders') {
+        return items.map(item => ({
+          ...item,
+          items: item.items ? JSON.parse(item.items) : []
+        }));
+      }
+      
+      return items;
     } catch (error) {
       console.error(`❌ Error getting pending ${table} items:`, error);
       return [];
     }
   }
 
-  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending' | 'error'): Promise<void> {
+  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error'): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {
       await this.db!.run(
@@ -225,9 +244,25 @@ class SQLiteDatabaseService {
     
     try {
       await this.db!.run(
-        'INSERT OR REPLACE INTO orders (id, client_id, order_date, total, status, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [id, order.client_id, order.order_date || now, order.total, order.status, 'pending', now]
+        'INSERT OR REPLACE INTO orders (id, customer_id, customer_name, order_date, total, status, sync_status, updated_at, notes, payment_method, reason, items, date, source_project) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          id, 
+          order.customer_id, 
+          order.customer_name,
+          order.order_date || now, 
+          order.total, 
+          order.status, 
+          order.sync_status || 'pending_sync', 
+          now,
+          order.notes || '',
+          order.payment_method || '',
+          order.reason || '',
+          JSON.stringify(order.items || []),
+          order.date || now,
+          order.source_project || 'mobile'
+        ]
       );
+      console.log('💾 Order saved to SQLite:', id);
     } catch (error) {
       console.error('❌ Error saving order:', error);
     }
@@ -238,7 +273,7 @@ class SQLiteDatabaseService {
     try {
       await this.db!.run(
         'UPDATE clients SET lastVisit = ?, sync_status = ?, updated_at = ? WHERE id = ?',
-        [new Date().toISOString(), 'pending', new Date().toISOString(), clientId]
+        [new Date().toISOString(), 'pending_sync', new Date().toISOString(), clientId]
       );
     } catch (error) {
       console.error('❌ Error updating client status:', error);
@@ -263,6 +298,20 @@ class SQLiteDatabaseService {
     }
   }
 
+  // New methods for offline flow
+  async getPendingOrders(): Promise<any[]> {
+    return this.getPendingSyncItems('orders');
+  }
+
+  async markOrderAsTransmitted(orderId: string): Promise<void> {
+    await this.updateSyncStatus('orders', orderId, 'synced');
+  }
+
+  async getOfflineOrdersCount(): Promise<number> {
+    const pendingOrders = await this.getPendingOrders();
+    return pendingOrders.length;
+  }
+
   async closeDatabase(): Promise<void> {
     if (this.db) {
       await this.db.close();
@@ -271,6 +320,7 @@ class SQLiteDatabaseService {
     if (this.sqliteConnection) {
       this.sqliteConnection = null;
     }
+    console.log('📱 SQLite database closed');
   }
 }
 

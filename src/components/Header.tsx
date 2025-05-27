@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface HeaderProps {
   title: string;
   showBackButton?: boolean;
-  backgroundColor?: 'orange' | 'gray' | 'blue';
+  backgroundColor?: 'orange' | 'gray' | 'blue' | 'green';
 }
 
 const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: HeaderProps) => {
@@ -18,6 +18,8 @@ const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: Hea
         return 'bg-app-orange';
       case 'gray': 
         return 'bg-slate-200';
+      case 'green':
+        return 'bg-green-600';
       case 'blue':
       default:
         return 'bg-gradient-to-r from-app-blue to-app-blue-dark';

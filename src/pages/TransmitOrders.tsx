@@ -13,6 +13,7 @@ import ApiService from '@/services/ApiService';
 
 interface PendingOrder {
   id: string;
+  customer_id: string;
   customer_name: string;
   total: number;
   date: string;
@@ -20,6 +21,8 @@ interface PendingOrder {
   items?: any[];
   sync_status: 'pending_sync' | 'synced' | 'error';
   reason?: string; // For negative sales
+  notes?: string;
+  payment_method?: string;
 }
 
 const TransmitOrders = () => {
@@ -122,7 +125,8 @@ const TransmitOrders = () => {
               status: 'negativado',
               notes: `Motivo: ${order.reason}. ${order.notes || ''}`,
               date: order.date,
-              source_project: 'mobile'
+              source_project: 'mobile',
+              sales_rep_id: '' // Will be auto-filled by RLS
             };
             
             await apiService.createOrder(negativeOrder);
@@ -133,10 +137,11 @@ const TransmitOrders = () => {
               customer_name: order.customer_name,
               total: order.total,
               status: order.status,
-              payment_method: order.payment_method,
-              notes: order.notes,
+              payment_method: order.payment_method || 'N/A',
+              notes: order.notes || '',
               date: order.date,
-              source_project: 'mobile'
+              source_project: 'mobile',
+              sales_rep_id: '' // Will be auto-filled by RLS
             };
             
             const items = order.items || [];
@@ -208,7 +213,7 @@ const TransmitOrders = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
         title="Transmitir Pedidos" 
-        backgroundColor="green"
+        backgroundColor="blue"
         showBackButton
       />
       
@@ -327,7 +332,7 @@ const TransmitOrders = () => {
         </AppButton>
         
         <AppButton 
-          variant="green" 
+          variant="blue" 
           onClick={transmitSelectedOrders}
           disabled={isTransmitting || selectedOrders.size === 0 || !isConnected}
           className="flex items-center justify-center"
