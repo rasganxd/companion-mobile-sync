@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, ShoppingCart, Eye } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Eye, Trash2 } from 'lucide-react';
 import AppButton from '@/components/AppButton';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
@@ -11,6 +11,16 @@ import OrderItemsTable from '@/components/order/OrderItemsTable';
 import ClientSearchDialog from '@/components/order/ClientSearchDialog';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface OrderItem {
   id: number;
@@ -59,6 +69,9 @@ const PlaceOrder = () => {
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  
+  // Novo estado para controlar o dialog de descarte
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   
   // Load client data and products from Supabase
   useEffect(() => {
@@ -348,6 +361,17 @@ const PlaceOrder = () => {
   };
   
   const handleGoBack = () => {
+    // Se há itens no carrinho, mostrar dialog de confirmação
+    if (orderItems.length > 0) {
+      setShowDiscardDialog(true);
+      return;
+    }
+    
+    // Se não há itens, navegar normalmente
+    navigateBack();
+  };
+
+  const navigateBack = () => {
     // Navigate back to activities list with client data
     if (location.state && location.state.clientId) {
       navigate('/', { 
@@ -360,6 +384,18 @@ const PlaceOrder = () => {
     } else {
       navigate('/clientes-lista');
     }
+  };
+
+  const handleDiscardAndGoBack = () => {
+    setOrderItems([]);
+    setShowDiscardDialog(false);
+    toast.info("Itens do carrinho descartados");
+    navigateBack();
+  };
+
+  const handleClearCart = () => {
+    setOrderItems([]);
+    toast.info("Carrinho limpo");
   };
 
   if (isLoading) {
@@ -488,10 +524,28 @@ const PlaceOrder = () => {
         
         {/* Action Buttons */}
         <div className="p-3 bg-white border-t shadow-lg">
+          {/* Se há itens no carrinho, mostrar botão de limpar carrinho */}
+          {orderItems.length > 0 && (
+            <div className="mb-2">
+              <AppButton 
+                variant="gray" 
+                className="flex items-center justify-center h-8 text-xs w-full text-red-600 border-red-200 hover:bg-red-50"
+                onClick={handleClearCart}
+              >
+                <Trash2 size={14} className="mr-1" />
+                Limpar Carrinho
+              </AppButton>
+            </div>
+          )}
+          
           <div className="grid grid-cols-3 gap-2">
             <AppButton 
               variant="gray" 
-              className="flex items-center justify-center h-8 text-xs"
+              className={`flex items-center justify-center h-8 text-xs ${
+                orderItems.length > 0 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : ''
+              }`}
               onClick={handleGoBack}
             >
               <ArrowLeft size={14} className="mr-1" />
@@ -538,6 +592,28 @@ const PlaceOrder = () => {
         filteredProducts={filteredProducts}
         onSelectProduct={handleSelectProduct}
       />
+
+      {/* Dialog de Confirmação para Descartar Carrinho */}
+      <AlertDialog open={showDiscardDialog} onOpenChange={setShowDiscardDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar itens do carrinho?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você possui {orderItems.length} {orderItems.length === 1 ? 'item' : 'itens'} no carrinho. 
+              Se voltar agora, todos os itens serão perdidos. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDiscardAndGoBack}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Descartar e Voltar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
