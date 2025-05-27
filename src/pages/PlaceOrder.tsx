@@ -1,15 +1,17 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, ShoppingCart, Eye, Trash2 } from 'lucide-react';
-import AppButton from '@/components/AppButton';
 import { toast } from "sonner";
 import { supabase } from '@/integrations/supabase/client';
 import ProductForm from '@/components/order/ProductForm';
-import OrderItemsTable from '@/components/order/OrderItemsTable';
 import ClientSearchDialog from '@/components/order/ClientSearchDialog';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
+import ClientInfoBar from '@/components/order/ClientInfoBar';
+import ProductHeader from '@/components/order/ProductHeader';
+import OrderItemsList from '@/components/order/OrderItemsList';
+import ActionButtons from '@/components/order/ActionButtons';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import {
   AlertDialog,
@@ -441,60 +443,22 @@ const PlaceOrder = () => {
         showBackButton
       />
       
-      {/* Client Info Bar - Reduced padding */}
-      <div className="bg-app-blue text-white px-3 py-1.5 text-sm">
-        {selectedClient.id ? (
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.company_name || selectedClient.name}
-            </div>
-            <AppButton 
-              variant="gray" 
-              className="text-xs px-2 py-1 h-6 border-white text-app-blue bg-white hover:bg-gray-100"
-              onClick={handleClientSearch}
-            >
-              Alterar
-            </AppButton>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <span className="text-yellow-200">Nenhum cliente selecionado</span>
-            <AppButton 
-              variant="gray" 
-              className="text-xs px-2 py-1 h-6 border-yellow-200 text-app-blue bg-yellow-200 hover:bg-yellow-100"
-              onClick={handleClientSearch}
-            >
-              Selecionar Cliente
-            </AppButton>
-          </div>
-        )}
-      </div>
+      {/* Client Info Bar */}
+      <ClientInfoBar 
+        selectedClient={selectedClient}
+        onClientSearch={handleClientSearch}
+      />
       
       <div className="flex flex-col flex-1 min-h-0">
-        {/* Product Section - Reduced padding and margins */}
-        <div className="flex-1 p-2 min-h-0">
+        {/* Product Section */}
+        <div className="flex-1 p-1.5 min-h-0">
           <Card className="h-full">
-            <CardContent className="p-2">
-              {/* Product Header - More compact */}
-              <div className="bg-gray-100 border border-gray-200 p-1.5 rounded-lg mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-gray-500 h-5 w-5 flex items-center justify-center mr-2 text-white rounded-full text-xs">
-                      <span className="font-bold">{currentProductIndex + 1}</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-gray-800 truncate max-w-[200px]">
-                        {currentProduct?.name || 'Nenhum produto'}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-800">
-                      R$ {currentProduct?.price.toFixed(2) || '0,00'}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <CardContent className="p-1.5">
+              {/* Product Header */}
+              <ProductHeader 
+                product={currentProduct}
+                currentProductIndex={currentProductIndex}
+              />
               
               {currentProduct && (
                 <ProductForm 
@@ -512,113 +476,23 @@ const PlaceOrder = () => {
           </Card>
         </div>
         
-        {/* Order Items Table - Fixed height and compact */}
-        <div className="bg-white border-t border-gray-200 flex-shrink-0">
-          <div className="p-2">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center">
-                <Package size={14} className="mr-1 text-app-blue" />
-                <h3 className="text-sm font-semibold text-app-blue">
-                  Itens ({orderItems.length})
-                </h3>
-              </div>
-              <div className="text-right">
-                <div className="text-xs text-gray-600">Total:</div>
-                <div className="text-sm font-bold text-green-600">
-                  R$ {calculateTotal()}
-                </div>
-              </div>
-            </div>
-            
-            <div className="h-20">
-              <ScrollArea className="h-full">
-                {orderItems.length > 0 ? (
-                  <div className="space-y-1">
-                    {orderItems.map((item) => (
-                      <div key={item.id} className="bg-gray-50 p-1.5 rounded border border-gray-200">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 mr-1">
-                            <div className="font-medium text-xs text-gray-900 truncate">
-                              {item.productName}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Qtd: {item.quantity} {item.unit}
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-5 w-5 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={() => onRemoveItem(item.id)}
-                          >
-                            <Trash2 size={10} />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-2 text-gray-500">
-                    <Package size={16} className="mx-auto mb-1 text-gray-300" />
-                    <p className="text-xs">Nenhum item adicionado</p>
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-          </div>
-        </div>
+        {/* Order Items List */}
+        <OrderItemsList 
+          orderItems={orderItems}
+          onRemoveItem={handleRemoveItem}
+          calculateTotal={calculateTotal}
+        />
         
-        {/* Action Buttons - More compact */}
-        <div className="p-2 bg-white border-t shadow-lg flex-shrink-0">
-          {/* Clear cart button if there are items */}
-          {orderItems.length > 0 && (
-            <div className="mb-1.5">
-              <AppButton 
-                variant="gray" 
-                className="flex items-center justify-center h-7 text-xs w-full text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleClearCart}
-              >
-                <Trash2 size={12} className="mr-1" />
-                Limpar Carrinho
-              </AppButton>
-            </div>
-          )}
-          
-          <div className="grid grid-cols-3 gap-2">
-            <AppButton 
-              variant="gray" 
-              className={`flex items-center justify-center h-7 text-xs ${
-                orderItems.length > 0 
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : ''
-              }`}
-              onClick={handleGoBack}
-            >
-              <ArrowLeft size={12} className="mr-1" />
-              Voltar
-            </AppButton>
-            
-            <AppButton 
-              variant="blue" 
-              className="flex items-center justify-center h-7 text-xs"
-              onClick={handleViewOrder}
-              disabled={orderItems.length === 0}
-            >
-              <Eye size={12} className="mr-1" />
-              Gravar
-            </AppButton>
-            
-            <AppButton 
-              variant="blue" 
-              className="flex items-center justify-center h-7 text-xs bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleFinishOrder}
-              disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
-            >
-              <ShoppingCart size={12} className="mr-1" />
-              {isSubmitting ? 'Salvando...' : 'Finalizar'}
-            </AppButton>
-          </div>
-        </div>
+        {/* Action Buttons */}
+        <ActionButtons 
+          orderItems={orderItems}
+          onClearCart={handleClearCart}
+          onGoBack={handleGoBack}
+          onViewOrder={handleViewOrder}
+          onFinishOrder={handleFinishOrder}
+          selectedClient={selectedClient}
+          isSubmitting={isSubmitting}
+        />
       </div>
 
       <ClientSearchDialog 

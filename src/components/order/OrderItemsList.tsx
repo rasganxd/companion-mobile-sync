@@ -14,65 +14,65 @@ interface OrderItem {
   unit: string;
 }
 
-interface OrderItemsTableProps {
+interface OrderItemsListProps {
   orderItems: OrderItem[];
   onRemoveItem: (id: number) => void;
   calculateTotal: () => string;
 }
 
-const OrderItemsTable: React.FC<OrderItemsTableProps> = ({
+const OrderItemsList: React.FC<OrderItemsListProps> = ({
   orderItems,
   onRemoveItem,
   calculateTotal
 }) => {
   return (
-    <div className="bg-white border-t border-gray-200">
-      <div className="p-3">
-        <div className="flex justify-between items-center mb-2">
+    <div className="bg-white border-t border-gray-200 flex-shrink-0">
+      <div className="p-1.5">
+        <div className="flex justify-between items-center mb-1">
           <div className="flex items-center">
-            <Package size={16} className="mr-1 text-app-blue" />
-            <h3 className="text-sm font-semibold text-app-blue">
+            <Package size={12} className="mr-1 text-app-blue" />
+            <h3 className="text-xs font-semibold text-app-blue">
               Itens ({orderItems.length})
             </h3>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-600">Total:</div>
-            <div className="text-sm font-bold text-green-600">
+            <div className="text-xs font-bold text-green-600">
               R$ {calculateTotal()}
             </div>
           </div>
         </div>
         
-        <div className="h-24">
+        <div className="h-16">
           <ScrollArea className="h-full">
             {orderItems.length > 0 ? (
               <div className="space-y-1">
                 {orderItems.map((item) => (
-                  <div key={item.id} className="bg-gray-50 p-2 rounded border border-gray-200">
+                  <div key={item.id} className="bg-gray-50 p-1 rounded border border-gray-200">
                     <div className="flex justify-between items-start">
                       <div className="flex-1 mr-1">
                         <div className="font-medium text-xs text-gray-900 truncate">
                           {item.productName}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-gray-500">
                           Qtd: {item.quantity} {item.unit}
                         </div>
                       </div>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="h-6 w-6 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
+                        className="h-4 w-4 p-0 text-red-500 hover:bg-red-50 hover:text-red-600"
                         onClick={() => onRemoveItem(item.id)}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={8} />
                       </Button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-4 text-gray-500">
-                <Package size={20} className="mx-auto mb-1 text-gray-300" />
+              <div className="text-center py-2 text-gray-500">
+                <Package size={14} className="mx-auto mb-1 text-gray-300" />
                 <p className="text-xs">Nenhum item adicionado</p>
               </div>
             )}
@@ -83,4 +83,4 @@ const OrderItemsTable: React.FC<OrderItemsTableProps> = ({
   );
 };
 
-export default OrderItemsTable;
+export default OrderItemsList;
