@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { toast } from 'sonner';
 
 interface RouteData {
@@ -55,9 +55,9 @@ const VisitRoutes = () => {
       try {
         setLoading(true);
         
-        console.log('🔍 Fetching customers and orders from Supabase...');
+        console.log('🔍 Fetching customers from Supabase and local orders...');
         
-        // Buscar clientes ativos com dias de visita definidos
+        // Buscar clientes ativos com dias de visita definidos do Supabase
         const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, visit_days')
@@ -69,21 +69,19 @@ const VisitRoutes = () => {
           throw customersError;
         }
         
-        // Buscar pedidos do dia atual
-        const today = new Date().toISOString().split('T')[0];
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('customer_id, status, total, date')
-          .gte('date', today)
-          .lt('date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+        // Buscar pedidos locais não sincronizados
+        const db = getDatabaseAdapter();
+        const localOrders = await db.getOrders();
         
-        if (ordersError) {
-          console.error('❌ Error fetching orders:', ordersError);
-          throw ordersError;
-        }
+        // Filtrar apenas pedidos pendentes de sincronização do dia atual
+        const today = new Date().toISOString().split('T')[0];
+        const todayLocalOrders = localOrders.filter(order => {
+          const orderDate = new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0];
+          return order.sync_status === 'pending_sync' && orderDate === today;
+        });
         
         console.log('👥 Loaded customers:', customers);
-        console.log('📋 Loaded orders:', orders);
+        console.log('📋 Local orders for today:', todayLocalOrders);
         
         // Definir todos os dias da semana
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -123,32 +121,40 @@ const VisitRoutes = () => {
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
           
-          // Calcular status dos clientes baseado nos pedidos
+          // Calcular status dos clientes baseado nos pedidos locais
           let positivados = 0;
           let negativados = 0;
           let pendentes = 0;
           let dayTotalSales = 0;
           
           dayClients.forEach(client => {
-            const clientOrders = orders?.filter(order => order.customer_id === client.id) || [];
+            const clientOrders = todayLocalOrders.filter(order => order.customer_id === client.id);
             
             if (clientOrders.length > 0) {
-              // Cliente tem pedidos - verificar status
-              const hasPositive = clientOrders.some(order => order.status === 'pending' || order.status === 'processed' || order.status === 'delivered');
+              // Cliente tem pedidos locais - verificar status
+              const hasPositive = clientOrders.some(order => 
+                order.status === 'pending' || 
+                order.status === 'processed' || 
+                order.status === 'delivered'
+              );
               const hasNegative = clientOrders.some(order => order.status === 'cancelled');
               
               if (hasPositive) {
                 positivados++;
                 // Somar apenas pedidos positivos
                 const positiveOrdersValue = clientOrders
-                  .filter(order => order.status === 'pending' || order.status === 'processed' || order.status === 'delivered')
+                  .filter(order => 
+                    order.status === 'pending' || 
+                    order.status === 'processed' || 
+                    order.status === 'delivered'
+                  )
                   .reduce((sum, order) => sum + (order.total || 0), 0);
                 dayTotalSales += positiveOrdersValue;
               } else if (hasNegative) {
                 negativados++;
               }
             } else {
-              // Cliente sem pedidos = pendente
+              // Cliente sem pedidos locais = pendente
               pendentes++;
             }
           });
@@ -191,8 +197,8 @@ const VisitRoutes = () => {
           positivadosValue
         });
         
-        console.log('📋 Processed routes:', processedRoutes);
-        console.log('💰 Sales data:', {
+        console.log('📋 Processed routes with local data:', processedRoutes);
+        console.log('💰 Sales data from local orders:', {
           totalSales,
           totalPositivados,
           totalNegativados,
@@ -266,7 +272,7 @@ const VisitRoutes = () => {
         {/* Cards de resumo */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1 text-sm">Total de Vendas</h3>
+            <h3 className="text-gray-700 font-medium mb-1 text-sm">Total de Vendas (Local)</h3>
             <div className="text-lg font-bold text-green-600">{formatCurrency(salesData.totalSales)}</div>
           </div>
           
