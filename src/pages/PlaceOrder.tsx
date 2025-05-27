@@ -239,21 +239,34 @@ const PlaceOrder = () => {
     setIsSubmitting(true);
     
     try {
-      // Create order
+      // Get next order code
+      const { data: codeData, error: codeError } = await supabase
+        .rpc('get_next_order_code');
+
+      if (codeError) {
+        console.error("Error getting order code:", codeError);
+        throw new Error("Erro ao gerar código do pedido");
+      }
+
+      // Create order with code
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert([{
+        .insert({
+          code: codeData,
           customer_id: selectedClient.id,
           customer_name: selectedClient.company_name || selectedClient.name,
           total: parseFloat(calculateTotal()),
           status: 'pending',
           payment_method: paymentMethod,
           source_project: 'mobile'
-        }])
+        })
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Error creating order:", orderError);
+        throw new Error("Erro ao criar pedido");
+      }
 
       // Create order items
       const orderItemsData = orderItems.map(item => ({
@@ -269,13 +282,16 @@ const PlaceOrder = () => {
         .from('order_items')
         .insert(orderItemsData);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Error creating order items:", itemsError);
+        throw new Error("Erro ao criar itens do pedido");
+      }
 
       toast.success("Pedido criado com sucesso!");
       navigate('/clientes-lista');
     } catch (error) {
       console.error("Error creating order:", error);
-      toast.error("Erro ao criar pedido");
+      toast.error(error instanceof Error ? error.message : "Erro ao criar pedido");
     } finally {
       setIsSubmitting(false);
     }
