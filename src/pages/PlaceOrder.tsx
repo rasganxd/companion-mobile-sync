@@ -446,10 +446,7 @@ const PlaceOrder = () => {
         {selectedClient.id ? (
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.name}
-              {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
-                <div className="text-xs text-blue-100 mt-1">{selectedClient.company_name}</div>
-              )}
+              <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.company_name || selectedClient.name}
             </div>
             <AppButton 
               variant="gray" 
