@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -80,44 +81,22 @@ const ProductForm: React.FC<ProductFormProps> = ({
       
       {/* Product Details Grid */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-3">
-          <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Unidade:</Label>
-            <Input
-              value={product.unit || 'UN'}
-              readOnly
-              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
-            />
-          </div>
-          
-          <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Preço Unitário:</Label>
-            <Input
-              value={`R$ ${product.cost?.toFixed(2) || '0,00'}`}
-              readOnly
-              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
-            />
-          </div>
+        <div>
+          <Label className="block mb-1 text-xs font-medium text-gray-700">Unidade:</Label>
+          <Input
+            value={product.unit || 'UN'}
+            readOnly
+            className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
+          />
         </div>
         
-        <div className="space-y-3">
-          <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Estoque:</Label>
-            <Input
-              value={product.stock || 0}
-              readOnly
-              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
-            />
-          </div>
-          
-          <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Código:</Label>
-            <Input
-              value={product.code || 'N/A'}
-              readOnly
-              className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
-            />
-          </div>
+        <div>
+          <Label className="block mb-1 text-xs font-medium text-gray-700">Preço Unitário:</Label>
+          <Input
+            value={`R$ ${product.cost?.toFixed(2) || '0,00'}`}
+            readOnly
+            className="h-8 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
+          />
         </div>
       </div>
       

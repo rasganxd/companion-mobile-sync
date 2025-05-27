@@ -449,21 +449,15 @@ const PlaceOrder = () => {
                     <div className="bg-white bg-opacity-20 h-8 w-8 flex items-center justify-center mr-2 text-white rounded-full">
                       <span className="text-xs font-bold">{currentProductIndex + 1}</span>
                     </div>
-                    <div>
-                      <div className="font-bold text-sm truncate">
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm truncate max-w-[200px]">
                         {currentProduct?.name || 'Nenhum produto'}
-                      </div>
-                      <div className="text-xs text-blue-100">
-                        Código: {currentProduct?.code || 'N/A'}
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-bold">
                       R$ {currentProduct?.price.toFixed(2) || '0,00'}
-                    </div>
-                    <div className="text-xs text-blue-100">
-                      Estoque: {currentProduct?.stock || 0}
                     </div>
                   </div>
                 </div>
