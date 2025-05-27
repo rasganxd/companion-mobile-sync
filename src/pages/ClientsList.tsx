@@ -22,7 +22,7 @@ interface Client {
 }
 
 const ClientsList = () => {
-  const { navigateTo, goBack } = useAppNavigation();
+  const { navigateToClientActivities, goBack } = useAppNavigation();
   const location = useLocation();
   const { day } = location.state || { day: 'Segunda' };
   const [clients, setClients] = useState<Client[]>([]);
@@ -94,8 +94,8 @@ const ClientsList = () => {
   
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
-    // Navegar para a tela de atividades (Index) passando os dados do cliente
-    navigateTo('/');
+    // Navegar para a tela de atividades usando a nova rota
+    navigateToClientActivities(client.company_name || client.name, client.id, day);
   };
   
   const handleGoBack = () => {

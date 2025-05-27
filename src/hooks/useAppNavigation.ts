@@ -22,6 +22,10 @@ export const useAppNavigation = () => {
   const navigateToMessage = () => navigateTo('/mensagem');
   const navigateToSettings = () => navigateTo('/sync-settings');
   const navigateToTransmitOrders = () => navigateTo('/transmit-orders');
+  const navigateToClientActivities = (clientName: string, clientId: string, day?: string) => {
+    // Navegar para a nova rota de atividades do cliente
+    navigateTo('/client-activities');
+  };
 
   return {
     navigateTo,
@@ -39,5 +43,6 @@ export const useAppNavigation = () => {
     navigateToMessage,
     navigateToSettings,
     navigateToTransmitOrders,
+    navigateToClientActivities,
   };
 };

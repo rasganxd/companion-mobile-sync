@@ -18,18 +18,18 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 
 // Mapeamento de fluxos de navegação - define para onde cada tela "volta"
 const navigationFlows: { [key: string]: string } = {
-  '/': '/home',
-  '/home': '/home', // Home não volta para lugar nenhum
+  '/home': '/home', // Home é a tela raiz - não volta para lugar nenhum
+  '/client-activities': '/clientes-lista', // Lista de atividades volta para clientes
   '/clientes-lista': '/rotas',
   '/rotas': '/home',
   '/my-orders': '/home',
   '/sync-settings': '/home',
   '/transmit-orders': '/home',
-  '/place-order': '/',
-  '/negativar-venda': '/',
-  '/ultimas-compras': '/',
-  '/mensagem': '/',
-  '/capturar-posicao': '/',
+  '/place-order': '/client-activities',
+  '/negativar-venda': '/client-activities',
+  '/ultimas-compras': '/client-activities',
+  '/mensagem': '/client-activities',
+  '/capturar-posicao': '/client-activities',
   '/order-details': '/my-orders',
   '/client': '/clientes-lista',
 };
@@ -38,7 +38,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [navigationState, setNavigationState] = useState<NavigationState>({
-    stack: ['/home'],
+    stack: ['/home'], // Iniciar sempre com /home
     currentIndex: 0
   });
 

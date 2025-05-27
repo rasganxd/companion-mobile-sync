@@ -721,11 +721,14 @@ export type Database = {
           created_at: string | null
           description: string | null
           group_id: string | null
+          has_subunit: boolean | null
           id: string
           min_stock: number | null
           name: string
           price: number
           stock: number | null
+          subunit: string | null
+          subunit_ratio: number | null
           sync_status: string | null
           unit: string | null
           updated_at: string | null
@@ -738,11 +741,14 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           group_id?: string | null
+          has_subunit?: boolean | null
           id?: string
           min_stock?: number | null
           name: string
           price: number
           stock?: number | null
+          subunit?: string | null
+          subunit_ratio?: number | null
           sync_status?: string | null
           unit?: string | null
           updated_at?: string | null
@@ -755,11 +761,14 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           group_id?: string | null
+          has_subunit?: boolean | null
           id?: string
           min_stock?: number | null
           name?: string
           price?: number
           stock?: number | null
+          subunit?: string | null
+          subunit_ratio?: number | null
           sync_status?: string | null
           unit?: string | null
           updated_at?: string | null

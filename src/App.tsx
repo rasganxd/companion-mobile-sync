@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider } from '@/contexts/NavigationContext';
@@ -31,9 +32,15 @@ function App() {
         <BrowserRouter>
           <NavigationProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              {/* Redirecionar rota raiz para /home */}
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              
               <Route path="/login" element={<Login />} />
               <Route path="/home" element={<Home />} />
+              
+              {/* Lista de Atividades - acessível apenas com estado de cliente */}
+              <Route path="/client-activities" element={<Index />} />
+              
               <Route path="/clients" element={<ClientsList />} />
               <Route path="/clientes-lista" element={<ClientsList />} />
               <Route path="/client/:id" element={<ClientDetails />} />
