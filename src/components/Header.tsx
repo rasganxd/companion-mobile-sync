@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '@/contexts/NavigationContext';
 
 interface HeaderProps {
   title: string;
@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: HeaderProps) => {
-  const navigate = useNavigate();
+  const { goBack, canGoBack } = useNavigation();
   
   const getBgColor = () => {
     switch (backgroundColor) {
@@ -26,12 +26,17 @@ const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: Hea
     }
   };
   
+  const handleBackClick = () => {
+    console.log('🔙 Header back button clicked');
+    goBack();
+  };
+  
   return (
     <div className={`w-full ${getBgColor()} py-4 px-4 flex items-center shadow-md`}>
-      {showBackButton && (
+      {showBackButton && canGoBack && (
         <button 
-          className="mr-2 bg-white bg-opacity-20 rounded-full p-1"
-          onClick={() => navigate(-1)}
+          className="mr-2 bg-white bg-opacity-20 rounded-full p-1 transition-all hover:bg-opacity-30"
+          onClick={handleBackClick}
         >
           <ArrowLeft size={24} color="white" />
         </button>

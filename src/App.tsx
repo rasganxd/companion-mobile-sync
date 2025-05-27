@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { NavigationProvider } from '@/contexts/NavigationContext';
 
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -29,31 +29,33 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gray-50">
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/clients" element={<ClientsList />} />
-            <Route path="/clientes-lista" element={<ClientsList />} />
-            <Route path="/client/:id" element={<ClientDetails />} />
-            <Route path="/place-order" element={<PlaceOrder />} />
-            <Route path="/my-orders" element={<MyOrders />} />
-            <Route path="/order-details/:id" element={<OrderDetails />} />
-            <Route path="/ultimas-compras" element={<LastPurchases />} />
-            <Route path="/visit-routes" element={<VisitRoutes />} />
-            <Route path="/rotas" element={<VisitRoutes />} />
-            <Route path="/negativar-venda" element={<NegativeSale />} />
-            <Route path="/negative-sale" element={<NegativeSale />} />
-            <Route path="/mensagem" element={<MessagePage />} />
-            <Route path="/message" element={<MessagePage />} />
-            <Route path="/capturar-posicao" element={<MessagePage />} />
-            <Route path="/sync-settings" element={<SyncSettings />} />
-            <Route path="/api-settings" element={<ApiSettings />} />
-            <Route path="/qr-scanner" element={<QRScanPage />} />
-            <Route path="/transmit-orders" element={<TransmitOrders />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
+          <NavigationProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/clients" element={<ClientsList />} />
+              <Route path="/clientes-lista" element={<ClientsList />} />
+              <Route path="/client/:id" element={<ClientDetails />} />
+              <Route path="/place-order" element={<PlaceOrder />} />
+              <Route path="/my-orders" element={<MyOrders />} />
+              <Route path="/order-details/:id" element={<OrderDetails />} />
+              <Route path="/ultimas-compras" element={<LastPurchases />} />
+              <Route path="/visit-routes" element={<VisitRoutes />} />
+              <Route path="/rotas" element={<VisitRoutes />} />
+              <Route path="/negativar-venda" element={<NegativeSale />} />
+              <Route path="/negative-sale" element={<NegativeSale />} />
+              <Route path="/mensagem" element={<MessagePage />} />
+              <Route path="/message" element={<MessagePage />} />
+              <Route path="/capturar-posicao" element={<MessagePage />} />
+              <Route path="/sync-settings" element={<SyncSettings />} />
+              <Route path="/api-settings" element={<ApiSettings />} />
+              <Route path="/qr-scanner" element={<QRScanPage />} />
+              <Route path="/transmit-orders" element={<TransmitOrders />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </NavigationProvider>
         </BrowserRouter>
       </div>
     </QueryClientProvider>

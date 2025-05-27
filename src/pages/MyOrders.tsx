@@ -1,6 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, Eye, RefreshCw, Send, Users } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -8,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 
 interface LocalOrder {
   id: string;
@@ -28,7 +27,7 @@ interface GroupedOrders {
 }
 
 const MyOrders = () => {
-  const navigate = useNavigate();
+  const { navigateTo } = useAppNavigation();
   
   const [orders, setOrders] = useState<LocalOrder[]>([]);
   const [groupedOrders, setGroupedOrders] = useState<GroupedOrders>({});
@@ -152,13 +151,13 @@ const MyOrders = () => {
 
         {/* Botões de Ação */}
         <div className="grid grid-cols-2 gap-2 mb-4">
-          <Button onClick={() => navigate('/new-order')} className="w-full">
+          <Button onClick={() => navigateTo('/new-order')} className="w-full">
             <Plus size={16} className="mr-2" />
             Novo Pedido
           </Button>
           
           <Button 
-            onClick={() => navigate('/transmit-orders')} 
+            onClick={() => navigateTo('/transmit-orders')} 
             variant="outline"
             disabled={getTotalOrders() === 0}
             className="w-full"
@@ -249,7 +248,7 @@ const MyOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/order-details/${order.id}`)}
+                            onClick={() => navigateTo(`/order-details/${order.id}`)}
                           >
                             <Eye size={14} className="mr-1" />
                             Ver
@@ -260,7 +259,7 @@ const MyOrders = () => {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => navigate(`/edit-order/${order.id}`)}
+                                onClick={() => navigateTo(`/edit-order/${order.id}`)}
                               >
                                 <Edit size={14} className="mr-1" />
                                 Editar

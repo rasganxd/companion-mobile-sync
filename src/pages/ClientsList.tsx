@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ArrowLeft, User } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
 
 interface Client {
   id: string;
@@ -21,7 +22,7 @@ interface Client {
 }
 
 const ClientsList = () => {
-  const navigate = useNavigate();
+  const { navigateTo, goBack } = useAppNavigation();
   const location = useLocation();
   const { day } = location.state || { day: 'Segunda' };
   const [clients, setClients] = useState<Client[]>([]);
@@ -94,18 +95,12 @@ const ClientsList = () => {
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
     // Navegar para a tela de atividades (Index) passando os dados do cliente
-    navigate('/', { 
-      state: { 
-        clientId: client.id, 
-        clientName: client.company_name || client.name,
-        day: day
-      } 
-    });
+    navigateTo('/');
   };
   
   const handleGoBack = () => {
-    // Navigate back to visit routes page
-    navigate('/visit-routes');
+    console.log('🔙 Going back to visit routes');
+    goBack();
   };
   
   // Helper to determine status color - usando 'active' como status
