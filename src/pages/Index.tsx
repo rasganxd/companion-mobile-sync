@@ -8,9 +8,18 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clientName, clientId, day } = location.state || { clientName: 'Cliente', clientId: null, day: null };
+  
+  // Extrair as informações do cliente do estado de navegação
+  const { clientName, clientId, day } = location.state || {};
   
   console.log('🏠 Index page - received state:', { clientName, clientId, day });
+  
+  // Se não temos informações do cliente, redirecionar para clientes
+  if (!clientId || !clientName) {
+    console.log('❌ Missing client information, redirecting to clients list');
+    navigate('/clientes-lista');
+    return null;
+  }
   
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">

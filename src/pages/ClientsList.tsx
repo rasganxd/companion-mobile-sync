@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
@@ -22,7 +22,8 @@ interface Client {
 }
 
 const ClientsList = () => {
-  const { navigateToClientActivities, goBack } = useAppNavigation();
+  const { goBack } = useAppNavigation();
+  const navigate = useNavigate();
   const location = useLocation();
   const { day } = location.state || { day: 'Segunda' };
   const [clients, setClients] = useState<Client[]>([]);
@@ -94,8 +95,16 @@ const ClientsList = () => {
   
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
-    // Navegar para a tela de atividades usando a nova rota
-    navigateToClientActivities(client.company_name || client.name, client.id, day);
+    console.log('📅 Day:', day);
+    
+    // Navegar para a tela de atividades passando todas as informações necessárias
+    navigate('/client-activities', {
+      state: {
+        clientName: client.company_name || client.name,
+        clientId: client.id,
+        day: day
+      }
+    });
   };
   
   const handleGoBack = () => {
