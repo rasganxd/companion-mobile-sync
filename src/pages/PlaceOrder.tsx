@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -5,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Search, RefreshCcw, ArrowLeft, ShoppingCart, Eye } from 'lucide-react';
+import { Trash2, Search, ArrowLeft, ShoppingCart, Eye } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import AppButton from '@/components/AppButton';
@@ -20,36 +21,11 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { toast } from "sonner";
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-
-// Mock product data
-const mockProducts = [
-  { id: 1, name: 'VINHO COLONIAL BORDO SECO 2L', price: 65.00, code: 'P001', unitPrice: 10.83, minPrice: 55.00, stock: 0, unit: 'PT' },
-  { id: 2, name: 'CERVEJA LATA 350ML', price: 4.50, code: 'P002', unitPrice: 3.75, minPrice: 4.00, stock: 24, unit: 'UN' },
-  { id: 3, name: 'ÁGUA MINERAL COM GÁS 500ML', price: 2.50, code: 'P003', unitPrice: 1.95, minPrice: 2.20, stock: 36, unit: 'UN' },
-  { id: 4, name: 'REFRIGERANTE COLA 2L', price: 8.90, code: 'P004', unitPrice: 7.50, minPrice: 8.00, stock: 12, unit: 'UN' },
-  { id: 5, name: 'SUCO DE LARANJA 1L', price: 6.75, code: 'P005', unitPrice: 5.50, minPrice: 6.00, stock: 8, unit: 'UN' },
-];
-
-// Mock client
-const mockClient = {
-  id: 1223,
-  name: 'NILSO ALVES FERREIRA',
-  fantasyName: 'BAR DO NILSON',
-};
-
-// Mock clients data for search
-const mockClients = [
-  { id: 1223, name: 'NILSO ALVES FERREIRA', fantasyName: 'BAR DO NILSON' },
-  { id: 1224, name: 'MARIA SILVA SOUZA', fantasyName: 'MERCADO CENTRAL' },
-  { id: 1225, name: 'JOÃO CARLOS FERREIRA', fantasyName: 'RESTAURANTE BOM GOSTO' },
-  { id: 1226, name: 'ANTONIO JOSE SANTOS', fantasyName: 'LANCHONETE DELICIA' },
-  { id: 1227, name: 'CLARA OLIVEIRA ALMEIDA', fantasyName: 'SORVETERIA GELATO' },
-];
+import { supabase } from '@/integrations/supabase/client';
 
 interface OrderItem {
   id: number;
-  productId: number;
+  productId: string;
   productName: string;
   quantity: number;
   price: number;
@@ -58,105 +34,126 @@ interface OrderItem {
 }
 
 interface Client {
-  id: number;
+  id: string;
   name: string;
-  fantasyName: string;
+  company_name?: string;
+  code?: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  code?: number;
+  stock: number;
+  unit?: string;
+  cost?: number;
 }
 
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [currentProduct, setCurrentProduct] = useState(mockProducts[0]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [quantity, setQuantity] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState('01 A VISTA');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client>({ id: 0, name: '', fantasyName: '' });
+  const [selectedClient, setSelectedClient] = useState<Client>({ id: '', name: '', company_name: '' });
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredClients, setFilteredClients] = useState<Client[]>(mockClients);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Load client data from location state or database when component mounts
+  // Load client data and products from Supabase
   useEffect(() => {
-    const fetchClientData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
         
-        // Check if client info was passed via location state
+        // Fetch products
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('id, name, price, code, stock, unit, cost')
+          .order('name');
+        
+        if (productsError) throw productsError;
+        
+        setProducts(productsData || []);
+        
+        // Fetch all clients for search
+        const { data: clientsData, error: clientsError } = await supabase
+          .from('customers')
+          .select('id, name, company_name, code')
+          .eq('active', true)
+          .order('name');
+        
+        if (clientsError) throw clientsError;
+        
+        setClients(clientsData || []);
+        setFilteredClients(clientsData || []);
+        
+        // Set selected client if passed via location state
         if (location.state && location.state.clientId) {
           const clientId = location.state.clientId;
+          const client = clientsData?.find(c => c.id === clientId);
           
-          try {
-            // Try to fetch client details from database
-            const db = getDatabaseAdapter();
-            const clientDetails = await db.getClientById(clientId);
-            
-            if (clientDetails) {
-              setSelectedClient({
-                id: clientDetails.id ? parseInt(clientDetails.id) : 0,
-                name: clientDetails.nome || '',
-                fantasyName: clientDetails.fantasia || ''
-              });
-            } else {
-              // Fallback to mockClient if database fetch fails
-              toast.error("Não foi possível carregar os dados do cliente");
-            }
-          } catch (error) {
-            console.error("Error fetching client:", error);
-            toast.error("Erro ao buscar os dados do cliente");
+          if (client) {
+            setSelectedClient(client);
+          } else {
+            console.error("Client not found:", clientId);
+            toast.error("Cliente não encontrado");
           }
-        } else if (location.state && location.state.clientName) {
-          // If only name is available (legacy support)
-          setSelectedClient({
-            id: location.state.clientId || 0,
-            name: location.state.clientName || '',
-            fantasyName: location.state.clientName || ''
-          });
         }
+        
       } catch (error) {
-        console.error("Error in fetchClientData:", error);
+        console.error("Error fetching data:", error);
+        toast.error("Erro ao carregar dados");
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchClientData();
+    fetchData();
   }, [location.state]);
+  
+  const currentProduct = products[currentProductIndex] || null;
   
   // Filter clients based on search query
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
     
     if (!value.trim()) {
-      setFilteredClients(mockClients);
+      setFilteredClients(clients);
       return;
     }
     
     const lowercasedValue = value.toLowerCase();
-    const filtered = mockClients.filter(
+    const filtered = clients.filter(
       client => 
         client.name.toLowerCase().includes(lowercasedValue) || 
-        (client.fantasyName && client.fantasyName.toLowerCase().includes(lowercasedValue))
+        (client.company_name && client.company_name.toLowerCase().includes(lowercasedValue))
     );
     
     setFilteredClients(filtered);
-  }, []);
+  }, [clients]);
   
   const handleProductChange = (direction: 'prev' | 'next' | 'first' | 'last') => {
-    const currentIndex = mockProducts.findIndex(p => p.id === currentProduct.id);
+    if (products.length === 0) return;
     
     let newIndex;
     if (direction === 'prev') {
-      newIndex = currentIndex > 0 ? currentIndex - 1 : currentIndex;
+      newIndex = currentProductIndex > 0 ? currentProductIndex - 1 : currentProductIndex;
     } else if (direction === 'next') {
-      newIndex = currentIndex < mockProducts.length - 1 ? currentIndex + 1 : currentIndex;
+      newIndex = currentProductIndex < products.length - 1 ? currentProductIndex + 1 : currentProductIndex;
     } else if (direction === 'first') {
       newIndex = 0;
     } else if (direction === 'last') {
-      newIndex = mockProducts.length - 1;
+      newIndex = products.length - 1;
     }
     
-    setCurrentProduct(mockProducts[newIndex]);
+    setCurrentProductIndex(newIndex || 0);
   };
   
   const handleAddItem = () => {
@@ -180,14 +177,14 @@ const PlaceOrder = () => {
         productName: currentProduct.name,
         quantity: parseFloat(quantity),
         price: currentProduct.price,
-        code: currentProduct.code,
-        unit: currentProduct.unit
+        code: currentProduct.code?.toString() || '',
+        unit: currentProduct.unit || 'UN'
       };
       
       setOrderItems([...orderItems, newItem]);
     }
     
-    toast.success(`${quantity} ${currentProduct.unit} de ${currentProduct.name} adicionado`);
+    toast.success(`${quantity} ${currentProduct.unit || 'UN'} de ${currentProduct.name} adicionado`);
     setQuantity('');
   };
   
@@ -209,18 +206,16 @@ const PlaceOrder = () => {
   };
   
   const handleGoBack = () => {
-    // If we came from client details, go back there
     if (location.state && location.state.clientId) {
-      navigate('/cliente-detalhes', { state: { clientId: location.state.clientId } });
+      navigate('/client/' + location.state.clientId, { state: { clientId: location.state.clientId } });
     } else {
-      // Default fallback
       navigate('/clientes-lista');
     }
   };
 
   const handleClientSearch = () => {
     setSearchQuery('');
-    setFilteredClients(mockClients);
+    setFilteredClients(clients);
     setSearchOpen(true);
   };
 
@@ -230,16 +225,96 @@ const PlaceOrder = () => {
     toast.success(`Cliente ${client.name} selecionado`);
   };
 
-  const handleFinishOrder = () => {
+  const handleFinishOrder = async () => {
     if (orderItems.length === 0) {
       toast.error("Adicione pelo menos um item ao pedido");
       return;
     }
     
-    // Here you would typically save the order to a database
-    toast.success("Pedido finalizado com sucesso!");
-    navigate('/clientes-lista');
+    if (!selectedClient.id) {
+      toast.error("Selecione um cliente");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Create order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          customer_id: selectedClient.id,
+          customer_name: selectedClient.company_name || selectedClient.name,
+          total: parseFloat(calculateTotal()),
+          status: 'pending',
+          payment_method: paymentMethod,
+          source_project: 'mobile'
+        }])
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Create order items
+      const orderItemsData = orderItems.map(item => ({
+        order_id: orderData.id,
+        product_name: item.productName,
+        product_code: parseInt(item.code) || null,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsData);
+
+      if (itemsError) throw itemsError;
+
+      toast.success("Pedido criado com sucesso!");
+      navigate('/clientes-lista');
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("Erro ao criar pedido");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex flex-col bg-gray-50">
+        <Header 
+          title="Digitação de Pedidos"
+          backgroundColor="blue"
+          showBackButton
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-lg text-gray-600">Carregando dados...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return (
+      <div className="h-screen flex flex-col bg-gray-50">
+        <Header 
+          title="Digitação de Pedidos"
+          backgroundColor="blue"
+          showBackButton
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-lg text-gray-600">Nenhum produto encontrado</div>
+            <div className="text-sm text-gray-500 mt-2">Cadastre produtos para fazer pedidos</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -250,13 +325,13 @@ const PlaceOrder = () => {
       />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
-        {isLoading ? (
-          <div className="animate-pulse">Carregando dados do cliente...</div>
-        ) : (
+        {selectedClient.id ? (
           <>
-            <span className="font-semibold">{selectedClient.id}</span> - {selectedClient.name}
-            {selectedClient.fantasyName && <span className="ml-1">({selectedClient.fantasyName})</span>}
+            <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.name}
+            {selectedClient.company_name && <span className="ml-1">({selectedClient.company_name})</span>}
           </>
+        ) : (
+          <span className="text-yellow-200">Nenhum cliente selecionado - Use o botão "Con" para selecionar</span>
         )}
       </div>
       
@@ -266,144 +341,146 @@ const PlaceOrder = () => {
             <CardContent className="p-3 flex flex-col h-full">
               <div className="bg-gray-100 p-2 rounded-md mb-3 flex items-center">
                 <div className="bg-app-purple h-7 w-7 flex items-center justify-center mr-2 text-white rounded-full">
-                  <span className="text-sm font-bold">1</span>
+                  <span className="text-sm font-bold">{currentProductIndex + 1}</span>
                 </div>
                 <div className="flex-1 font-bold text-app-blue text-sm truncate">
-                  {currentProduct.name}
+                  {currentProduct?.name || 'Nenhum produto'}
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="bg-white">
-                    <Label className="block mb-1 text-sm font-medium text-gray-700">Unidade:</Label>
-                    <Select defaultValue={currentProduct.unit}>
-                      <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
-                        <SelectValue placeholder="Unidade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="PT">PT - {currentProduct.unit}</SelectItem>
-                        <SelectItem value="CX">CX - Caixa</SelectItem>
-                        <SelectItem value="UN">UN - Unidade</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label className="block mb-1 text-sm font-medium text-gray-700">Tabela:</Label>
-                    <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
-                      <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="01 A VISTA">01 A VISTA</SelectItem>
-                        <SelectItem value="02 PRAZO">02 PRAZO</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
+              {currentProduct && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="bg-white">
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Unidade:</Label>
+                      <Select defaultValue={currentProduct.unit || 'UN'}>
+                        <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
+                          <SelectValue placeholder="Unidade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UN">UN - Unidade</SelectItem>
+                          <SelectItem value="PT">PT - Pacote</SelectItem>
+                          <SelectItem value="CX">CX - Caixa</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
                     <div>
-                      <Label className="block mb-1 text-sm font-medium text-gray-700">Quantidade:</Label>
-                      <div className="flex">
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Tabela:</Label>
+                      <Select defaultValue={paymentMethod} onValueChange={setPaymentMethod}>
+                        <SelectTrigger className="h-9 w-full bg-white border border-gray-300 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="01 A VISTA">01 A VISTA</SelectItem>
+                          <SelectItem value="02 PRAZO">02 PRAZO</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="block mb-1 text-sm font-medium text-gray-700">Quantidade:</Label>
+                        <div className="flex">
+                          <Input 
+                            type="number"
+                            className="h-9 flex-1 border border-gray-300 text-sm"
+                            value={quantity}
+                            onChange={(e) => setQuantity(e.target.value)}
+                          />
+                          <Button 
+                            variant="default"
+                            className="ml-2 w-9 h-9 bg-app-blue text-sm p-0"
+                            onClick={handleAddItem}
+                          >
+                            E
+                          </Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="block mb-1 text-sm font-medium text-gray-700">Valor:</Label>
                         <Input 
-                          type="number"
-                          className="h-9 flex-1 border border-gray-300 text-sm"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
+                          type="text" 
+                          className="h-9 bg-white border border-gray-300 text-sm" 
+                          value={currentProduct.price.toFixed(2)}
+                          readOnly 
                         />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
+                      <div className="flex gap-1">
                         <Button 
-                          variant="default"
-                          className="ml-2 w-9 h-9 bg-app-blue text-sm p-0"
-                          onClick={handleAddItem}
+                          variant="outline" 
+                          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                          onClick={() => handleProductChange('first')}
                         >
-                          E
+                          &lt;&lt;
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                          onClick={() => handleProductChange('prev')}
+                        >
+                          &lt;
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                          onClick={handleClientSearch}
+                        >
+                          <Search size={14} className="mr-1" /> Con
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                          onClick={() => handleProductChange('next')}
+                        >
+                          &gt;
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
+                          onClick={() => handleProductChange('last')}
+                        >
+                          &gt;&gt;
                         </Button>
                       </div>
                     </div>
-                    <div>
-                      <Label className="block mb-1 text-sm font-medium text-gray-700">Valor:</Label>
-                      <Input 
-                        type="text" 
-                        className="h-9 bg-white border border-gray-300 text-sm" 
-                        value={currentProduct.price.toFixed(2)}
-                        readOnly 
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-3">
-                  <div>
-                    <Label className="block mb-1 text-sm font-medium text-gray-700">Navegação:</Label>
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-                        onClick={() => handleProductChange('first')}
-                      >
-                        &lt;&lt;
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-                        onClick={() => handleProductChange('prev')}
-                      >
-                        &lt;
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-                        onClick={handleClientSearch}
-                      >
-                        <Search size={14} className="mr-1" /> Con
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-                        onClick={() => handleProductChange('next')}
-                      >
-                        &gt;
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1 bg-gray-50 h-9 border border-gray-300 text-sm"
-                        onClick={() => handleProductChange('last')}
-                      >
-                        &gt;&gt;
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-12 gap-3">
-                    <div className="col-span-3">
-                      <Label className="block mb-1 text-sm font-medium text-gray-700">L</Label>
-                      <div className="bg-gray-50 h-9 flex items-center justify-center border rounded-md border-gray-300 text-sm">L</div>
-                    </div>
-                    <div className="col-span-9">
-                      <Label className="block mb-1 text-sm font-medium text-gray-700">Viagem:</Label>
-                      <Input type="text" className="h-9 bg-white border border-gray-300 text-sm" value="1" readOnly />
-                    </div>
-                  </div>
-                  
-                  <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
-                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-800">
-                      <div>
-                        <span className="text-gray-600 font-medium">P. unit:</span>
-                        <span className="ml-1">{currentProduct.unitPrice.toFixed(2)}</span>
+                    
+                    <div className="grid grid-cols-12 gap-3">
+                      <div className="col-span-3">
+                        <Label className="block mb-1 text-sm font-medium text-gray-700">L</Label>
+                        <div className="bg-gray-50 h-9 flex items-center justify-center border rounded-md border-gray-300 text-sm">L</div>
                       </div>
-                      <div>
-                        <span className="text-gray-600 font-medium">Estq:</span>
-                        <span className="ml-1">{currentProduct.stock}</span>
+                      <div className="col-span-9">
+                        <Label className="block mb-1 text-sm font-medium text-gray-700">Viagem:</Label>
+                        <Input type="text" className="h-9 bg-white border border-gray-300 text-sm" value="1" readOnly />
                       </div>
-                      <div>
-                        <span className="text-gray-600 font-medium">P. mín:</span>
-                        <span className="ml-1">{currentProduct.minPrice.toFixed(2)}</span>
+                    </div>
+                    
+                    <div className="bg-blue-50 p-3 rounded-md border border-blue-100">
+                      <div className="grid grid-cols-2 gap-2 text-sm text-gray-800">
+                        <div>
+                          <span className="text-gray-600 font-medium">P. unit:</span>
+                          <span className="ml-1">{(currentProduct.cost || 0).toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 font-medium">Estq:</span>
+                          <span className="ml-1">{currentProduct.stock || 0}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-600 font-medium">Código:</span>
+                          <span className="ml-1">{currentProduct.code || 'N/A'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -413,7 +490,7 @@ const PlaceOrder = () => {
             <div className="flex justify-between items-center mb-2 px-1">
               <h3 className="text-sm font-medium text-app-blue">Itens do Pedido ({orderItems.length})</h3>
               <div className="text-sm font-medium">
-                Total: <span className="text-app-blue">{calculateTotal()}</span>
+                Total: <span className="text-app-blue">R$ {calculateTotal()}</span>
               </div>
             </div>
             
@@ -435,7 +512,7 @@ const PlaceOrder = () => {
                         <TableCell className="py-0 text-xs p-1">{item.code}</TableCell>
                         <TableCell className="py-0 text-xs p-1 max-w-[120px] truncate">{item.productName}</TableCell>
                         <TableCell className="py-0 text-xs p-1">{item.quantity}</TableCell>
-                        <TableCell className="py-0 text-xs p-1">{(item.price * item.quantity).toFixed(2)}</TableCell>
+                        <TableCell className="py-0 text-xs p-1">R$ {(item.price * item.quantity).toFixed(2)}</TableCell>
                         <TableCell className="py-0 p-0 text-xs">
                           <Button 
                             variant="ghost" 
@@ -485,10 +562,10 @@ const PlaceOrder = () => {
               variant="blue" 
               className="flex items-center justify-center h-9 text-xs"
               onClick={handleFinishOrder}
-              disabled={orderItems.length === 0}
+              disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
             >
               <ShoppingCart size={14} className="mr-1" />
-              Finalizar
+              {isSubmitting ? 'Finalizando...' : 'Finalizar'}
             </AppButton>
           </div>
         </div>
@@ -516,7 +593,7 @@ const PlaceOrder = () => {
                   >
                     <div className="flex flex-col">
                       <span className="font-medium">{client.name}</span>
-                      <span className="text-sm text-gray-500">{client.fantasyName}</span>
+                      <span className="text-sm text-gray-500">{client.company_name}</span>
                     </div>
                   </CommandItem>
                 ))}
