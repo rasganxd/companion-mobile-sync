@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Filter, Edit, Trash2, Eye, RefreshCw } from 'lucide-react';
@@ -19,13 +18,13 @@ const MyOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
-    status: '',
+    status: 'all',
     startDate: '',
     endDate: ''
   });
 
   const statusOptions = [
-    { value: '', label: 'Todos os Status' },
+    { value: 'all', label: 'Todos os Status' },
     { value: 'pending', label: 'Pendente' },
     { value: 'processed', label: 'Processado' },
     { value: 'cancelled', label: 'Cancelado' },
@@ -51,7 +50,7 @@ const MyOrders = () => {
       }
 
       const fetchedOrders = await apiService.getOrders({
-        status: filters.status || undefined,
+        status: filters.status === 'all' ? undefined : filters.status,
         start_date: filters.startDate || undefined,
         end_date: filters.endDate || undefined
       });
