@@ -73,7 +73,12 @@ class WebDatabaseService {
 
   async getPendingSyncItems(table: string): Promise<any[]> {
     const data = this.getTableData(table);
-    return data.filter(item => item.sync_status === 'pending_sync');
+    const pendingItems = data.filter(item => item.sync_status === 'pending_sync');
+    
+    console.log(`📋 [${table}] Total items: ${data.length}, Pending sync: ${pendingItems.length}`);
+    console.log(`📋 [${table}] Sync statuses found:`, [...new Set(data.map(item => item.sync_status))]);
+    
+    return pendingItems;
   }
 
   async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
@@ -81,9 +86,14 @@ class WebDatabaseService {
     const itemIndex = data.findIndex(item => item.id === id);
     
     if (itemIndex >= 0) {
+      const oldStatus = data[itemIndex].sync_status;
       data[itemIndex].sync_status = status;
       data[itemIndex].updated_at = new Date().toISOString();
       this.setTableData(table, data);
+      
+      console.log(`🔄 [${table}] Updated sync status for ${id}: ${oldStatus} → ${status}`);
+    } else {
+      console.error(`❌ [${table}] Item not found for sync status update: ${id}`);
     }
   }
 
@@ -105,25 +115,33 @@ class WebDatabaseService {
     const orders = this.getTableData('orders');
     const now = new Date().toISOString();
     
+    // 🎯 CORREÇÃO: Garantir que novos pedidos sempre tenham sync_status correto
     const orderToSave = {
       ...order,
       id: order.id || uuidv4(),
       created_at: now,
       updated_at: now,
-      sync_status: order.sync_status || 'pending_sync'
+      sync_status: order.sync_status || 'pending_sync' // ✅ Forçar pending_sync se não especificado
     };
     
     // Check if order already exists (for updates)
     const existingIndex = orders.findIndex(o => o.id === orderToSave.id);
     
     if (existingIndex >= 0) {
+      console.log(`📝 Updating existing order ${orderToSave.id} with sync_status: ${orderToSave.sync_status}`);
       orders[existingIndex] = orderToSave;
     } else {
+      console.log(`📝 Creating new order ${orderToSave.id} with sync_status: ${orderToSave.sync_status}`);
       orders.push(orderToSave);
     }
     
     this.setTableData('orders', orders);
-    console.log('💾 Order saved to localStorage:', orderToSave);
+    console.log('💾 Order saved to localStorage:', {
+      id: orderToSave.id,
+      customer_name: orderToSave.customer_name,
+      sync_status: orderToSave.sync_status,
+      total: orderToSave.total
+    });
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
@@ -144,12 +162,20 @@ class WebDatabaseService {
     return clients.find(client => client.id === clientId) || null;
   }
 
-  // Original methods for offline flow
+  // ✅ CORREÇÃO: getPendingOrders deve buscar apenas pedidos com sync_status = 'pending_sync'
   async getPendingOrders(): Promise<any[]> {
-    return this.getPendingSyncItems('orders');
+    const pendingOrders = await this.getPendingSyncItems('orders');
+    
+    console.log(`🔍 Found ${pendingOrders.length} pending orders to transmit`);
+    pendingOrders.forEach(order => {
+      console.log(`📋 Pending order: ${order.id} - ${order.customer_name} - Status: ${order.sync_status}`);
+    });
+    
+    return pendingOrders;
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
+    console.log(`✅ Marking order ${orderId} as transmitted`);
     await this.updateSyncStatus('orders', orderId, 'transmitted');
   }
 
@@ -168,17 +194,31 @@ class WebDatabaseService {
   }
 
   async deleteOrder(orderId: string): Promise<void> {
+    console.log(`🗑️ Marking order ${orderId} as deleted`);
     await this.updateSyncStatus('orders', orderId, 'deleted');
   }
 
   async getTransmittedOrders(): Promise<any[]> {
     const orders = this.getTableData('orders');
-    return orders.filter(order => order.sync_status === 'transmitted');
+    const transmittedOrders = orders.filter(order => order.sync_status === 'transmitted');
+    
+    console.log(`📤 Found ${transmittedOrders.length} transmitted orders`);
+    return transmittedOrders;
   }
 
   async getAllOrders(): Promise<any[]> {
     const orders = this.getTableData('orders');
-    return orders.filter(order => order.sync_status !== 'deleted');
+    const activeOrders = orders.filter(order => order.sync_status !== 'deleted');
+    
+    console.log(`📊 Total active orders: ${activeOrders.length}`);
+    console.log(`📊 Orders by sync_status:`, {
+      pending_sync: activeOrders.filter(o => o.sync_status === 'pending_sync').length,
+      transmitted: activeOrders.filter(o => o.sync_status === 'transmitted').length,
+      synced: activeOrders.filter(o => o.sync_status === 'synced').length,
+      error: activeOrders.filter(o => o.sync_status === 'error').length
+    });
+    
+    return activeOrders;
   }
 
   async closeDatabase(): Promise<void> {

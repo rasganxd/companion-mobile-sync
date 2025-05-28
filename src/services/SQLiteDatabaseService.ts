@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -195,12 +194,22 @@ class SQLiteDatabaseService {
       
       const items = result.values || [];
       
+      console.log(`📋 [${table}] Total pending sync items: ${items.length}`);
+      
       // Parse items field for orders if it exists
       if (table === 'orders') {
-        return items.map(item => ({
+        const parsedItems = items.map(item => ({
           ...item,
           items: item.items ? JSON.parse(item.items) : []
         }));
+        
+        console.log(`📋 [${table}] Pending orders:`, parsedItems.map(o => ({
+          id: o.id,
+          customer_name: o.customer_name,
+          sync_status: o.sync_status
+        })));
+        
+        return parsedItems;
       }
       
       return items;
@@ -214,9 +223,11 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
     try {
       await this.db!.run(
-        `UPDATE ${table} SET sync_status = ? WHERE id = ?`, 
-        [status, id]
+        `UPDATE ${table} SET sync_status = ?, updated_at = ? WHERE id = ?`, 
+        [status, new Date().toISOString(), id]
       );
+      
+      console.log(`🔄 [${table}] Updated sync status for ${id} to: ${status}`);
     } catch (error) {
       console.error(`❌ Error updating sync status for ${table}:`, error);
     }
@@ -242,6 +253,9 @@ class SQLiteDatabaseService {
     const id = order.id || uuidv4();
     const now = new Date().toISOString();
     
+    // 🎯 CORREÇÃO: Garantir que novos pedidos sempre tenham sync_status correto
+    const syncStatus = order.sync_status || 'pending_sync'; // ✅ Forçar pending_sync se não especificado
+    
     try {
       await this.db!.run(
         'INSERT OR REPLACE INTO orders (id, customer_id, customer_name, order_date, total, status, sync_status, updated_at, notes, payment_method, reason, items, date, source_project) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -252,7 +266,7 @@ class SQLiteDatabaseService {
           order.order_date || now, 
           order.total, 
           order.status, 
-          order.sync_status || 'pending_sync', 
+          syncStatus, // ✅ Usar o sync_status corrigido
           now,
           order.notes || '',
           order.payment_method || '',
@@ -262,7 +276,13 @@ class SQLiteDatabaseService {
           order.source_project || 'mobile'
         ]
       );
-      console.log('💾 Order saved to SQLite:', id);
+      
+      console.log('💾 Order saved to SQLite:', {
+        id,
+        customer_name: order.customer_name,
+        sync_status: syncStatus,
+        total: order.total
+      });
     } catch (error) {
       console.error('❌ Error saving order:', error);
     }
@@ -300,10 +320,14 @@ class SQLiteDatabaseService {
 
   // Original methods for offline flow
   async getPendingOrders(): Promise<any[]> {
-    return this.getPendingSyncItems('orders');
+    const pendingOrders = await this.getPendingSyncItems('orders');
+    
+    console.log(`🔍 Found ${pendingOrders.length} pending orders to transmit`);
+    return pendingOrders;
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
+    console.log(`✅ Marking order ${orderId} as transmitted`);
     await this.updateSyncStatus('orders', orderId, 'transmitted');
   }
 

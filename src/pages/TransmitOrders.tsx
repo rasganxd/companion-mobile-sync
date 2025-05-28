@@ -37,13 +37,33 @@ const TransmitOrders = () => {
       setIsLoading(true);
       const db = getDatabaseAdapter();
       
+      console.log('🔄 Loading orders for transmission page...');
+      
       // Carregar pedidos pendentes
       const pending = await db.getPendingOrders();
+      console.log(`📋 Loaded ${pending.length} pending orders:`, pending.map(o => ({
+        id: o.id,
+        customer_name: o.customer_name,
+        sync_status: o.sync_status,
+        total: o.total
+      })));
       setPendingOrders(pending);
       
       // Carregar pedidos transmitidos
       const transmitted = await db.getTransmittedOrders();
+      console.log(`📤 Loaded ${transmitted.length} transmitted orders`);
       setTransmittedOrders(transmitted);
+      
+      // Carregar todos os pedidos para debug
+      const allOrders = await db.getAllOrders();
+      console.log(`📊 Total orders in database: ${allOrders.length}`);
+      console.log(`📊 Orders breakdown by sync_status:`, {
+        pending_sync: allOrders.filter(o => o.sync_status === 'pending_sync').length,
+        transmitted: allOrders.filter(o => o.sync_status === 'transmitted').length,
+        synced: allOrders.filter(o => o.sync_status === 'synced').length,
+        error: allOrders.filter(o => o.sync_status === 'error').length,
+        other: allOrders.filter(o => !['pending_sync', 'transmitted', 'synced', 'error'].includes(o.sync_status)).length
+      });
       
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -185,6 +205,9 @@ const TransmitOrders = () => {
             <h4 className="font-medium">{order.customer_name}</h4>
             <p className="text-sm text-gray-500">
               Pedido #{order.id?.substring(0, 8)} • {formatDate(order.date)}
+            </p>
+            <p className="text-xs text-blue-600">
+              Sync: {order.sync_status}
             </p>
           </div>
           <div className="text-right">
