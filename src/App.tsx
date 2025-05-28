@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider } from '@/contexts/NavigationContext';
+import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
 
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -32,6 +32,7 @@ function App() {
       <div className="min-h-screen bg-gray-50">
         <BrowserRouter>
           <NavigationProvider>
+            <MobileBackButtonManager />
             <Routes>
               {/* Redirecionar rota raiz para /home */}
               <Route path="/" element={<Navigate to="/home" replace />} />

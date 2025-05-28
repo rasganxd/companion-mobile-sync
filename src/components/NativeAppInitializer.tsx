@@ -4,7 +4,6 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard } from '@capacitor/keyboard';
-import { useNativeBackButton } from '@/hooks/useNativeBackButton';
 import { toast } from 'sonner';
 
 interface NativeAppInitializerProps {
@@ -13,9 +12,6 @@ interface NativeAppInitializerProps {
 
 export const NativeAppInitializer: React.FC<NativeAppInitializerProps> = ({ children }) => {
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // Configurar o botão físico de voltar
-  useNativeBackButton();
 
   useEffect(() => {
     const initializeNativeFeatures = async () => {
