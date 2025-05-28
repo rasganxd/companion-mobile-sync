@@ -873,6 +873,36 @@ export type Database = {
         }
         Relationships: []
       }
+      product_units: {
+        Row: {
+          conversion_rate: number
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          conversion_rate?: number
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand_id: string | null

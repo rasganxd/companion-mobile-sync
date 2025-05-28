@@ -42,7 +42,7 @@ const ClientSearchDialog: React.FC<ClientSearchDialogProps> = ({
         </DialogHeader>
         <Command className="rounded-lg border shadow-md">
           <CommandInput 
-            placeholder="Digite o nome do cliente..." 
+            placeholder="Digite o nome fantasia do cliente..." 
             value={searchQuery}
             onValueChange={onSearchChange}
           />
@@ -56,8 +56,10 @@ const ClientSearchDialog: React.FC<ClientSearchDialogProps> = ({
                   className="cursor-pointer"
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium">{client.name}</span>
-                    <span className="text-sm text-gray-500">{client.company_name}</span>
+                    <span className="font-medium">{client.company_name || client.name}</span>
+                    {client.company_name && client.name && (
+                      <span className="text-sm text-gray-500">Razão Social: {client.name}</span>
+                    )}
                   </div>
                 </CommandItem>
               ))}

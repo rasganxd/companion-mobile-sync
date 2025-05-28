@@ -209,7 +209,7 @@ const ClientsList = () => {
     // Navegar para a tela de atividades passando todas as informações necessárias
     navigate('/client-activities', {
       state: {
-        clientName: client.company_name || client.name,
+        clientName: client.company_name || client.name, // Priorizar nome fantasia
         clientId: client.id,
         day: day
       }
@@ -286,7 +286,9 @@ const ClientsList = () => {
                           {statusInfo.text}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500">{client.name}</div>
+                      {client.company_name && client.name && (
+                        <div className="text-sm text-gray-500">Razão Social: {client.name}</div>
+                      )}
                       <div className="text-xs text-gray-400 mt-1">
                         Código: {client.code || 'N/A'}
                         {client.address && (

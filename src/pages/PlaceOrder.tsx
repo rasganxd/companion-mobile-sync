@@ -116,7 +116,7 @@ const PlaceOrder = () => {
           .from('customers')
           .select('id, name, company_name, code')
           .eq('active', true)
-          .order('name');
+          .order('company_name');
         
         if (clientsError) throw clientsError;
         
@@ -250,8 +250,8 @@ const PlaceOrder = () => {
     const lowercasedValue = value.toLowerCase();
     const filtered = clients.filter(
       client => 
-        client.name.toLowerCase().includes(lowercasedValue) || 
-        (client.company_name && client.company_name.toLowerCase().includes(lowercasedValue))
+        (client.company_name && client.company_name.toLowerCase().includes(lowercasedValue)) ||
+        client.name.toLowerCase().includes(lowercasedValue)
     );
     
     setFilteredClients(filtered);
@@ -357,7 +357,7 @@ const PlaceOrder = () => {
   const handleSelectClient = async (client: Client) => {
     await loadClientExistingOrder(client);
     setSearchOpen(false);
-    toast.success(`Cliente ${client.name} selecionado`);
+    toast.success(`Cliente ${client.company_name || client.name} selecionado`);
   };
 
   const handleFinishOrder = async () => {
@@ -381,7 +381,7 @@ const PlaceOrder = () => {
       const orderData = {
         id: orderId,
         customer_id: selectedClient.id,
-        customer_name: selectedClient.company_name || selectedClient.name,
+        customer_name: selectedClient.company_name || selectedClient.name, // Priorizar nome fantasia
         total: parseFloat(calculateTotal()),
         status: 'pending',
         payment_method: paymentMethod,
