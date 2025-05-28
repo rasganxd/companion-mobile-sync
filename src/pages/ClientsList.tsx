@@ -35,7 +35,7 @@ const ClientsList = () => {
   const { goBack } = useAppNavigation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { salesRep } = useAuth();
+  const { salesRep, isLoading } = useAuth();
   const { day } = location.state || { day: 'Segunda' };
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +53,16 @@ const ClientsList = () => {
   
   useEffect(() => {
     const loadClients = async () => {
-      // Verificar se o vendedor está logado
+      // Aguardar o carregamento da autenticação
+      if (isLoading) {
+        console.log('⏳ Waiting for auth to load...');
+        return;
+      }
+
+      // Se não há vendedor logado, mostrar estado informativo
       if (!salesRep?.id) {
-        console.log('❌ Sales rep not logged in, cannot load clients');
-        toast.error('Vendedor não identificado. Faça login novamente.');
-        navigate('/login');
+        console.log('❌ No sales rep logged in');
+        setLoading(false);
         return;
       }
 
@@ -109,12 +114,6 @@ const ClientsList = () => {
         ) || [];
         
         console.log(`📅 Filtered to ${dayClients.length} clients for ${day}`);
-
-        // Validação adicional de segurança - garantir que todos os clientes pertencem ao vendedor
-        const invalidClients = dayClients.filter(client => !client.id);
-        if (invalidClients.length > 0) {
-          console.warn('⚠️ Found clients without valid IDs:', invalidClients);
-        }
 
         // Buscar pedidos do dia atual para estes clientes (online)
         const today = new Date().toISOString().split('T')[0];
@@ -256,7 +255,7 @@ const ClientsList = () => {
     };
     
     loadClients();
-  }, [day, salesRep]);
+  }, [day, salesRep, isLoading]);
   
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
@@ -320,7 +319,18 @@ const ClientsList = () => {
     }).format(value);
   };
 
-  // Verificar se vendedor está logado
+  // Estados de loading e sem vendedor - mostrar informativos sem redirects forçados
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg mb-2">Carregando...</div>
+          <div className="text-sm text-gray-500">Verificando autenticação</div>
+        </div>
+      </div>
+    );
+  }
+
   if (!salesRep) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">

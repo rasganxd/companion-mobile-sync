@@ -11,7 +11,7 @@ import AppButton from '@/components/AppButton';
 const Index = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { salesRep } = useAuth();
+  const { salesRep, isLoading } = useAuth();
   
   // Extrair as informações do cliente do estado de navegação
   const { clientName, clientId, day } = location.state || {};
@@ -19,7 +19,19 @@ const Index = () => {
   console.log('🏠 Index page - received state:', { clientName, clientId, day });
   console.log('👨‍💼 Current sales rep:', salesRep?.name);
   
-  // Verificar se o vendedor está logado
+  // Estado de loading da autenticação
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg mb-2">Carregando...</div>
+          <div className="text-sm text-gray-500">Verificando autenticação</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Se não há vendedor logado, mostrar estado informativo
   if (!salesRep?.id) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center">
