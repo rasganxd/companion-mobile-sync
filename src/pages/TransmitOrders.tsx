@@ -8,17 +8,33 @@ import OrderActionButtons from '@/components/transmit/OrderActionButtons';
 import OrdersList from '@/components/transmit/OrdersList';
 
 const TransmitOrders = () => {
-  const [activeTab, setActiveTab] = useState<'pending' | 'transmitted'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'transmitted' | 'error'>('pending');
   
   const {
     pendingOrders,
     transmittedOrders,
+    errorOrders,
     isTransmitting,
     isLoading,
     loadOrders,
     transmitAllOrders,
+    retryOrder,
+    retryAllErrorOrders,
     deleteTransmittedOrder
   } = useOrderTransmission();
+
+  const getCurrentOrders = () => {
+    switch (activeTab) {
+      case 'pending':
+        return pendingOrders;
+      case 'transmitted':
+        return transmittedOrders;
+      case 'error':
+        return errorOrders;
+      default:
+        return [];
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -34,6 +50,7 @@ const TransmitOrders = () => {
           onTabChange={setActiveTab}
           pendingCount={pendingOrders.length}
           transmittedCount={transmittedOrders.length}
+          errorCount={errorOrders.length}
         />
 
         <OrderSummaryCard
@@ -46,15 +63,19 @@ const TransmitOrders = () => {
           isTransmitting={isTransmitting}
           isLoading={isLoading}
           pendingCount={pendingOrders.length}
+          errorCount={errorOrders.length}
           onTransmitAll={transmitAllOrders}
+          onRetryAllErrors={retryAllErrorOrders}
           onRefresh={loadOrders}
         />
 
         <OrdersList
-          orders={activeTab === 'pending' ? pendingOrders : transmittedOrders}
+          orders={getCurrentOrders()}
           isLoading={isLoading}
           showDeleteButton={activeTab === 'transmitted'}
+          showRetryButton={activeTab === 'error'}
           onDeleteOrder={activeTab === 'transmitted' ? deleteTransmittedOrder : undefined}
+          onRetryOrder={activeTab === 'error' ? retryOrder : undefined}
           emptyStateType={activeTab}
         />
       </div>

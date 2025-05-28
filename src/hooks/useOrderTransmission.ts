@@ -8,6 +8,7 @@ import { LocalOrder } from '@/types/order';
 export const useOrderTransmission = () => {
   const [pendingOrders, setPendingOrders] = useState<LocalOrder[]>([]);
   const [transmittedOrders, setTransmittedOrders] = useState<LocalOrder[]>([]);
+  const [errorOrders, setErrorOrders] = useState<LocalOrder[]>([]);
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,12 +21,7 @@ export const useOrderTransmission = () => {
       
       // Carregar pedidos pendentes
       const pending = await db.getPendingOrders();
-      console.log(`📋 Loaded ${pending.length} pending orders:`, pending.map(o => ({
-        id: o.id,
-        customer_name: o.customer_name,
-        sync_status: o.sync_status,
-        total: o.total
-      })));
+      console.log(`📋 Loaded ${pending.length} pending orders`);
       setPendingOrders(pending);
       
       // Carregar pedidos transmitidos
@@ -33,16 +29,11 @@ export const useOrderTransmission = () => {
       console.log(`📤 Loaded ${transmitted.length} transmitted orders`);
       setTransmittedOrders(transmitted);
       
-      // Carregar todos os pedidos para debug
+      // Carregar pedidos com erro
       const allOrders = await db.getAllOrders();
-      console.log(`📊 Total orders in database: ${allOrders.length}`);
-      console.log(`📊 Orders breakdown by sync_status:`, {
-        pending_sync: allOrders.filter(o => o.sync_status === 'pending_sync').length,
-        transmitted: allOrders.filter(o => o.sync_status === 'transmitted').length,
-        synced: allOrders.filter(o => o.sync_status === 'synced').length,
-        error: allOrders.filter(o => o.sync_status === 'error').length,
-        other: allOrders.filter(o => !['pending_sync', 'transmitted', 'synced', 'error'].includes(o.sync_status)).length
-      });
+      const errorOrdersList = allOrders.filter(order => order.sync_status === 'error');
+      console.log(`❌ Loaded ${errorOrdersList.length} error orders`);
+      setErrorOrders(errorOrdersList);
       
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -116,6 +107,43 @@ export const useOrderTransmission = () => {
     }
   };
 
+  const retryOrder = async (orderId: string) => {
+    try {
+      const db = getDatabaseAdapter();
+      await db.updateSyncStatus('orders', orderId, 'pending_sync');
+      toast.success('Pedido recolocado na fila de transmissão');
+      await loadOrders();
+    } catch (error) {
+      console.error('Error retrying order:', error);
+      toast.error('Erro ao tentar novamente');
+    }
+  };
+
+  const retryAllErrorOrders = async () => {
+    if (errorOrders.length === 0) {
+      toast.warning('Não há pedidos com erro para tentar novamente');
+      return;
+    }
+
+    if (!confirm(`Tentar transmitir novamente ${errorOrders.length} pedido(s) com erro?`)) {
+      return;
+    }
+
+    try {
+      const db = getDatabaseAdapter();
+      
+      for (const order of errorOrders) {
+        await db.updateSyncStatus('orders', order.id, 'pending_sync');
+      }
+      
+      toast.success(`${errorOrders.length} pedido(s) recolocados na fila de transmissão`);
+      await loadOrders();
+    } catch (error) {
+      console.error('Error retrying error orders:', error);
+      toast.error('Erro ao tentar novamente');
+    }
+  };
+
   const deleteTransmittedOrder = async (orderId: string) => {
     if (!confirm('Tem certeza que deseja excluir este pedido permanentemente?')) {
       return;
@@ -139,10 +167,13 @@ export const useOrderTransmission = () => {
   return {
     pendingOrders,
     transmittedOrders,
+    errorOrders,
     isTransmitting,
     isLoading,
     loadOrders,
     transmitAllOrders,
+    retryOrder,
+    retryAllErrorOrders,
     deleteTransmittedOrder
   };
 };

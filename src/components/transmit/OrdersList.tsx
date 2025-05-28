@@ -10,15 +10,19 @@ interface OrdersListProps {
   orders: LocalOrder[];
   isLoading: boolean;
   showDeleteButton: boolean;
+  showRetryButton?: boolean;
   onDeleteOrder?: (orderId: string) => void;
-  emptyStateType: 'pending' | 'transmitted';
+  onRetryOrder?: (orderId: string) => void;
+  emptyStateType: 'pending' | 'transmitted' | 'error';
 }
 
 const OrdersList: React.FC<OrdersListProps> = ({
   orders,
   isLoading,
   showDeleteButton,
+  showRetryButton = false,
   onDeleteOrder,
+  onRetryOrder,
   emptyStateType
 }) => {
   if (isLoading) {
@@ -43,7 +47,9 @@ const OrdersList: React.FC<OrdersListProps> = ({
           key={order.id}
           order={order}
           showDeleteButton={showDeleteButton}
+          showRetryButton={showRetryButton}
           onDelete={onDeleteOrder}
+          onRetry={onRetryOrder}
         />
       ))}
     </div>

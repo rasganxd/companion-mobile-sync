@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Trash2, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,13 +10,17 @@ import { useAppNavigation } from '@/hooks/useAppNavigation';
 interface OrderCardProps {
   order: LocalOrder;
   showDeleteButton?: boolean;
+  showRetryButton?: boolean;
   onDelete?: (orderId: string) => void;
+  onRetry?: (orderId: string) => void;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({ 
   order, 
-  showDeleteButton = false, 
-  onDelete 
+  showDeleteButton = false,
+  showRetryButton = false,
+  onDelete,
+  onRetry
 }) => {
   const { navigateTo } = useAppNavigation();
 
@@ -33,23 +37,33 @@ const OrderCard: React.FC<OrderCardProps> = ({
     return `R$ ${amount.toFixed(2)}`;
   };
 
-  const getStatusColor = (status: string): "orange" | "gray" | "blue" | "purple" => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
-      case 'pending': return 'orange';
-      case 'processed': return 'blue';
-      case 'cancelled': return 'gray';
-      case 'delivered': return 'blue';
-      default: return 'gray';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'processed': return 'bg-blue-100 text-blue-800';
+      case 'cancelled': return 'bg-gray-100 text-gray-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getSyncStatusColor = (syncStatus: string): "orange" | "gray" | "blue" | "purple" => {
+  const getSyncStatusColor = (syncStatus: string): string => {
     switch (syncStatus) {
-      case 'pending_sync': return 'orange';
-      case 'transmitted': return 'blue';
-      case 'synced': return 'blue';
-      case 'error': return 'gray';
-      default: return 'gray';
+      case 'pending_sync': return 'bg-orange-100 text-orange-800';
+      case 'transmitted': return 'bg-blue-100 text-blue-800';
+      case 'synced': return 'bg-green-100 text-green-800';
+      case 'error': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getSyncStatusLabel = (syncStatus: string): string => {
+    switch (syncStatus) {
+      case 'pending_sync': return 'Pendente';
+      case 'transmitted': return 'Transmitido';
+      case 'synced': return 'Sincronizado';
+      case 'error': return 'Erro';
+      default: return syncStatus;
     }
   };
 
@@ -57,22 +71,19 @@ const OrderCard: React.FC<OrderCardProps> = ({
     <Card className="mb-4">
       <CardContent className="pt-4">
         <div className="flex justify-between items-start mb-2">
-          <div>
-            <h4 className="font-medium">{order.customer_name}</h4>
+          <div className="min-w-0 flex-1">
+            <h4 className="font-medium truncate">{order.customer_name}</h4>
             <p className="text-sm text-gray-500">
               Pedido #{order.id?.substring(0, 8)} • {formatDate(order.date)}
             </p>
-            <p className="text-xs text-blue-600">
-              Sync: {order.sync_status}
-            </p>
           </div>
-          <div className="text-right">
-            <div className="flex gap-1 mb-1">
-              <Badge variant="secondary" className={`bg-${getStatusColor(order.status)}-100 text-${getStatusColor(order.status)}-800`}>
+          <div className="text-right flex-shrink-0 ml-2">
+            <div className="flex flex-wrap gap-1 mb-1 justify-end">
+              <Badge className={`text-xs ${getStatusColor(order.status)}`}>
                 {order.status}
               </Badge>
-              <Badge variant="secondary" className={`bg-${getSyncStatusColor(order.sync_status)}-100 text-${getSyncStatusColor(order.sync_status)}-800`}>
-                {order.sync_status}
+              <Badge className={`text-xs ${getSyncStatusColor(order.sync_status)}`}>
+                {getSyncStatusLabel(order.sync_status)}
               </Badge>
             </div>
             <p className="font-bold">{formatCurrency(order.total)}</p>
@@ -97,21 +108,35 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </p>
         )}
         
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3">
           <Button
             variant="outline"
             size="sm"
             onClick={() => navigateTo(`/order-details/${order.id}`)}
+            className="text-xs"
           >
             <Eye size={14} className="mr-1" />
             Ver Detalhes
           </Button>
+          
+          {showRetryButton && onRetry && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRetry(order.id)}
+              className="text-xs"
+            >
+              <RotateCcw size={14} className="mr-1" />
+              Tentar Novamente
+            </Button>
+          )}
           
           {showDeleteButton && onDelete && (
             <Button
               variant="destructive"
               size="sm"
               onClick={() => onDelete(order.id)}
+              className="text-xs"
             >
               <Trash2 size={14} className="mr-1" />
               Excluir
