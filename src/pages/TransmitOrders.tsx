@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Send, RefreshCw, Trash2, Eye, CheckCircle, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
@@ -16,7 +15,7 @@ interface LocalOrder {
   customer_name: string;
   total: number;
   date: string;
-  status: string;
+  status: 'pending' | 'processed' | 'cancelled' | 'delivered';
   items?: any[];
   sync_status: 'pending_sync' | 'transmitted' | 'synced' | 'error';
   reason?: string;
@@ -80,12 +79,12 @@ const TransmitOrders = () => {
         try {
           console.log('🚀 Transmitting order:', order.id);
 
-          // Preparar dados do pedido para a API
+          // Preparar dados do pedido para a API - garantindo que status seja do tipo correto
           const orderData = {
             customer_id: order.customer_id,
             customer_name: order.customer_name,
             date: order.date,
-            status: order.status,
+            status: order.status as 'pending' | 'processed' | 'cancelled' | 'delivered',
             total: order.total,
             notes: order.notes || '',
             payment_method: order.payment_method || '',

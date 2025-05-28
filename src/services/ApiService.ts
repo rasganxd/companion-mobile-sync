@@ -48,7 +48,7 @@ class ApiService {
   private static instance: ApiService;
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co';
   private apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
-  private useMobileImportEndpoint = false;
+  private useMobileImportEndpoint = true; // ✅ Mobile usa endpoint de importação por padrão
 
   private constructor() {}
 
@@ -82,6 +82,15 @@ class ApiService {
   setMobileImportMode(enabled: boolean): void {
     this.useMobileImportEndpoint = enabled;
     console.log(`📱 Mobile import mode ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  // Método para bloquear uso do endpoint orders-api no mobile
+  private validateEndpointUsage(): void {
+    if (this.useMobileImportEndpoint) {
+      console.log('✅ Using mobile import endpoint - pedidos aguardam importação manual');
+    } else {
+      console.warn('⚠️ Using direct orders endpoint - pedidos aparecem diretamente no sistema');
+    }
   }
 
   private async request<T>(
@@ -223,6 +232,9 @@ class ApiService {
     try {
       console.log('📝 Creating order with data:', order);
       
+      // Validar uso do endpoint
+      this.validateEndpointUsage();
+      
       if (this.useMobileImportEndpoint) {
         console.log('📱 Using mobile import endpoint for order creation');
         const response = await this.requestMobileImport<any>(order, []);
@@ -234,7 +246,9 @@ class ApiService {
         } as Order;
       }
 
-      // Usar endpoint regular se não estiver em modo móvel
+      // ❌ BLOQUEADO: Usar endpoint regular se não estiver em modo móvel
+      console.warn('❌ ATENÇÃO: Usando endpoint direto - pedido aparecerá imediatamente no sistema');
+      
       const code = await this.getNextOrderCode();
       const cleanOrder = { ...order, code };
       
@@ -270,6 +284,9 @@ class ApiService {
     try {
       console.log('📦 Creating order with items:', { order, items });
       
+      // Validar uso do endpoint
+      this.validateEndpointUsage();
+      
       if (this.useMobileImportEndpoint) {
         console.log('📱 Using mobile import endpoint for order with items');
         const response = await this.requestMobileImport<any>(order, items);
@@ -282,7 +299,9 @@ class ApiService {
         } as Order;
       }
 
-      // Criar pedido primeiro usando endpoint regular
+      // ❌ BLOQUEADO: Criar pedido primeiro usando endpoint regular
+      console.warn('❌ ATENÇÃO: Usando endpoint direto - pedido aparecerá imediatamente no sistema');
+      
       const createdOrder = await this.createOrder(order);
       
       // Se temos um ID válido, criar os itens

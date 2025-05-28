@@ -6,7 +6,7 @@ import { useNavigation } from '@/contexts/NavigationContext';
 interface HeaderProps {
   title: string;
   showBackButton?: boolean;
-  backgroundColor?: 'orange' | 'gray' | 'blue' | 'green';
+  backgroundColor?: 'orange' | 'gray' | 'blue' | 'green' | 'purple';
 }
 
 const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: HeaderProps) => {
@@ -20,6 +20,8 @@ const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: Hea
         return 'bg-slate-200';
       case 'green':
         return 'bg-green-600';
+      case 'purple':
+        return 'bg-purple-600';
       case 'blue':
       default:
         return 'bg-gradient-to-r from-app-blue to-app-blue-dark';
