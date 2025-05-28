@@ -25,7 +25,7 @@ const ProductHeader: React.FC<ProductHeaderProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div className="bg-gray-500 h-4 w-4 flex items-center justify-center mr-1.5 text-white rounded-full text-xs">
-            <span className="font-bold">{currentProductIndex + 1}</span>
+            <span className="font-bold">{product?.code || 'N/A'}</span>
           </div>
           <div className="flex-1">
             <div className="font-medium text-xs text-gray-800 truncate max-w-[200px]">
