@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Users, Search, Package, Plus, ShoppingCart, Save, FileText } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,16 @@ import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useLocation } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Client {
   id: string;
   name: string;
+  company_name?: string;
   address?: string;
   phone?: string;
   sales_rep_id?: string;
+  code?: number;
 }
 
 interface Product {
@@ -62,37 +65,69 @@ const PlaceOrder = () => {
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   const locationState = location.state as any;
 
-  const loadClientsForSalesRep = async () => {
+  const loadClientsForSalesRep = useCallback(async () => {
     if (!salesRep?.id) {
       console.warn('⚠️ Não há vendedor autenticado');
       return;
     }
 
+    setIsLoadingClients(true);
     try {
+      console.log('🔄 Loading clients for sales rep:', salesRep.id);
+      
+      // Primeiro, tentar carregar do WebDatabase (localStorage)
       const db = getDatabaseAdapter();
-      const allClients = await db.getClients();
+      const localClients = await db.getClients();
       
-      console.log('📋 Todos os clientes carregados:', allClients.length);
-      console.log('🔍 Vendedor atual:', salesRep.id);
+      console.log('📋 Local clients found:', localClients.length);
       
-      // Filtrar apenas clientes do vendedor logado
-      const salesRepClients = allClients.filter(client => {
-        const belongsToSalesRep = client.sales_rep_id === salesRep.id;
-        console.log(`Cliente ${client.name} (${client.id}): sales_rep_id=${client.sales_rep_id}, pertence ao vendedor=${belongsToSalesRep}`);
-        return belongsToSalesRep;
-      });
-      
-      console.log(`✅ Clientes filtrados para o vendedor ${salesRep.name}: ${salesRepClients.length} clientes`);
-      console.log('🎯 Clientes do vendedor:', salesRepClients.map(c => `${c.name} (${c.id})`));
-      
-      setClients(salesRepClients);
+      if (localClients.length > 0) {
+        // Filtrar clientes do vendedor logado
+        const salesRepClients = localClients.filter(client => 
+          client.sales_rep_id === salesRep.id
+        );
+        console.log('👤 Sales rep clients found locally:', salesRepClients.length);
+        setClients(salesRepClients);
+      } else {
+        // Se não há clientes locais, buscar do Supabase
+        console.log('🌐 No local clients found, fetching from Supabase...');
+        const { data: supabaseClients, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('sales_rep_id', salesRep.id)
+          .eq('active', true);
+        
+        if (error) {
+          console.error('❌ Error fetching clients from Supabase:', error);
+          toast.error('Erro ao carregar clientes do servidor');
+        } else {
+          console.log('✅ Clients fetched from Supabase:', supabaseClients?.length || 0);
+          const mappedClients = (supabaseClients || []).map(client => ({
+            id: client.id,
+            name: client.name,
+            company_name: client.company_name,
+            address: client.address,
+            phone: client.phone,
+            sales_rep_id: client.sales_rep_id,
+            code: client.code
+          }));
+          setClients(mappedClients);
+          
+          // Salvar no localStorage para próximas consultas
+          for (const client of mappedClients) {
+            await db.saveClient(client);
+          }
+        }
+      }
       
       // Se há dados de navegação, tentar encontrar o cliente
       if (locationState?.clientId) {
-        const preSelectedClient = salesRepClients.find(c => c.id === locationState.clientId);
+        const preSelectedClient = clients.find(c => c.id === locationState.clientId);
         if (preSelectedClient) {
           setSelectedClient(preSelectedClient);
           console.log('✅ Cliente pré-selecionado encontrado:', preSelectedClient.name);
@@ -105,25 +140,67 @@ const PlaceOrder = () => {
     } catch (error) {
       console.error('❌ Erro ao carregar clientes do vendedor:', error);
       toast.error('Erro ao carregar lista de clientes');
+    } finally {
+      setIsLoadingClients(false);
     }
-  };
+  }, [salesRep?.id]);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
+    setIsLoadingProducts(true);
     try {
+      console.log('🔄 Loading products...');
+      
+      // Primeiro, tentar carregar do WebDatabase (localStorage)
       const db = getDatabaseAdapter();
-      const allProducts = await db.getProducts();
-      setProducts(allProducts);
-      console.log('📦 Produtos carregados:', allProducts.length);
+      const localProducts = await db.getProducts();
+      
+      console.log('📦 Local products found:', localProducts.length);
+      
+      if (localProducts.length > 0) {
+        setProducts(localProducts);
+      } else {
+        // Se não há produtos locais, buscar do Supabase
+        console.log('🌐 No local products found, fetching from Supabase...');
+        const { data: supabaseProducts, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) {
+          console.error('❌ Error fetching products from Supabase:', error);
+          toast.error('Erro ao carregar produtos do servidor');
+        } else {
+          console.log('✅ Products fetched from Supabase:', supabaseProducts?.length || 0);
+          const mappedProducts = (supabaseProducts || []).map(product => ({
+            id: product.id,
+            name: product.name,
+            code: product.code?.toString() || '',
+            price: product.price,
+            unit: product.unit || 'UN',
+            description: product.description,
+            has_subunit: product.has_subunit,
+            subunit: product.subunit,
+            subunit_ratio: product.subunit_ratio
+          }));
+          setProducts(mappedProducts);
+          
+          // Salvar no localStorage para próximas consultas
+          for (const product of mappedProducts) {
+            await db.saveProduct(product);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-      toast.error('Erro ao carregar lista de produtos');
+      console.error('❌ Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar produtos');
+    } finally {
+      setIsLoadingProducts(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadClientsForSalesRep();
     loadProducts();
-  }, [salesRep?.id]);
+  }, [loadClientsForSalesRep, loadProducts]);
 
   useEffect(() => {
     // Carregar dados existentes se houver
@@ -211,7 +288,15 @@ const PlaceOrder = () => {
       return false;
     }
 
-    // Verificar novamente se o cliente pertence ao vendedor (segurança adicional)
+    // Verificar novamente se o cliente pertence ao vendedor com logs detalhados
+    console.log('🔍 Validating client ownership:', {
+      selectedClientId: selectedClient.id,
+      selectedClientName: selectedClient.name,
+      selectedClientSalesRepId: selectedClient.sales_rep_id,
+      currentSalesRepId: salesRep?.id,
+      clientBelongsToSalesRep: selectedClient.sales_rep_id === salesRep?.id
+    });
+
     if (selectedClient.sales_rep_id !== salesRep?.id) {
       toast.error('Cliente selecionado não pertence ao seu portfólio');
       console.error('❌ Tentativa de criar pedido para cliente de outro vendedor:', {
