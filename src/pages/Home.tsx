@@ -1,19 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Route, Package, BarChart3, Settings, Send } from 'lucide-react';
+import { Route, Package, BarChart3, Settings, Send, LogOut } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { Badge } from '@/components/ui/badge';
 import { useSync } from '@/hooks/useSync';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const Home = () => {
   const navigate = useNavigate();
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
   const [salesRepName, setSalesRepName] = useState('');
   const { syncStatus } = useSync();
+  const { logout } = useAuth();
 
   useEffect(() => {
     loadPendingOrdersCount();
@@ -55,6 +68,10 @@ const Home = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Vendas Fortes" backgroundColor="blue" />
@@ -65,13 +82,38 @@ const Home = () => {
           <div>
             <p className="text-sm font-medium text-gray-900">Vendedor: {salesRepName}</p>
           </div>
-          <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
-            syncStatus.connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            <span className={`w-2 h-2 mr-1 rounded-full ${
-              syncStatus.connected ? 'bg-green-500' : 'bg-red-500'
-            }`}></span>
-            <span>{syncStatus.connected ? 'Online' : 'Offline'}</span>
+          <div className="flex items-center space-x-3">
+            <div className={`flex items-center px-2 py-1 rounded-full text-xs ${
+              syncStatus.connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              <span className={`w-2 h-2 mr-1 rounded-full ${
+                syncStatus.connected ? 'bg-green-500' : 'bg-red-500'
+              }`}></span>
+              <span>{syncStatus.connected ? 'Online' : 'Offline'}</span>
+            </div>
+            
+            {/* Botão de Logout */}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button className="flex items-center justify-center w-8 h-8 bg-red-100 hover:bg-red-200 rounded-full transition-colors">
+                  <LogOut size={16} className="text-red-600" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar Logout</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza que deseja sair do sistema? Você será redirecionado para a tela de login.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleLogout} className="bg-red-600 hover:bg-red-700">
+                    Sair
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
         <div>
