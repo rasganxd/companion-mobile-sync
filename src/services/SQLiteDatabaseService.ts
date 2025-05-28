@@ -158,11 +158,11 @@ class SQLiteDatabaseService {
   async getOrders(clientId?: string): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
-      let query = 'SELECT * FROM orders';
-      let values: string[] = [];
+      let query = 'SELECT * FROM orders WHERE sync_status != ?';
+      let values: string[] = ['deleted'];
       
       if (clientId) {
-        query += ' WHERE customer_id = ?';
+        query += ' AND customer_id = ?';
         values.push(clientId);
       }
       
@@ -210,7 +210,7 @@ class SQLiteDatabaseService {
     }
   }
 
-  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error'): Promise<void> {
+  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {
       await this.db!.run(
@@ -298,18 +298,80 @@ class SQLiteDatabaseService {
     }
   }
 
-  // New methods for offline flow
+  // Original methods for offline flow
   async getPendingOrders(): Promise<any[]> {
     return this.getPendingSyncItems('orders');
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
-    await this.updateSyncStatus('orders', orderId, 'synced');
+    await this.updateSyncStatus('orders', orderId, 'transmitted');
   }
 
   async getOfflineOrdersCount(): Promise<number> {
     const pendingOrders = await this.getPendingOrders();
     return pendingOrders.length;
+  }
+
+  // New methods for improved order management
+  async getClientOrders(clientId: string): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE customer_id = ? AND sync_status != ?', 
+        [clientId, 'deleted']
+      );
+      
+      const orders = result.values || [];
+      return orders.map(order => ({
+        ...order,
+        items: order.items ? JSON.parse(order.items) : []
+      }));
+    } catch (error) {
+      console.error('❌ Error getting client orders:', error);
+      return [];
+    }
+  }
+
+  async deleteOrder(orderId: string): Promise<void> {
+    await this.updateSyncStatus('orders', orderId, 'deleted');
+  }
+
+  async getTransmittedOrders(): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE sync_status = ?', 
+        ['transmitted']
+      );
+      
+      const orders = result.values || [];
+      return orders.map(order => ({
+        ...order,
+        items: order.items ? JSON.parse(order.items) : []
+      }));
+    } catch (error) {
+      console.error('❌ Error getting transmitted orders:', error);
+      return [];
+    }
+  }
+
+  async getAllOrders(): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE sync_status != ?', 
+        ['deleted']
+      );
+      
+      const orders = result.values || [];
+      return orders.map(order => ({
+        ...order,
+        items: order.items ? JSON.parse(order.items) : []
+      }));
+    } catch (error) {
+      console.error('❌ Error getting all orders:', error);
+      return [];
+    }
   }
 
   async closeDatabase(): Promise<void> {

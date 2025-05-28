@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -66,6 +65,7 @@ const PlaceOrder = () => {
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
   
   // Novos estados para busca de produtos
   const [productSearchOpen, setProductSearchOpen] = useState(false);
@@ -139,7 +139,7 @@ const PlaceOrder = () => {
           
           if (client) {
             console.log('✅ Client found in database:', client);
-            setSelectedClient(client);
+            await loadClientExistingOrder(client);
             toast.success(`Cliente ${client.company_name || client.name} selecionado automaticamente`);
           } else {
             // If not found in database, create a temporary client object with the passed data
@@ -149,7 +149,7 @@ const PlaceOrder = () => {
               name: clientName,
               company_name: clientName
             };
-            setSelectedClient(tempClient);
+            await loadClientExistingOrder(tempClient);
             toast.success(`Cliente ${clientName} selecionado automaticamente`);
           }
         }
@@ -164,6 +164,53 @@ const PlaceOrder = () => {
     
     fetchData();
   }, [location.state]);
+
+  const loadClientExistingOrder = async (client: Client) => {
+    try {
+      setSelectedClient(client);
+      
+      // Verificar se há pedido existente para este cliente
+      const db = getDatabaseAdapter();
+      const clientOrders = await db.getClientOrders(client.id);
+      
+      console.log('📋 Client orders found:', clientOrders);
+      
+      if (clientOrders.length > 0) {
+        // Pegar o pedido mais recente (último)
+        const latestOrder = clientOrders.sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0];
+        
+        console.log('📄 Loading latest order:', latestOrder);
+        
+        // Carregar itens do pedido existente
+        if (latestOrder.items && latestOrder.items.length > 0) {
+          const existingItems = latestOrder.items.map((item: any, index: number) => ({
+            id: Date.now() + index, // Gerar IDs únicos
+            productId: item.product_id || `temp_${index}`,
+            productName: item.product_name,
+            quantity: item.quantity,
+            price: item.price || item.unit_price || 0,
+            code: item.product_code?.toString() || '',
+            unit: item.unit || 'UN'
+          }));
+          
+          setOrderItems(existingItems);
+          setExistingOrderId(latestOrder.id);
+          
+          // Carregar método de pagamento se disponível
+          if (latestOrder.payment_method) {
+            setPaymentMethod(latestOrder.payment_method);
+          }
+          
+          toast.success(`Pedido existente carregado com ${existingItems.length} item(s)`);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading client existing order:', error);
+      toast.error('Erro ao carregar pedido existente do cliente');
+    }
+  };
   
   const currentProduct = products[currentProductIndex] || null;
   
@@ -275,7 +322,8 @@ const PlaceOrder = () => {
         paymentMethod,
         clientId: location.state?.clientId,
         clientName: location.state?.clientName,
-        day: location.state?.day
+        day: location.state?.day,
+        existingOrderId
       } 
     });
   };
@@ -301,8 +349,8 @@ const PlaceOrder = () => {
     toast.success(`Produto ${product.name} selecionado`);
   };
 
-  const handleSelectClient = (client: Client) => {
-    setSelectedClient(client);
+  const handleSelectClient = async (client: Client) => {
+    await loadClientExistingOrder(client);
     setSearchOpen(false);
     toast.success(`Cliente ${client.name} selecionado`);
   };
@@ -323,16 +371,17 @@ const PlaceOrder = () => {
     try {
       const db = getDatabaseAdapter();
       
-      // Create order locally with offline status
+      // Create or update order locally with offline status
+      const orderId = existingOrderId || `local_${Date.now()}`;
       const orderData = {
-        id: `local_${Date.now()}`, // Local ID prefix
+        id: orderId,
         customer_id: selectedClient.id,
         customer_name: selectedClient.company_name || selectedClient.name,
         total: parseFloat(calculateTotal()),
         status: 'pending',
         payment_method: paymentMethod,
         date: new Date().toISOString(),
-        sync_status: 'pending_sync', // Offline status
+        sync_status: 'pending_sync', // Sempre pendente para nova transmissão
         source_project: 'mobile',
         items: orderItems.map(item => ({
           product_name: item.productName,
@@ -343,14 +392,20 @@ const PlaceOrder = () => {
         }))
       };
 
-      // Save order locally
+      // Save order locally (will update if existing)
       await db.saveOrder(orderData);
       
       console.log('📱 Order saved locally:', orderData);
-      toast.success("Pedido salvo localmente! Use 'Transmitir Pedidos' para enviar ao servidor.");
+      
+      if (existingOrderId) {
+        toast.success("Pedido atualizado e salvo localmente!");
+      } else {
+        toast.success("Pedido salvo localmente!");
+      }
       
       // Clear form
       setOrderItems([]);
+      setExistingOrderId(null);
       setSelectedClient({ id: '', name: '', company_name: '' });
       
       navigate('/clientes-lista');
@@ -390,6 +445,7 @@ const PlaceOrder = () => {
 
   const handleDiscardAndGoBack = () => {
     setOrderItems([]);
+    setExistingOrderId(null);
     setShowDiscardDialog(false);
     toast.info("Itens do carrinho descartados");
     navigateBack();
@@ -397,6 +453,7 @@ const PlaceOrder = () => {
 
   const handleClearCart = () => {
     setOrderItems([]);
+    setExistingOrderId(null);
     toast.info("Carrinho limpo");
   };
 
@@ -438,7 +495,7 @@ const PlaceOrder = () => {
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <Header 
-        title="Digitação de Pedidos"
+        title={existingOrderId ? "Editar Pedido" : "Digitação de Pedidos"}
         backgroundColor="blue"
         showBackButton
       />
@@ -448,6 +505,14 @@ const PlaceOrder = () => {
         selectedClient={selectedClient}
         onClientSearch={handleClientSearch}
       />
+      
+      {existingOrderId && (
+        <div className="bg-yellow-100 border-b border-yellow-200 px-3 py-2">
+          <p className="text-yellow-800 text-sm">
+            ✏️ Editando pedido existente - As alterações serão salvas automaticamente
+          </p>
+        </div>
+      )}
       
       <div className="flex flex-col flex-1 min-h-0">
         {/* Product Section */}

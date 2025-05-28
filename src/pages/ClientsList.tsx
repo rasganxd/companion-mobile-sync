@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface Client {
   id: string;
@@ -22,6 +23,8 @@ interface Client {
   visit_days?: string[];
   status?: 'positivado' | 'negativado' | 'pendente';
   orderTotal?: number;
+  hasLocalOrders?: boolean;
+  localOrdersCount?: number;
 }
 
 const ClientsList = () => {
@@ -79,7 +82,7 @@ const ClientsList = () => {
           customer.visit_days.includes(englishDay)
         ) || [];
         
-        // Buscar pedidos do dia atual para estes clientes
+        // Buscar pedidos do dia atual para estes clientes (online)
         const today = new Date().toISOString().split('T')[0];
         const clientIds = dayClients.map(client => client.id);
         
@@ -92,32 +95,42 @@ const ClientsList = () => {
         
         if (ordersError) {
           console.error('❌ Error fetching orders:', ordersError);
-          // Continuar sem os dados de pedidos
+          // Continuar sem os dados de pedidos online
         }
         
-        console.log('👥 Day clients:', dayClients);
-        console.log('📋 Orders for today:', orders);
+        // Buscar pedidos locais para estes clientes
+        const db = getDatabaseAdapter();
+        const localOrders = await db.getAllOrders();
         
-        // Determinar status de cada cliente baseado nos pedidos
+        console.log('👥 Day clients:', dayClients);
+        console.log('📋 Online orders for today:', orders);
+        console.log('📱 Local orders:', localOrders);
+        
+        // Determinar status de cada cliente baseado nos pedidos (online + local)
         const clientsWithStatus = dayClients.map(client => {
-          const clientOrders = orders?.filter(order => order.customer_id === client.id) || [];
+          const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
+          const clientLocalOrders = localOrders.filter(order => 
+            order.customer_id === client.id && 
+            order.sync_status !== 'deleted'
+          );
           
           let status: 'positivado' | 'negativado' | 'pendente' = 'pendente';
           let orderTotal = 0;
+          let hasLocalOrders = clientLocalOrders.length > 0;
+          let localOrdersCount = clientLocalOrders.length;
           
-          if (clientOrders.length > 0) {
-            // Cliente tem pedidos - verificar status
-            const hasPositive = clientOrders.some(order => 
+          // Verificar pedidos online primeiro
+          if (clientOnlineOrders.length > 0) {
+            const hasPositive = clientOnlineOrders.some(order => 
               order.status === 'pending' || 
               order.status === 'processed' || 
               order.status === 'delivered'
             );
-            const hasNegative = clientOrders.some(order => order.status === 'cancelled');
+            const hasNegative = clientOnlineOrders.some(order => order.status === 'cancelled');
             
             if (hasPositive) {
               status = 'positivado';
-              // Calcular total apenas dos pedidos positivos
-              orderTotal = clientOrders
+              orderTotal = clientOnlineOrders
                 .filter(order => 
                   order.status === 'pending' || 
                   order.status === 'processed' || 
@@ -129,10 +142,49 @@ const ClientsList = () => {
             }
           }
           
+          // Se não há pedidos online, verificar pedidos locais
+          if (status === 'pendente' && clientLocalOrders.length > 0) {
+            const hasPositiveLocal = clientLocalOrders.some(order => 
+              order.status === 'pending' || 
+              order.status === 'processed' || 
+              order.status === 'delivered'
+            );
+            const hasNegativeLocal = clientLocalOrders.some(order => 
+              order.status === 'negativado' || order.status === 'cancelled'
+            );
+            
+            if (hasPositiveLocal) {
+              status = 'positivado';
+              orderTotal = clientLocalOrders
+                .filter(order => 
+                  order.status === 'pending' || 
+                  order.status === 'processed' || 
+                  order.status === 'delivered'
+                )
+                .reduce((sum, order) => sum + (order.total || 0), 0);
+            } else if (hasNegativeLocal) {
+              status = 'negativado';
+            }
+          }
+          
+          // Se tem pedidos locais, adicionar ao total
+          if (hasLocalOrders && status === 'positivado') {
+            const localTotal = clientLocalOrders
+              .filter(order => 
+                order.status === 'pending' || 
+                order.status === 'processed' || 
+                order.status === 'delivered'
+              )
+              .reduce((sum, order) => sum + (order.total || 0), 0);
+            orderTotal += localTotal;
+          }
+          
           return {
             ...client,
             status,
-            orderTotal
+            orderTotal,
+            hasLocalOrders,
+            localOrdersCount
           };
         });
         
@@ -175,18 +227,18 @@ const ClientsList = () => {
       case 'positivado':
         return {
           color: 'bg-green-100 text-green-800',
-          text: 'Positivado'
+          text: client.hasLocalOrders ? `Positivado (${client.localOrdersCount} local)` : 'Positivado'
         };
       case 'negativado':
         return {
           color: 'bg-red-100 text-red-800',
-          text: 'Negativado'
+          text: client.hasLocalOrders ? `Negativado (${client.localOrdersCount} local)` : 'Negativado'
         };
       case 'pendente':
       default:
         return {
-          color: 'bg-gray-100 text-gray-800',
-          text: 'Pendente'
+          color: client.hasLocalOrders ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
+          text: client.hasLocalOrders ? `Pendente (${client.localOrdersCount} local)` : 'Pendente'
         };
     }
   };
@@ -240,7 +292,7 @@ const ClientsList = () => {
                         {client.address && (
                           <span className="ml-2">• {client.address}</span>
                         )}
-                        {client.status === 'positivado' && client.orderTotal && client.orderTotal > 0 && (
+                        {(client.status === 'positivado' && client.orderTotal && client.orderTotal > 0) && (
                           <span className="ml-2 text-green-600 font-medium">
                             • {formatCurrency(client.orderTotal)}
                           </span>

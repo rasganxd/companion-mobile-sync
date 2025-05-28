@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
-import { ArrowLeft, Send, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, Clock, Wifi, WifiOff, Trash2, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ApiService from '@/services/ApiService';
@@ -19,7 +18,7 @@ interface PendingOrder {
   date: string;
   status: string;
   items?: any[];
-  sync_status: 'pending_sync' | 'synced' | 'error';
+  sync_status: 'pending_sync' | 'transmitted' | 'error';
   reason?: string;
   notes?: string;
   payment_method?: string;
@@ -28,31 +27,41 @@ interface PendingOrder {
 const TransmitOrders = () => {
   const navigate = useNavigate();
   const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [transmittedOrders, setTransmittedOrders] = useState<PendingOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'pending' | 'transmitted'>('pending');
 
   useEffect(() => {
-    loadPendingOrders();
+    loadOrders();
     checkConnection();
   }, []);
 
-  const loadPendingOrders = async () => {
+  const loadOrders = async () => {
     try {
       setIsLoading(true);
       const db = getDatabaseAdapter();
-      const orders = await db.getPendingSyncItems('orders');
       
-      console.log('📋 Loaded pending orders:', orders);
-      setPendingOrders(orders);
+      // Carregar pedidos pendentes
+      const pending = await db.getPendingSyncItems('orders');
       
-      // Auto-select all orders
-      const orderIds = new Set(orders.map(order => order.id));
+      // Carregar pedidos transmitidos
+      const transmitted = await db.getTransmittedOrders();
+      
+      console.log('📋 Loaded pending orders:', pending);
+      console.log('📋 Loaded transmitted orders:', transmitted);
+      
+      setPendingOrders(pending);
+      setTransmittedOrders(transmitted);
+      
+      // Auto-select all pending orders
+      const orderIds = new Set(pending.map(order => order.id));
       setSelectedOrders(orderIds);
     } catch (error) {
-      console.error('Error loading pending orders:', error);
-      toast.error('Erro ao carregar pedidos pendentes');
+      console.error('Error loading orders:', error);
+      toast.error('Erro ao carregar pedidos');
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +100,22 @@ const TransmitOrders = () => {
 
   const deselectAllOrders = () => {
     setSelectedOrders(new Set());
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este pedido permanentemente?')) {
+      return;
+    }
+
+    try {
+      const db = getDatabaseAdapter();
+      await db.deleteOrder(orderId);
+      toast.success('Pedido excluído com sucesso');
+      loadOrders(); // Recarregar listas
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Erro ao excluir pedido');
+    }
   };
 
   const transmitSelectedOrders = async () => {
@@ -151,11 +176,11 @@ const TransmitOrders = () => {
             console.log('✅ Regular order transmitted:', result);
           }
           
-          // Mark as synced locally ONLY if transmission was successful
-          await db.updateSyncStatus('orders', order.id, 'synced');
+          // Mark as transmitted locally (not deleted!)
+          await db.updateSyncStatus('orders', order.id, 'transmitted');
           successCount++;
           
-          console.log('✅ Order transmitted and marked as synced:', order.id);
+          console.log('✅ Order transmitted and marked as transmitted:', order.id);
           
           // Show individual success message
           toast.success(`Pedido de ${order.customer_name} transmitido!`);
@@ -189,8 +214,8 @@ const TransmitOrders = () => {
 
       console.log(`✅ Transmissão concluída: ${successCount} sucesso, ${errorCount} erros`);
 
-      // Reload pending orders to update the list
-      await loadPendingOrders();
+      // Reload orders to update the lists
+      await loadOrders();
       
     } catch (error) {
       console.error('❌ Error during transmission:', error);
@@ -229,6 +254,76 @@ const TransmitOrders = () => {
     return <Badge variant="secondary">Pendente</Badge>;
   };
 
+  const renderOrderCard = (order: PendingOrder, showActions: boolean) => (
+    <Card 
+      key={order.id} 
+      className={`cursor-pointer border-2 transition-colors ${
+        showActions && selectedOrders.has(order.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+      }`}
+      onClick={() => showActions && toggleOrderSelection(order.id)}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-sm font-medium">
+            {order.customer_name}
+          </CardTitle>
+          {getStatusBadge(order)}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Total:</span>
+            <span className="font-medium">{formatCurrency(order.total)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Data:</span>
+            <span>{formatDate(order.date)}</span>
+          </div>
+          {order.reason && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Motivo:</span>
+              <span className="text-red-600">{order.reason}</span>
+            </div>
+          )}
+          {order.items && order.items.length > 0 && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Itens:</span>
+              <span>{order.items.length} produto(s)</span>
+            </div>
+          )}
+        </div>
+        
+        {!showActions && (
+          <div className="flex gap-2 mt-3">
+            <AppButton 
+              variant="gray" 
+              className="text-xs flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/order-details/${order.id}`);
+              }}
+            >
+              <Eye size={12} className="mr-1" />
+              Ver
+            </AppButton>
+            <AppButton 
+              variant="red" 
+              className="text-xs flex-1"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteOrder(order.id);
+              }}
+            >
+              <Trash2 size={12} className="mr-1" />
+              Excluir
+            </AppButton>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
@@ -245,130 +340,141 @@ const TransmitOrders = () => {
         {isConnected ? 'Conectado ao servidor' : 'Sem conexão com o servidor'}
       </div>
 
-      {/* Summary */}
-      <div className="bg-white border-b p-4">
-        <div className="flex justify-between items-center mb-3">
-          <div>
-            <h3 className="font-medium">Pedidos Pendentes</h3>
-            <p className="text-sm text-gray-600">
-              {pendingOrders.length} pedido(s) aguardando transmissão
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-600">Selecionados</p>
-            <p className="font-medium">{selectedOrders.size} de {pendingOrders.length}</p>
-          </div>
-        </div>
-        
-        {pendingOrders.length > 0 && (
-          <div className="flex gap-2">
-            <AppButton 
-              variant="gray" 
-              className="text-xs"
-              onClick={selectAllOrders}
-            >
-              Selecionar Todos
-            </AppButton>
-            <AppButton 
-              variant="gray" 
-              className="text-xs"
-              onClick={deselectAllOrders}
-            >
-              Desmarcar Todos
-            </AppButton>
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="bg-white border-b flex">
+        <button
+          className={`flex-1 py-3 px-4 text-sm font-medium ${
+            activeTab === 'pending' 
+              ? 'border-b-2 border-blue-500 text-blue-600' 
+              : 'text-gray-600'
+          }`}
+          onClick={() => setActiveTab('pending')}
+        >
+          Pendentes ({pendingOrders.length})
+        </button>
+        <button
+          className={`flex-1 py-3 px-4 text-sm font-medium ${
+            activeTab === 'transmitted' 
+              ? 'border-b-2 border-blue-500 text-blue-600' 
+              : 'text-gray-600'
+          }`}
+          onClick={() => setActiveTab('transmitted')}
+        >
+          Transmitidos ({transmittedOrders.length})
+        </button>
       </div>
+
+      {/* Summary */}
+      {activeTab === 'pending' && (
+        <div className="bg-white border-b p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h3 className="font-medium">Pedidos Pendentes</h3>
+              <p className="text-sm text-gray-600">
+                {pendingOrders.length} pedido(s) aguardando transmissão
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600">Selecionados</p>
+              <p className="font-medium">{selectedOrders.size} de {pendingOrders.length}</p>
+            </div>
+          </div>
+          
+          {pendingOrders.length > 0 && (
+            <div className="flex gap-2">
+              <AppButton 
+                variant="gray" 
+                className="text-xs"
+                onClick={selectAllOrders}
+              >
+                Selecionar Todos
+              </AppButton>
+              <AppButton 
+                variant="gray" 
+                className="text-xs"
+                onClick={deselectAllOrders}
+              >
+                Desmarcar Todos
+              </AppButton>
+            </div>
+          )}
+        </div>
+      )}
       
       <ScrollArea className="flex-1 px-4 py-4">
         {isLoading ? (
           <div className="text-center py-8">
             <div className="text-lg text-gray-600">Carregando pedidos...</div>
           </div>
-        ) : pendingOrders.length === 0 ? (
-          <div className="text-center py-8">
-            <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
-            <div className="text-lg text-gray-600">Nenhum pedido pendente</div>
-            <div className="text-sm text-gray-500">Todos os pedidos foram transmitidos</div>
-          </div>
         ) : (
           <div className="space-y-3">
-            {pendingOrders.map((order) => (
-              <Card 
-                key={order.id} 
-                className={`cursor-pointer border-2 transition-colors ${
-                  selectedOrders.has(order.id) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                }`}
-                onClick={() => toggleOrderSelection(order.id)}
-              >
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-sm font-medium">
-                      {order.customer_name}
-                    </CardTitle>
-                    {getStatusBadge(order)}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total:</span>
-                      <span className="font-medium">{formatCurrency(order.total)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Data:</span>
-                      <span>{formatDate(order.date)}</span>
-                    </div>
-                    {order.reason && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Motivo:</span>
-                        <span className="text-red-600">{order.reason}</span>
-                      </div>
-                    )}
-                    {order.items && order.items.length > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Itens:</span>
-                        <span>{order.items.length} produto(s)</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {activeTab === 'pending' ? (
+              pendingOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+                  <div className="text-lg text-gray-600">Nenhum pedido pendente</div>
+                  <div className="text-sm text-gray-500">Todos os pedidos foram transmitidos</div>
+                </div>
+              ) : (
+                pendingOrders.map((order) => renderOrderCard(order, true))
+              )
+            ) : (
+              transmittedOrders.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="text-lg text-gray-600">Nenhum pedido transmitido</div>
+                  <div className="text-sm text-gray-500">Pedidos transmitidos aparecerão aqui</div>
+                </div>
+              ) : (
+                transmittedOrders.map((order) => renderOrderCard(order, false))
+              )
+            )}
           </div>
         )}
       </ScrollArea>
       
       {/* Actions */}
-      <div className="p-4 bg-white border-t grid grid-cols-2 gap-4">
-        <AppButton 
-          variant="gray" 
-          onClick={() => navigate(-1)}
-          disabled={isTransmitting}
-          className="flex items-center justify-center"
-        >
-          <ArrowLeft size={16} className="mr-2" />
-          Voltar
-        </AppButton>
-        
-        <AppButton 
-          variant="blue" 
-          onClick={transmitSelectedOrders}
-          disabled={isTransmitting || selectedOrders.size === 0 || !isConnected}
-          className="flex items-center justify-center"
-        >
-          {isTransmitting ? (
-            <>
-              <Clock size={16} className="mr-2 animate-spin" />
-              Transmitindo...
-            </>
-          ) : (
-            <>
-              <Send size={16} className="mr-2" />
-              Transmitir ({selectedOrders.size})
-            </>
-          )}
-        </AppButton>
+      <div className="p-4 bg-white border-t">
+        {activeTab === 'pending' ? (
+          <div className="grid grid-cols-2 gap-4">
+            <AppButton 
+              variant="gray" 
+              onClick={() => navigate(-1)}
+              disabled={isTransmitting}
+              className="flex items-center justify-center"
+            >
+              <ArrowLeft size={16} className="mr-2" />
+              Voltar
+            </AppButton>
+            
+            <AppButton 
+              variant="blue" 
+              onClick={transmitSelectedOrders}
+              disabled={isTransmitting || selectedOrders.size === 0 || !isConnected}
+              className="flex items-center justify-center"
+            >
+              {isTransmitting ? (
+                <>
+                  <Clock size={16} className="mr-2 animate-spin" />
+                  Transmitindo...
+                </>
+              ) : (
+                <>
+                  <Send size={16} className="mr-2" />
+                  Transmitir ({selectedOrders.size})
+                </>
+              )}
+            </AppButton>
+          </div>
+        ) : (
+          <AppButton 
+            variant="gray" 
+            onClick={() => navigate(-1)}
+            className="w-full flex items-center justify-center"
+          >
+            <ArrowLeft size={16} className="mr-2" />
+            Voltar
+          </AppButton>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, RefreshCw, Send, Users } from 'lucide-react';
 import Header from '@/components/Header';
@@ -16,7 +17,7 @@ interface LocalOrder {
   date: string;
   status: string;
   items?: any[];
-  sync_status: 'pending_sync' | 'synced' | 'error';
+  sync_status: 'pending_sync' | 'transmitted' | 'synced' | 'error';
   reason?: string;
   notes?: string;
   payment_method?: string;
@@ -32,6 +33,7 @@ const MyOrders = () => {
   const [orders, setOrders] = useState<LocalOrder[]>([]);
   const [groupedOrders, setGroupedOrders] = useState<GroupedOrders>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'transmitted'>('all');
 
   const statusColors = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -41,19 +43,29 @@ const MyOrders = () => {
     negativado: 'bg-red-100 text-red-800'
   };
 
-  const loadLocalOrders = async () => {
+  const syncStatusColors = {
+    pending_sync: 'bg-orange-100 text-orange-800',
+    transmitted: 'bg-blue-100 text-blue-800',
+    synced: 'bg-green-100 text-green-800',
+    error: 'bg-red-100 text-red-800'
+  };
+
+  const loadAllOrders = async () => {
     try {
       setIsLoading(true);
       const db = getDatabaseAdapter();
       
-      // Buscar apenas pedidos pendentes de sincronização
-      const pendingOrders = await db.getPendingSyncItems('orders');
+      // Buscar todos os pedidos (exceto deletados)
+      const allOrders = await db.getAllOrders();
       
-      console.log('📋 Loaded local pending orders:', pendingOrders);
-      setOrders(pendingOrders);
+      console.log('📋 Loaded all orders:', allOrders);
+      setOrders(allOrders);
+      
+      // Filtrar baseado no filtro ativo
+      const filteredOrders = filterOrdersByStatus(allOrders, activeFilter);
       
       // Agrupar pedidos por cliente
-      const grouped = pendingOrders.reduce((acc: GroupedOrders, order) => {
+      const grouped = filteredOrders.reduce((acc: GroupedOrders, order) => {
         const customerName = order.customer_name || 'Cliente não identificado';
         if (!acc[customerName]) {
           acc[customerName] = [];
@@ -64,20 +76,45 @@ const MyOrders = () => {
       
       setGroupedOrders(grouped);
     } catch (error) {
-      console.error('Error loading local orders:', error);
-      toast.error('Erro ao carregar pedidos locais');
+      console.error('Error loading all orders:', error);
+      toast.error('Erro ao carregar pedidos');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const filterOrdersByStatus = (orders: LocalOrder[], filter: string) => {
+    switch (filter) {
+      case 'pending':
+        return orders.filter(order => order.sync_status === 'pending_sync');
+      case 'transmitted':
+        return orders.filter(order => order.sync_status === 'transmitted');
+      default:
+        return orders;
+    }
+  };
+
   useEffect(() => {
-    loadLocalOrders();
+    loadAllOrders();
   }, []);
 
-  const deleteOrder = async (orderId: string, status: string) => {
-    if (status !== 'pending' && status !== 'negativado') {
-      toast.error('Apenas pedidos pendentes podem ser deletados');
+  useEffect(() => {
+    // Re-filter when active filter changes
+    const filteredOrders = filterOrdersByStatus(orders, activeFilter);
+    const grouped = filteredOrders.reduce((acc: GroupedOrders, order) => {
+      const customerName = order.customer_name || 'Cliente não identificado';
+      if (!acc[customerName]) {
+        acc[customerName] = [];
+      }
+      acc[customerName].push(order);
+      return acc;
+    }, {});
+    setGroupedOrders(grouped);
+  }, [activeFilter, orders]);
+
+  const deleteOrder = async (orderId: string, syncStatus: string) => {
+    if (syncStatus === 'transmitted') {
+      toast.error('Pedidos transmitidos não podem ser deletados aqui. Use a aba "Transmitidos" em Transmitir Pedidos.');
       return;
     }
 
@@ -87,14 +124,36 @@ const MyOrders = () => {
 
     try {
       const db = getDatabaseAdapter();
-      // Para deletar, vamos marcar como 'error' ou implementar método de delete
-      await db.updateSyncStatus('orders', orderId, 'error');
+      await db.deleteOrder(orderId);
       toast.success('Pedido deletado com sucesso');
-      loadLocalOrders(); // Recarregar lista
+      loadAllOrders(); // Recarregar lista
     } catch (error) {
       console.error('Error deleting order:', error);
       toast.error(`Erro ao deletar pedido: ${error}`);
     }
+  };
+
+  const editOrder = (order: LocalOrder) => {
+    if (order.sync_status === 'transmitted') {
+      toast.warning('Pedidos transmitidos não podem ser editados. Crie um novo pedido para este cliente.');
+      return;
+    }
+
+    // Navegar para PlaceOrder com dados do pedido
+    navigateTo('/new-order', {
+      clientId: order.customer_id,
+      clientName: order.customer_name,
+      existingOrderItems: order.items?.map((item: any, index: number) => ({
+        id: Date.now() + index,
+        productId: item.product_id || `temp_${index}`,
+        productName: item.product_name,
+        quantity: item.quantity,
+        price: item.price || item.unit_price || 0,
+        code: item.product_code?.toString() || '',
+        unit: item.unit || 'UN'
+      })) || [],
+      paymentMethod: order.payment_method
+    });
   };
 
   const formatDate = (dateString: string): string => {
@@ -110,8 +169,14 @@ const MyOrders = () => {
     return `R$ ${amount.toFixed(2)}`;
   };
 
-  const getTotalOrders = () => orders.length;
-  const getTotalValue = () => orders.reduce((sum, order) => sum + order.total, 0);
+  const getFilteredOrdersCount = (filter: string) => {
+    return filterOrdersByStatus(orders, filter).length;
+  };
+
+  const getTotalValue = () => {
+    const filteredOrders = filterOrdersByStatus(orders, activeFilter);
+    return filteredOrders.reduce((sum, order) => sum + order.total, 0);
+  };
 
   const getStatusLabel = (status: string) => {
     const statusLabels = {
@@ -124,6 +189,16 @@ const MyOrders = () => {
     return statusLabels[status] || status;
   };
 
+  const getSyncStatusLabel = (syncStatus: string) => {
+    const syncStatusLabels = {
+      pending_sync: 'Pendente',
+      transmitted: 'Transmitido',
+      synced: 'Sincronizado',
+      error: 'Erro'
+    };
+    return syncStatusLabels[syncStatus] || syncStatus;
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
@@ -133,13 +208,41 @@ const MyOrders = () => {
       />
       
       <div className="p-4 flex-1">
+        {/* Filtros */}
+        <div className="flex gap-2 mb-4 overflow-x-auto">
+          <Button
+            variant={activeFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveFilter('all')}
+          >
+            Todos ({orders.length})
+          </Button>
+          <Button
+            variant={activeFilter === 'pending' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveFilter('pending')}
+          >
+            Pendentes ({getFilteredOrdersCount('pending')})
+          </Button>
+          <Button
+            variant={activeFilter === 'transmitted' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveFilter('transmitted')}
+          >
+            Transmitidos ({getFilteredOrdersCount('transmitted')})
+          </Button>
+        </div>
+
         {/* Resumo */}
         <Card className="mb-4">
           <CardContent className="pt-6">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{getTotalOrders()}</p>
-                <p className="text-sm text-gray-600">Pedidos Pendentes</p>
+                <p className="text-2xl font-bold text-blue-600">{getFilteredOrdersCount(activeFilter)}</p>
+                <p className="text-sm text-gray-600">
+                  {activeFilter === 'all' ? 'Total de Pedidos' : 
+                   activeFilter === 'pending' ? 'Pedidos Pendentes' : 'Pedidos Transmitidos'}
+                </p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">{formatCurrency(getTotalValue())}</p>
@@ -159,16 +262,16 @@ const MyOrders = () => {
           <Button 
             onClick={() => navigateTo('/transmit-orders')} 
             variant="outline"
-            disabled={getTotalOrders() === 0}
+            disabled={getFilteredOrdersCount('pending') === 0}
             className="w-full"
           >
             <Send size={16} className="mr-2" />
-            Transmitir ({getTotalOrders()})
+            Transmitir ({getFilteredOrdersCount('pending')})
           </Button>
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <Button onClick={loadLocalOrders} variant="outline" size="sm">
+          <Button onClick={loadAllOrders} variant="outline" size="sm">
             <RefreshCw size={16} className="mr-1" />
             Atualizar
           </Button>
@@ -179,14 +282,21 @@ const MyOrders = () => {
           <Card>
             <CardContent className="pt-6 text-center">
               <RefreshCw className="animate-spin mx-auto mb-2" size={24} />
-              <p>Carregando pedidos locais...</p>
+              <p>Carregando pedidos...</p>
             </CardContent>
           </Card>
-        ) : getTotalOrders() === 0 ? (
+        ) : Object.keys(groupedOrders).length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center">
-              <p className="text-gray-500 mb-2">Nenhum pedido pendente</p>
-              <p className="text-sm text-gray-400">Todos os pedidos foram transmitidos</p>
+              <p className="text-gray-500 mb-2">
+                {activeFilter === 'all' ? 'Nenhum pedido encontrado' :
+                 activeFilter === 'pending' ? 'Nenhum pedido pendente' :
+                 'Nenhum pedido transmitido'}
+              </p>
+              <p className="text-sm text-gray-400">
+                {activeFilter === 'pending' ? 'Todos os pedidos foram transmitidos' :
+                 'Crie novos pedidos para visualizá-los aqui'}
+              </p>
             </CardContent>
           </Card>
         ) : (
@@ -217,10 +327,15 @@ const MyOrders = () => {
                           </div>
                           
                           <div className="text-right">
-                            <Badge className={statusColors[order.status] || statusColors.pending}>
-                              {getStatusLabel(order.status)}
-                            </Badge>
-                            <p className="font-bold text-sm mt-1">
+                            <div className="flex gap-1 mb-1">
+                              <Badge className={statusColors[order.status] || statusColors.pending}>
+                                {getStatusLabel(order.status)}
+                              </Badge>
+                              <Badge className={syncStatusColors[order.sync_status] || syncStatusColors.pending_sync}>
+                                {getSyncStatusLabel(order.sync_status)}
+                              </Badge>
+                            </div>
+                            <p className="font-bold text-sm">
                               {formatCurrency(order.total)}
                             </p>
                           </div>
@@ -254,27 +369,25 @@ const MyOrders = () => {
                             Ver
                           </Button>
                           
-                          {(order.status === 'pending' || order.status === 'negativado') && (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigateTo(`/edit-order/${order.id}`)}
-                              >
-                                <Edit size={14} className="mr-1" />
-                                Editar
-                              </Button>
-                              
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => deleteOrder(order.id!, order.status)}
-                              >
-                                <Trash2 size={14} className="mr-1" />
-                                Deletar
-                              </Button>
-                            </>
+                          {order.sync_status !== 'transmitted' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => editOrder(order)}
+                            >
+                              <Edit size={14} className="mr-1" />
+                              Editar
+                            </Button>
                           )}
+                          
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteOrder(order.id!, order.sync_status)}
+                          >
+                            <Trash2 size={14} className="mr-1" />
+                            Deletar
+                          </Button>
                         </div>
                       </div>
                     ))}

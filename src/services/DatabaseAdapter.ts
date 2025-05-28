@@ -10,7 +10,7 @@ interface DatabaseAdapter {
   getOrders(clientId?: string): Promise<any[]>;
   getProducts(): Promise<any[]>;
   getPendingSyncItems(table: string): Promise<any[]>;
-  updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error'): Promise<void>;
+  updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void>;
   logSync(type: string, status: string, details?: string): Promise<void>;
   saveOrder(order: any): Promise<void>;
   updateClientStatus(clientId: string, status: string): Promise<void>;
@@ -20,6 +20,11 @@ interface DatabaseAdapter {
   getPendingOrders(): Promise<any[]>;
   markOrderAsTransmitted(orderId: string): Promise<void>;
   getOfflineOrdersCount(): Promise<number>;
+  // New methods for improved order management
+  getClientOrders(clientId: string): Promise<any[]>;
+  deleteOrder(orderId: string): Promise<void>;
+  getTransmittedOrders(): Promise<any[]>;
+  getAllOrders(): Promise<any[]>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
