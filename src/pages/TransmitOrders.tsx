@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -9,6 +8,7 @@ import { ArrowLeft, Send, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'luc
 import { Badge } from '@/components/ui/badge';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ApiService from '@/services/ApiService';
+import { toast } from 'sonner';
 
 interface PendingOrder {
   id: string;
@@ -51,6 +51,7 @@ const TransmitOrders = () => {
       setSelectedOrders(orderIds);
     } catch (error) {
       console.error('Error loading pending orders:', error);
+      toast.error('Erro ao carregar pedidos pendentes');
     } finally {
       setIsLoading(false);
     }
@@ -61,9 +62,14 @@ const TransmitOrders = () => {
       const apiService = ApiService.getInstance();
       const connected = await apiService.testConnection();
       setIsConnected(connected);
+      
+      if (!connected) {
+        toast.warning('Sem conexão com o servidor');
+      }
     } catch (error) {
       console.error('Connection check failed:', error);
       setIsConnected(false);
+      toast.error('Erro ao verificar conexão');
     }
   };
 
@@ -88,10 +94,12 @@ const TransmitOrders = () => {
 
   const transmitSelectedOrders = async () => {
     if (selectedOrders.size === 0) {
+      toast.warning('Selecione pelo menos um pedido para transmitir');
       return;
     }
 
     if (!isConnected) {
+      toast.error('Sem conexão com o servidor. Verifique sua internet.');
       return;
     }
 
@@ -103,6 +111,8 @@ const TransmitOrders = () => {
 
     try {
       const ordersToTransmit = pendingOrders.filter(order => selectedOrders.has(order.id));
+      
+      toast.info(`Transmitindo ${ordersToTransmit.length} pedido(s)...`);
       
       for (const order of ordersToTransmit) {
         try {
@@ -145,12 +155,23 @@ const TransmitOrders = () => {
           console.log('✅ Order transmitted successfully:', order.id);
         } catch (error) {
           console.error('❌ Error transmitting order:', order.id, error);
-          // NÃO marcar como erro - manter como pending_sync para nova tentativa
           errorCount++;
+          
+          // Show specific error message
+          const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+          toast.error(`Erro no pedido ${order.customer_name}: ${errorMessage}`);
         }
       }
 
-      // Show results without toast notifications
+      // Show final results
+      if (successCount > 0) {
+        toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
+      }
+      
+      if (errorCount > 0) {
+        toast.error(`${errorCount} pedido(s) falharam na transmissão`);
+      }
+
       console.log(`Transmissão concluída: ${successCount} sucesso, ${errorCount} erros`);
 
       // Reload pending orders
@@ -158,6 +179,7 @@ const TransmitOrders = () => {
       
     } catch (error) {
       console.error('Error during transmission:', error);
+      toast.error('Erro geral na transmissão de pedidos');
     } finally {
       setIsTransmitting(false);
     }

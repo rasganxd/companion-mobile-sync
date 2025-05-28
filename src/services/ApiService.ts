@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -23,6 +22,7 @@ export interface Order {
   total: number;
   notes?: string;
   items?: OrderItem[];
+  code?: number;
 }
 
 export interface Customer {
@@ -81,6 +81,8 @@ class ApiService {
     const headers = await this.getAuthHeaders();
     
     try {
+      console.log('🔄 Making API request:', { url, method: options.method || 'GET', body: options.body });
+      
       const response = await fetch(url, {
         ...options,
         headers: {
@@ -90,20 +92,53 @@ class ApiService {
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', { status: response.status, statusText: response.statusText, body: errorText });
+        
         if (response.status === 401) {
           throw new Error('Não autorizado - faça login novamente');
         }
         if (response.status === 403) {
           throw new Error('Acesso negado');
         }
-        const errorText = await response.text();
+        
+        // Parse error message for better user feedback
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.message && errorData.message.includes('null value in column "code"')) {
+            throw new Error('Erro: Campo código obrigatório não foi gerado. Tente novamente.');
+          }
+        } catch (parseError) {
+          // If can't parse, use original error
+        }
+        
         throw new Error(`Erro na API: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ API Response:', data);
       return Array.isArray(data) ? data as T : [data] as T;
     } catch (error) {
-      console.error('API request error:', error);
+      console.error('❌ API request error:', error);
+      throw error;
+    }
+  }
+
+  private async getNextOrderCode(): Promise<number> {
+    try {
+      console.log('🔢 Getting next order code...');
+      
+      const { data, error } = await supabase.rpc('get_next_order_code');
+      
+      if (error) {
+        console.error('❌ Error getting next order code:', error);
+        throw new Error('Erro ao gerar código do pedido');
+      }
+      
+      console.log('✅ Generated order code:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Failed to get next order code:', error);
       throw error;
     }
   }
@@ -120,18 +155,31 @@ class ApiService {
 
   // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
-    // Remove sales_rep_id se estiver vazio - será automaticamente inferido pelo RLS via auth.uid()
-    const cleanOrder = { ...order };
-    if (cleanOrder.sales_rep_id === '' || !cleanOrder.sales_rep_id) {
-      delete cleanOrder.sales_rep_id;
+    try {
+      console.log('📝 Creating order with data:', order);
+      
+      // Get next order code
+      const code = await this.getNextOrderCode();
+      
+      // Remove sales_rep_id se estiver vazio - será automaticamente inferido pelo RLS via auth.uid()
+      const cleanOrder = { ...order, code };
+      if (cleanOrder.sales_rep_id === '' || !cleanOrder.sales_rep_id) {
+        delete cleanOrder.sales_rep_id;
+      }
+      
+      console.log('📝 Creating order with code:', cleanOrder);
+      
+      const response = await this.request<Order[]>('/orders', {
+        method: 'POST',
+        body: JSON.stringify(cleanOrder),
+      });
+      
+      console.log('✅ Order created successfully:', response[0]);
+      return response[0];
+    } catch (error) {
+      console.error('❌ Error creating order:', error);
+      throw error;
     }
-    
-    const response = await this.request<Order[]>('/orders', {
-      method: 'POST',
-      body: JSON.stringify(cleanOrder),
-    });
-    
-    return response[0];
   }
 
   async getOrders(filters: {
@@ -197,22 +245,31 @@ class ApiService {
   }
 
   async createOrderWithItems(order: Omit<Order, 'id'>, items: Omit<OrderItem, 'id' | 'order_id'>[]): Promise<Order> {
-    // Criar pedido primeiro
-    const createdOrder = await this.createOrder(order);
-    
-    // Depois criar todos os itens
-    if (items.length > 0) {
-      const itemPromises = items.map(item => 
-        this.createOrderItem({
-          ...item,
-          order_id: createdOrder.id!
-        })
-      );
+    try {
+      console.log('📦 Creating order with items:', { order, items });
       
-      await Promise.all(itemPromises);
+      // Criar pedido primeiro
+      const createdOrder = await this.createOrder(order);
+      
+      // Depois criar todos os itens
+      if (items.length > 0) {
+        console.log('📋 Creating order items...');
+        const itemPromises = items.map(item => 
+          this.createOrderItem({
+            ...item,
+            order_id: createdOrder.id!
+          })
+        );
+        
+        await Promise.all(itemPromises);
+        console.log('✅ All order items created successfully');
+      }
+      
+      return createdOrder;
+    } catch (error) {
+      console.error('❌ Error creating order with items:', error);
+      throw error;
     }
-    
-    return createdOrder;
   }
 
   // Customers CRUD operations
