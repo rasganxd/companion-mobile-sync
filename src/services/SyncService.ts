@@ -1,8 +1,8 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
 import { Network } from '@capacitor/network';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface SyncProgress {
@@ -97,14 +97,32 @@ class SyncService {
       this.autoSyncTimer = setInterval(() => {
         if (this.connected && !this.syncInProgress) {
           if (this.syncSettings.syncOnWifiOnly) {
-            // Here we would check if we're on WiFi
-            // For demo purposes, we assume we are
-            this.sync();
+            this.checkWifiAndSync();
           } else {
             this.sync();
           }
         }
       }, interval);
+    }
+  }
+
+  private async checkWifiAndSync(): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const status = await Network.getStatus();
+        if (status.connected && status.connectionType === 'wifi') {
+          this.sync();
+        } else {
+          console.log('🚫 Not on WiFi, skipping auto-sync');
+        }
+      } catch (error) {
+        console.error('❌ Error checking WiFi status:', error);
+      }
+    } else {
+      // Para web, assumir que está conectado
+      if (navigator.onLine) {
+        this.sync();
+      }
     }
   }
 
@@ -186,16 +204,23 @@ class SyncService {
 
   private async checkConnection(): Promise<void> {
     try {
-      // Use a API Capacitor Network quando disponível, caso contrário use fetch
-      try {
+      if (Capacitor.isNativePlatform()) {
+        // Usar Capacitor Network em apps nativos
         const status = await Network.getStatus();
         this.connected = status.connected;
-      } catch (e) {
-        // Fallback para método web se o Capacitor Network não estiver disponível
-        const response = await fetch(`${this.apiUrl}/ping`);
-        this.connected = response.ok;
+        console.log('📶 Network status (native):', status);
+      } else {
+        // Fallback para método web
+        try {
+          const response = await fetch(`${this.apiUrl}/ping`);
+          this.connected = response.ok;
+        } catch {
+          this.connected = navigator.onLine;
+        }
+        console.log('📶 Network status (web):', this.connected);
       }
     } catch (error) {
+      console.error('❌ Error checking connection:', error);
       this.connected = false;
     }
     this.notifyStatusChange();

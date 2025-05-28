@@ -1,6 +1,7 @@
 
 import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
+import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
   initDatabase(): Promise<void>;
@@ -25,49 +26,28 @@ interface DatabaseAdapter {
 export function getDatabaseAdapter(): DatabaseAdapter {
   console.log('🔍 Determining database adapter...');
   
-  // Detectar o ambiente atual de forma mais robusta
-  const isMobileApp = (): boolean => {
-    try {
-      console.log('🔍 Checking environment...');
-      
-      // Verificar se estamos no browser
-      if (typeof window === 'undefined') {
-        console.log('❌ No window object - not in browser');
-        return false;
-      }
-      
-      // Verificar se é um ambiente Capacitor real
-      const hasCapacitor = !!(window as any).Capacitor;
-      const isCapacitorNative = hasCapacitor && (window as any).Capacitor.isNativePlatform && (window as any).Capacitor.isNativePlatform();
-      
-      console.log('🔍 Environment check:', {
-        hasCapacitor,
-        isCapacitorNative,
-        userAgent: navigator.userAgent,
-        platform: (window as any).Capacitor?.getPlatform?.() || 'unknown'
-      });
-      
-      // Só considerar mobile se for realmente nativo
-      return hasCapacitor && isCapacitorNative;
-    } catch (e) {
-      console.log('❌ Error checking environment:', e);
-      return false;
-    }
-  };
-
-  const isNative = isMobileApp();
+  // Para apps nativos, sempre tentar usar SQLite primeiro
+  const isNative = Capacitor.isNativePlatform();
+  
+  console.log('🔍 Platform detection:', {
+    isNative,
+    platform: Capacitor.getPlatform(),
+    isAndroid: Capacitor.getPlatform() === 'android',
+    isIOS: Capacitor.getPlatform() === 'ios'
+  });
   
   if (isNative) {
-    console.log('📱 Using SQLite database service for native mobile');
+    console.log('📱 Native platform detected, using SQLite database service');
     try {
-      return SQLiteDatabaseService.getInstance();
+      const sqliteService = SQLiteDatabaseService.getInstance();
+      return sqliteService;
     } catch (e) {
-      console.log('❌ Failed to initialize SQLite, falling back to WebDatabase:', e);
-      console.log('🌐 Using Web database service (fallback)');
+      console.error('❌ Failed to initialize SQLite on native platform:', e);
+      console.log('🌐 Falling back to Web database service');
       return WebDatabaseService.getInstance();
     }
   } else {
-    console.log('🌐 Using Web database service for browser');
+    console.log('🌐 Web platform detected, using Web database service');
     return WebDatabaseService.getInstance();
   }
 }

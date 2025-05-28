@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 
 interface NavigationState {
   stack: string[];
@@ -42,48 +43,72 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     currentIndex: 0
   });
 
-  // Bloquear completamente o botão de voltar do navegador/celular
-  useEffect(() => {
-    const blockBrowserBack = (event: PopStateEvent) => {
-      console.log('🚫 Browser back button blocked');
-      event.preventDefault();
-      event.stopPropagation();
-      
-      // Força a manutenção da URL atual
-      window.history.pushState(null, '', location.pathname);
-      return false;
-    };
+  const isNative = Capacitor.isNativePlatform();
 
-    // Adicionar estado inicial para bloquear voltar
-    window.history.pushState(null, '', location.pathname);
+  // Configurar controle de navegação baseado na plataforma
+  useEffect(() => {
+    console.log(`🔄 Setting up navigation for ${isNative ? 'native' : 'web'} platform...`);
     
-    // Escutar e bloquear eventos de voltar
-    window.addEventListener('popstate', blockBrowserBack);
-    
-    // Bloquear também eventos de teclado (Alt+Left, etc)
-    const blockKeyboardNavigation = (event: KeyboardEvent) => {
-      if (
-        (event.altKey && event.key === 'ArrowLeft') ||
-        (event.altKey && event.key === 'ArrowRight') ||
-        event.key === 'Backspace'
-      ) {
-        console.log('🚫 Keyboard navigation blocked');
+    if (isNative) {
+      // Para apps nativos, bloquear completamente o histórico do navegador
+      console.log('📱 Native platform: Disabling browser history completely');
+      
+      // Substituir estado do histórico para evitar voltar
+      window.history.replaceState(null, '', location.pathname);
+      
+      // Bloquear eventos de popstate (não deve acontecer em nativo, mas por garantia)
+      const blockBrowserBack = (event: PopStateEvent) => {
+        console.log('🚫 Browser back blocked in native app');
         event.preventDefault();
         event.stopPropagation();
+        window.history.replaceState(null, '', location.pathname);
         return false;
-      }
-    };
+      };
 
-    window.addEventListener('keydown', blockKeyboardNavigation);
+      window.addEventListener('popstate', blockBrowserBack);
+      
+      return () => {
+        window.removeEventListener('popstate', blockBrowserBack);
+      };
+    } else {
+      // Para web, manter o comportamento anterior de bloqueio
+      console.log('🌐 Web platform: Using controlled browser history blocking');
+      
+      const blockBrowserBack = (event: PopStateEvent) => {
+        console.log('🚫 Browser back button blocked');
+        event.preventDefault();
+        event.stopPropagation();
+        window.history.pushState(null, '', location.pathname);
+        return false;
+      };
 
-    return () => {
-      window.removeEventListener('popstate', blockBrowserBack);
-      window.removeEventListener('keydown', blockKeyboardNavigation);
-    };
-  }, [location.pathname]);
+      window.history.pushState(null, '', location.pathname);
+      window.addEventListener('popstate', blockBrowserBack);
+      
+      const blockKeyboardNavigation = (event: KeyboardEvent) => {
+        if (
+          (event.altKey && event.key === 'ArrowLeft') ||
+          (event.altKey && event.key === 'ArrowRight') ||
+          event.key === 'Backspace'
+        ) {
+          console.log('🚫 Keyboard navigation blocked');
+          event.preventDefault();
+          event.stopPropagation();
+          return false;
+        }
+      };
+
+      window.addEventListener('keydown', blockKeyboardNavigation);
+
+      return () => {
+        window.removeEventListener('popstate', blockBrowserBack);
+        window.removeEventListener('keydown', blockKeyboardNavigation);
+      };
+    }
+  }, [location.pathname, isNative]);
 
   const navigateTo = (path: string) => {
-    console.log(`🧭 Navigating to: ${path}`);
+    console.log(`🧭 Navigating to: ${path} (${isNative ? 'native' : 'web'} mode)`);
     
     setNavigationState(prev => {
       const newStack = [...prev.stack, path];
@@ -93,14 +118,19 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       };
     });
     
-    navigate(path);
+    // Em apps nativos, usar replace para evitar empilhamento no histórico
+    if (isNative) {
+      navigate(path, { replace: true });
+    } else {
+      navigate(path);
+    }
   };
 
   const goBack = () => {
     const currentPath = location.pathname;
     const targetPath = navigationFlows[currentPath] || '/home';
     
-    console.log(`⬅️ Going back from ${currentPath} to ${targetPath}`);
+    console.log(`⬅️ Going back from ${currentPath} to ${targetPath} (${isNative ? 'native' : 'web'} mode)`);
     
     setNavigationState(prev => {
       // Se já estamos na home, não faz nada
@@ -120,7 +150,12 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       };
     });
     
-    navigate(targetPath);
+    // Em apps nativos, sempre usar replace
+    if (isNative) {
+      navigate(targetPath, { replace: true });
+    } else {
+      navigate(targetPath);
+    }
   };
 
   const canGoBack = location.pathname !== '/home';
