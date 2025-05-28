@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -6,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
 
 interface RouteData {
   day: string;
@@ -30,7 +30,6 @@ interface SalesData {
 
 const VisitRoutes = () => {
   const navigate = useNavigate();
-  const { salesRep, isLoading } = useAuth();
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [salesData, setSalesData] = useState<SalesData>({
     totalSales: 0,
@@ -54,30 +53,16 @@ const VisitRoutes = () => {
 
   useEffect(() => {
     const loadRoutesData = async () => {
-      // Aguardar o carregamento da autenticação
-      if (isLoading) {
-        console.log('⏳ Waiting for auth to load...');
-        return;
-      }
-
-      // Se não há vendedor logado, mostrar estado informativo
-      if (!salesRep?.id) {
-        console.log('❌ No sales rep logged in');
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         
-        console.log(`🔍 Fetching customers from Supabase and local orders for sales rep ${salesRep.name} (${salesRep.id})...`);
+        console.log('🔍 Fetching customers from Supabase and local orders...');
         
-        // Buscar clientes ativos APENAS do vendedor logado com dias de visita definidos
+        // Buscar clientes ativos com dias de visita definidos do Supabase
         const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, visit_days')
           .eq('active', true)
-          .eq('sales_rep_id', salesRep.id) // FILTRO CRÍTICO: apenas clientes do vendedor logado
           .not('visit_days', 'is', null);
         
         if (customersError) {
@@ -85,13 +70,11 @@ const VisitRoutes = () => {
           throw customersError;
         }
         
-        console.log(`👥 Found ${customers?.length || 0} customers for sales rep ${salesRep.name}`);
-        
         // Buscar pedidos locais (incluindo transmitidos)
         const db = getDatabaseAdapter();
         const localOrders = await db.getOrders();
         
-        // Filtrar pedidos válidos do dia atual (pending_sync OU transmitted) APENAS do vendedor atual
+        // Filtrar pedidos válidos do dia atual (pending_sync OU transmitted)
         const today = new Date().toISOString().split('T')[0];
         const todayValidOrders = localOrders.filter(order => {
           const orderDate = new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0];
@@ -99,13 +82,11 @@ const VisitRoutes = () => {
           const isValidOrder = order.sync_status === 'pending_sync' || 
                               order.sync_status === 'transmitted' || 
                               order.sync_status === 'synced';
-          // IMPORTANTE: Filtrar também por vendedor nos pedidos locais
-          const isSalesRepOrder = order.sales_rep_id === salesRep.id;
-          return isValidOrder && orderDate === today && isSalesRepOrder;
+          return isValidOrder && orderDate === today;
         });
         
-        console.log('👥 Loaded customers for sales rep:', customers);
-        console.log('📋 Valid local orders for today (including transmitted) for sales rep:', todayValidOrders);
+        console.log('👥 Loaded customers:', customers);
+        console.log('📋 Valid local orders for today (including transmitted):', todayValidOrders);
         
         // PRIMEIRO: Calcular totais únicos por cliente (incluindo pedidos transmitidos)
         const uniqueClientStats = new Map<string, {
@@ -162,7 +143,7 @@ const VisitRoutes = () => {
         const clientsWithValidOrders = new Set(todayValidOrders.map(order => order.customer_id));
         const totalPendentes = (customers?.length || 0) - clientsWithValidOrders.size;
         
-        console.log('💰 Unique client stats (including transmitted) for sales rep:', {
+        console.log('💰 Unique client stats (including transmitted):', {
           totalSales,
           totalPositivados,
           totalNegativados,
@@ -216,9 +197,6 @@ const VisitRoutes = () => {
                 dayTotalSales += clientStats.totalSales;
               } else if (clientStats.hasNegative) {
                 negativados++;
-              } else {
-                // Cliente tem pedidos mas não são positivos nem negativos
-                pendentes++;
               }
             } else {
               // Cliente sem pedidos válidos = pendente
@@ -226,7 +204,7 @@ const VisitRoutes = () => {
             }
           });
           
-          console.log(`📅 ${day} (${englishDay}) for sales rep ${salesRep.name}:`, {
+          console.log(`📅 ${day} (${englishDay}):`, {
             clients: clientNames,
             total,
             positivados,
@@ -257,8 +235,8 @@ const VisitRoutes = () => {
           positivadosValue
         });
         
-        console.log('📋 Processed routes by day (including transmitted orders) for sales rep:', processedRoutes);
-        console.log('💰 Final unique sales data (including transmitted) for sales rep:', {
+        console.log('📋 Processed routes by day (including transmitted orders):', processedRoutes);
+        console.log('💰 Final unique sales data (including transmitted):', {
           totalSales,
           totalPositivados,
           totalNegativados,
@@ -288,7 +266,7 @@ const VisitRoutes = () => {
     };
     
     loadRoutesData();
-  }, [salesRep, isLoading]);
+  }, []);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -302,8 +280,7 @@ const VisitRoutes = () => {
     navigate('/clientes-lista', { state: { day } });
   };
 
-  // Estados de loading e sem vendedor - mostrar informativos sem redirects forçados
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header 
@@ -315,28 +292,6 @@ const VisitRoutes = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-lg text-gray-600">Carregando rotas...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!salesRep) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Header 
-          title="Rotas de Visitas" 
-          backgroundColor="blue" 
-          showBackButton={true}
-        />
-        
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-lg text-gray-600 mb-2">Vendedor não identificado</div>
-            <div className="text-sm text-gray-500 mb-4">Faça login para continuar</div>
-            <AppButton onClick={() => navigate('/login')}>
-              Fazer Login
-            </AppButton>
           </div>
         </div>
       </div>

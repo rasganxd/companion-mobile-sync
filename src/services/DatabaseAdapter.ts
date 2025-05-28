@@ -27,11 +27,6 @@ interface DatabaseAdapter {
   getAllOrders(): Promise<any[]>;
   // New method for mobile orders
   saveMobileOrder(order: any): Promise<void>;
-  // Methods for sync data saving
-  saveClient(client: any): Promise<void>;
-  saveProduct(product: any): Promise<void>;
-  savePaymentTable(paymentTable: any): Promise<void>;
-  saveSalesRep(salesRep: any): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

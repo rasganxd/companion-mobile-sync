@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
@@ -337,9 +338,6 @@ class SyncService {
       }
 
       console.log('🔄 Starting sync with active update:', activeUpdate.id);
-      console.log('📋 Update metadata:', activeUpdate.metadata);
-      console.log('📦 Data types to sync:', activeUpdate.data_types);
-      
       toast.info("Iniciando sincronização...");
 
       // Count pending items for upload
@@ -429,186 +427,33 @@ class SyncService {
   }
 
   private async downloadData(activeUpdate: SyncUpdate): Promise<void> {
-    console.log('📥 Starting data download for update:', activeUpdate.id);
-    console.log('📋 Update metadata:', activeUpdate.metadata);
-    console.log('📦 Data types to download:', activeUpdate.data_types);
+    console.log('📥 Downloading data for update:', activeUpdate.id);
     
-    const dataTypesToDownload = activeUpdate.data_types;
-    const metadata = activeUpdate.metadata || {};
-    
-    // Extract specific IDs from metadata to filter downloads
-    const salesRepIds = metadata.sales_rep_ids || [];
-    const customerIds = metadata.customer_ids || [];
-    const productIds = metadata.product_ids || [];
-    
-    console.log('🎯 Filtering by:', {
-      salesRepIds: salesRepIds.length > 0 ? salesRepIds : 'all',
-      customerIds: customerIds.length > 0 ? customerIds : 'all',
-      productIds: productIds.length > 0 ? productIds : 'all'
-    });
-    
-    let totalDownloaded = 0;
-    const totalToDownload = dataTypesToDownload.length;
-    
-    for (const dataType of dataTypesToDownload) {
+    // Use configured download endpoint if available
+    if (this.apiConfig?.endpoints?.download) {
       try {
-        console.log(`📥 Downloading ${dataType}...`);
-        
-        switch (dataType) {
-          case 'customers':
-            await this.downloadCustomers(salesRepIds, customerIds);
-            break;
-          case 'products':
-            await this.downloadProducts(productIds);
-            break;
-          case 'payment_tables':
-            await this.downloadPaymentTables();
-            break;
-          case 'sales_reps':
-            await this.downloadSalesReps(salesRepIds);
-            break;
-          default:
-            console.warn(`⚠️ Unknown data type: ${dataType}`);
-        }
-        
-        totalDownloaded++;
-        this.notifyProgress({
-          total: totalToDownload,
-          processed: totalDownloaded,
-          type: 'download'
+        const url = `${this.apiConfig.baseUrl}${this.apiConfig.endpoints.download}`;
+        const response = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${this.apiConfig.token}`
+          }
         });
         
-        console.log(`✅ Successfully downloaded ${dataType}`);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Downloaded data:', data);
+          // Process downloaded data here based on activeUpdate.data_types
+        }
       } catch (error) {
-        console.error(`❌ Error downloading ${dataType}:`, error);
+        console.error('Error downloading data:', error);
       }
     }
     
-    console.log(`📊 Download complete: ${totalDownloaded}/${totalToDownload} data types processed`);
-  }
-
-  private async downloadCustomers(salesRepIds: string[], customerIds: string[]): Promise<void> {
-    try {
-      let query = supabase.from('customers').select('*');
-      
-      // Filter by specific sales rep IDs if provided
-      if (salesRepIds.length > 0) {
-        console.log('🎯 Filtering customers by sales_rep_ids:', salesRepIds);
-        query = query.in('sales_rep_id', salesRepIds);
-      }
-      
-      // Additional filter by customer IDs if provided
-      if (customerIds.length > 0) {
-        console.log('🎯 Additional filtering by customer_ids:', customerIds);
-        query = query.in('id', customerIds);
-      }
-      
-      const { data: customers, error } = await query;
-      
-      if (error) {
-        throw new Error(`Failed to fetch customers: ${error.message}`);
-      }
-      
-      console.log(`📥 Downloaded ${customers?.length || 0} customers`);
-      
-      // Save to local database
-      if (customers && customers.length > 0) {
-        for (const customer of customers) {
-          await this.dbService.saveClient(customer);
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading customers:', error);
-      throw error;
-    }
-  }
-
-  private async downloadProducts(productIds: string[]): Promise<void> {
-    try {
-      let query = supabase.from('products').select('*');
-      
-      // Filter by specific product IDs if provided
-      if (productIds.length > 0) {
-        console.log('🎯 Filtering products by product_ids:', productIds);
-        query = query.in('id', productIds);
-      }
-      
-      const { data: products, error } = await query;
-      
-      if (error) {
-        throw new Error(`Failed to fetch products: ${error.message}`);
-      }
-      
-      console.log(`📥 Downloaded ${products?.length || 0} products`);
-      
-      // Save to local database
-      if (products && products.length > 0) {
-        for (const product of products) {
-          await this.dbService.saveProduct(product);
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading products:', error);
-      throw error;
-    }
-  }
-
-  private async downloadPaymentTables(): Promise<void> {
-    try {
-      const { data: paymentTables, error } = await supabase
-        .from('payment_tables')
-        .select('*')
-        .eq('active', true);
-      
-      if (error) {
-        throw new Error(`Failed to fetch payment tables: ${error.message}`);
-      }
-      
-      console.log(`📥 Downloaded ${paymentTables?.length || 0} payment tables`);
-      
-      // Save to local database
-      if (paymentTables && paymentTables.length > 0) {
-        for (const paymentTable of paymentTables) {
-          await this.dbService.savePaymentTable(paymentTable);
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading payment tables:', error);
-      throw error;
-    }
-  }
-
-  private async downloadSalesReps(salesRepIds: string[]): Promise<void> {
-    try {
-      let query = supabase.from('sales_reps').select('*').eq('active', true);
-      
-      // Filter by specific sales rep IDs if provided
-      if (salesRepIds.length > 0) {
-        console.log('🎯 Filtering sales reps by sales_rep_ids:', salesRepIds);
-        query = query.in('id', salesRepIds);
-      }
-      
-      const { data: salesReps, error } = await query;
-      
-      if (error) {
-        throw new Error(`Failed to fetch sales reps: ${error.message}`);
-      }
-      
-      console.log(`📥 Downloaded ${salesReps?.length || 0} sales reps`);
-      
-      // Save to local database (if the database adapter supports it)
-      if (salesReps && salesReps.length > 0) {
-        for (const salesRep of salesReps) {
-          // Only save if the database adapter has this method
-          if (typeof this.dbService.saveSalesRep === 'function') {
-            await this.dbService.saveSalesRep(salesRep);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error downloading sales reps:', error);
-      throw error;
-    }
+    this.notifyProgress({
+      total: 1,
+      processed: 1,
+      type: 'download'
+    });
   }
 
   async refreshConnection(): Promise<boolean> {
