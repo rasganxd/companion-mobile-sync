@@ -359,6 +359,7 @@ export type Database = {
           product_name: string | null
           quantity: number
           total: number
+          unit: string | null
           unit_price: number | null
           updated_at: string
         }
@@ -373,6 +374,7 @@ export type Database = {
           product_name?: string | null
           quantity: number
           total: number
+          unit?: string | null
           unit_price?: number | null
           updated_at?: string
         }
@@ -387,6 +389,7 @@ export type Database = {
           product_name?: string | null
           quantity?: number
           total?: number
+          unit?: string | null
           unit_price?: number | null
           updated_at?: string
         }
@@ -403,6 +406,62 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items_mobile: {
+        Row: {
+          created_at: string
+          discount: number | null
+          id: string
+          order_id: string | null
+          price: number
+          product_code: number | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number
+          total: number
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount?: number | null
+          id?: string
+          order_id?: string | null
+          price: number
+          product_code?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity: number
+          total: number
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount?: number | null
+          id?: string
+          order_id?: string | null
+          price?: number
+          product_code?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number
+          total?: number
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_order_items_mobile_order_id"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_mobile"
             referencedColumns: ["id"]
           },
         ]
@@ -520,6 +579,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      orders_mobile: {
+        Row: {
+          code: number
+          created_at: string
+          customer_id: string | null
+          customer_name: string | null
+          date: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_date: string | null
+          delivery_state: string | null
+          delivery_zip: string | null
+          discount: number | null
+          due_date: string | null
+          id: string
+          imported: boolean
+          imported_at: string | null
+          imported_by: string | null
+          mobile_order_id: string | null
+          notes: string | null
+          payment_method: string | null
+          payment_method_id: string | null
+          payment_status: string | null
+          payment_table: string | null
+          payment_table_id: string | null
+          payments: Json | null
+          sales_rep_id: string | null
+          sales_rep_name: string | null
+          source_project: string
+          status: string
+          sync_status: string | null
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          code: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_date?: string | null
+          delivery_state?: string | null
+          delivery_zip?: string | null
+          discount?: number | null
+          due_date?: string | null
+          id?: string
+          imported?: boolean
+          imported_at?: string | null
+          imported_by?: string | null
+          mobile_order_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_table?: string | null
+          payment_table_id?: string | null
+          payments?: Json | null
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          source_project?: string
+          status?: string
+          sync_status?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: number
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_date?: string | null
+          delivery_state?: string | null
+          delivery_zip?: string | null
+          discount?: number | null
+          due_date?: string | null
+          id?: string
+          imported?: boolean
+          imported_at?: string | null
+          imported_by?: string | null
+          mobile_order_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_table?: string | null
+          payment_table_id?: string | null
+          payments?: Json | null
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          source_project?: string
+          status?: string
+          sync_status?: string | null
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       payment_methods: {
         Row: {
@@ -1217,6 +1378,14 @@ export type Database = {
           customer_state: string
           customer_zip_code: string
           customer_phone: string
+        }[]
+      }
+      import_mobile_orders: {
+        Args: { p_sales_rep_id?: string; p_imported_by?: string }
+        Returns: {
+          imported_count: number
+          failed_count: number
+          error_messages: string[]
         }[]
       }
       sync_customers_to_route: {

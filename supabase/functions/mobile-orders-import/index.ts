@@ -79,7 +79,7 @@ serve(async (req) => {
 
     console.log('🔢 Generated order code:', codeData);
 
-    // Preparar dados do pedido para inserção
+    // Preparar dados do pedido para inserção na tabela orders_mobile
     const orderToInsert = {
       customer_id: orderData.customer_id,
       customer_name: orderData.customer_name,
@@ -90,52 +90,52 @@ serve(async (req) => {
       payment_method: orderData.payment_method || '',
       code: codeData,
       source_project: 'mobile',
-      imported: false, // CRUCIAL: marcar como não importado
+      imported: false, // Não importado ainda
       sync_status: 'pending_import' // Status especial para pedidos móveis
     };
 
-    // Inserir pedido na tabela (sem RLS porque estamos usando service role)
+    // Inserir pedido na tabela orders_mobile
     const { data: createdOrder, error: orderError } = await supabase
-      .from('orders')
+      .from('orders_mobile')
       .insert(orderToInsert)
       .select()
       .single();
 
     if (orderError) {
-      console.error('❌ Error creating order:', orderError);
-      throw new Error(`Failed to create order: ${orderError.message}`);
+      console.error('❌ Error creating mobile order:', orderError);
+      throw new Error(`Failed to create mobile order: ${orderError.message}`);
     }
 
-    console.log('✅ Order created successfully:', createdOrder.id);
+    console.log('✅ Mobile order created successfully:', createdOrder.id);
 
-    // Inserir itens do pedido se existirem
+    // Inserir itens do pedido na tabela order_items_mobile
     if (orderData.items && orderData.items.length > 0) {
-      console.log('📋 Creating order items...');
+      console.log('📋 Creating mobile order items...');
       
       const itemsToInsert = orderData.items.map(item => ({
         order_id: createdOrder.id,
         product_name: item.product_name,
         product_code: item.product_code,
         quantity: item.quantity,
-        price: item.price, // ✅ CORRETO: usar o campo price que vem do mobile
-        unit_price: item.price, // ✅ CORRETO: mesmo valor para compatibilidade
-        total: item.total // ✅ CORRETO: usar o campo total que vem do mobile
+        price: item.price,
+        unit_price: item.price,
+        total: item.total
       }));
 
       console.log('🔍 Items to insert:', itemsToInsert);
 
       const { error: itemsError } = await supabase
-        .from('order_items')
+        .from('order_items_mobile')
         .insert(itemsToInsert);
 
       if (itemsError) {
-        console.error('❌ Error creating order items:', itemsError);
+        console.error('❌ Error creating mobile order items:', itemsError);
         // Tentar deletar o pedido criado se os itens falharam
-        await supabase.from('orders').delete().eq('id', createdOrder.id);
-        throw new Error(`Failed to create order items: ${itemsError.message}`);
+        await supabase.from('orders_mobile').delete().eq('id', createdOrder.id);
+        throw new Error(`Failed to create mobile order items: ${itemsError.message}`);
       }
 
-      console.log('✅ Order items created successfully');
+      console.log('✅ Mobile order items created successfully');
     }
 
     // Log da operação
@@ -143,10 +143,10 @@ serve(async (req) => {
     const { error: logError } = await supabase
       .from('sync_logs')
       .insert({
-        event_type: 'mobile_order_import',
+        event_type: 'mobile_order_received',
         data_type: 'orders',
         records_count: 1,
-        status: 'pending_manual_import',
+        status: 'pending_import',
         metadata: {
           order_id: createdOrder.id,
           customer_id: orderData.customer_id,

@@ -25,6 +25,8 @@ interface DatabaseAdapter {
   deleteOrder(orderId: string): Promise<void>;
   getTransmittedOrders(): Promise<any[]>;
   getAllOrders(): Promise<any[]>;
+  // New method for mobile orders
+  saveMobileOrder(order: any): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
-interface PendingOrder {
+interface PendingMobileOrder {
   id: string;
   code: number;
   customer_id: string;
@@ -26,7 +27,7 @@ interface PendingOrder {
 const MobileOrdersImport = () => {
   const { navigateTo } = useAppNavigation();
   
-  const [pendingOrders, setPendingOrders] = useState<PendingOrder[]>([]);
+  const [pendingOrders, setPendingOrders] = useState<PendingMobileOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [importingOrderId, setImportingOrderId] = useState<string | null>(null);
 
@@ -36,28 +37,27 @@ const MobileOrdersImport = () => {
       
       console.log('🔍 Loading pending mobile orders...');
       
-      // Buscar pedidos não importados do mobile
+      // Buscar pedidos não importados da tabela orders_mobile
       const { data: orders, error: ordersError } = await supabase
-        .from('orders')
+        .from('orders_mobile')
         .select(`
           *,
-          order_items (*)
+          order_items_mobile (*)
         `)
         .eq('imported', false)
-        .eq('source_project', 'mobile')
         .order('created_at', { ascending: false });
 
       if (ordersError) {
-        console.error('❌ Error loading pending orders:', ordersError);
+        console.error('❌ Error loading pending mobile orders:', ordersError);
         throw ordersError;
       }
 
-      console.log('📋 Loaded pending orders:', orders);
+      console.log('📋 Loaded pending mobile orders:', orders);
       setPendingOrders(orders || []);
       
     } catch (error) {
-      console.error('Error loading pending orders:', error);
-      toast.error('Erro ao carregar pedidos pendentes');
+      console.error('Error loading pending mobile orders:', error);
+      toast.error('Erro ao carregar pedidos móveis pendentes');
     } finally {
       setIsLoading(false);
     }
@@ -68,42 +68,83 @@ const MobileOrdersImport = () => {
   }, []);
 
   const importOrder = async (orderId: string) => {
-    if (!confirm('Confirma a importação deste pedido para o sistema?')) {
+    if (!confirm('Confirma a importação deste pedido móvel para o sistema local?')) {
       return;
     }
 
     try {
       setImportingOrderId(orderId);
       
-      console.log('📥 Importing order:', orderId);
+      console.log('📥 Importing mobile order:', orderId);
       
-      // Marcar pedido como importado
+      // Buscar dados completos do pedido móvel
+      const { data: mobileOrder, error: fetchError } = await supabase
+        .from('orders_mobile')
+        .select(`
+          *,
+          order_items_mobile (*)
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) {
+        console.error('❌ Error fetching mobile order:', fetchError);
+        throw fetchError;
+      }
+
+      console.log('📦 Mobile order data:', mobileOrder);
+
+      // Usar o DatabaseAdapter para salvar no banco local
+      const db = getDatabaseAdapter();
+      
+      // Preparar dados do pedido para o formato local
+      const localOrderData = {
+        id: mobileOrder.id,
+        customer_id: mobileOrder.customer_id,
+        customer_name: mobileOrder.customer_name,
+        date: mobileOrder.date,
+        status: mobileOrder.status,
+        total: mobileOrder.total,
+        notes: mobileOrder.notes || '',
+        payment_method: mobileOrder.payment_method || '',
+        sync_status: 'synced',
+        source_project: 'mobile',
+        items: mobileOrder.order_items_mobile || []
+      };
+
+      // Salvar pedido no banco local
+      await db.saveOrder(localOrderData);
+      console.log('💾 Order saved to local database');
+
+      // Marcar como importado na tabela orders_mobile
       const { error: updateError } = await supabase
-        .from('orders')
+        .from('orders_mobile')
         .update({ 
           imported: true,
-          sync_status: 'synced',
+          imported_at: new Date().toISOString(),
+          imported_by: 'desktop_admin',
           updated_at: new Date().toISOString()
         })
         .eq('id', orderId);
 
       if (updateError) {
-        console.error('❌ Error importing order:', updateError);
+        console.error('❌ Error marking mobile order as imported:', updateError);
         throw updateError;
       }
 
-      // Log da importação
+      // Log da importação bem-sucedida
       const { error: logError } = await supabase
         .from('sync_logs')
         .insert({
-          event_type: 'manual_import',
+          event_type: 'mobile_import',
           data_type: 'orders',
           records_count: 1,
           status: 'completed',
           metadata: {
             order_id: orderId,
-            imported_by: 'admin',
-            import_date: new Date().toISOString()
+            imported_by: 'desktop_admin',
+            import_date: new Date().toISOString(),
+            total: mobileOrder.total
           }
         });
 
@@ -111,48 +152,48 @@ const MobileOrdersImport = () => {
         console.warn('⚠️ Warning: Failed to log import:', logError);
       }
 
-      toast.success('Pedido importado com sucesso!');
+      toast.success('Pedido móvel importado com sucesso!');
       
       // Recarregar lista
       await loadPendingOrders();
       
     } catch (error) {
-      console.error('Error importing order:', error);
-      toast.error('Erro ao importar pedido');
+      console.error('Error importing mobile order:', error);
+      toast.error('Erro ao importar pedido móvel');
     } finally {
       setImportingOrderId(null);
     }
   };
 
   const rejectOrder = async (orderId: string) => {
-    if (!confirm('Tem certeza que deseja rejeitar este pedido? Ele será removido permanentemente.')) {
+    if (!confirm('Tem certeza que deseja rejeitar este pedido móvel? Ele será removido permanentemente.')) {
       return;
     }
 
     try {
       setImportingOrderId(orderId);
       
-      console.log('❌ Rejecting order:', orderId);
+      console.log('❌ Rejecting mobile order:', orderId);
       
-      // Deletar itens do pedido primeiro
+      // Deletar itens do pedido móvel primeiro
       const { error: itemsError } = await supabase
-        .from('order_items')
+        .from('order_items_mobile')
         .delete()
         .eq('order_id', orderId);
 
       if (itemsError) {
-        console.error('❌ Error deleting order items:', itemsError);
+        console.error('❌ Error deleting mobile order items:', itemsError);
         throw itemsError;
       }
 
-      // Deletar o pedido
+      // Deletar o pedido móvel
       const { error: orderError } = await supabase
-        .from('orders')
+        .from('orders_mobile')
         .delete()
         .eq('id', orderId);
 
       if (orderError) {
-        console.error('❌ Error deleting order:', orderError);
+        console.error('❌ Error deleting mobile order:', orderError);
         throw orderError;
       }
 
@@ -160,13 +201,13 @@ const MobileOrdersImport = () => {
       const { error: logError } = await supabase
         .from('sync_logs')
         .insert({
-          event_type: 'order_rejection',
+          event_type: 'mobile_order_rejection',
           data_type: 'orders',
           records_count: 1,
           status: 'completed',
           metadata: {
             order_id: orderId,
-            rejected_by: 'admin',
+            rejected_by: 'desktop_admin',
             rejection_date: new Date().toISOString()
           }
         });
@@ -175,14 +216,14 @@ const MobileOrdersImport = () => {
         console.warn('⚠️ Warning: Failed to log rejection:', logError);
       }
 
-      toast.success('Pedido rejeitado com sucesso');
+      toast.success('Pedido móvel rejeitado com sucesso');
       
       // Recarregar lista
       await loadPendingOrders();
       
     } catch (error) {
-      console.error('Error rejecting order:', error);
-      toast.error('Erro ao rejeitar pedido');
+      console.error('Error rejecting mobile order:', error);
+      toast.error('Erro ao rejeitar pedido móvel');
     } finally {
       setImportingOrderId(null);
     }
@@ -221,7 +262,7 @@ const MobileOrdersImport = () => {
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-purple-600">{pendingOrders.length}</p>
-                <p className="text-sm text-gray-600">Pedidos Pendentes</p>
+                <p className="text-sm text-gray-600">Pedidos Móveis Pendentes</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-green-600">{formatCurrency(getTotalValue())}</p>
@@ -233,7 +274,7 @@ const MobileOrdersImport = () => {
 
         {/* Botão de Atualizar */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Pedidos Aguardando Importação</h2>
+          <h2 className="text-lg font-semibold">Pedidos Móveis Aguardando Importação</h2>
           <Button 
             onClick={loadPendingOrders} 
             variant="outline" 
@@ -250,7 +291,7 @@ const MobileOrdersImport = () => {
           <Card>
             <CardContent className="pt-6 text-center">
               <RefreshCw className="animate-spin mx-auto mb-2" size={24} />
-              <p>Carregando pedidos pendentes...</p>
+              <p>Carregando pedidos móveis pendentes...</p>
             </CardContent>
           </Card>
         ) : pendingOrders.length === 0 ? (
@@ -275,7 +316,7 @@ const MobileOrdersImport = () => {
                     </div>
                     <div className="text-right">
                       <Badge variant="secondary" className="bg-purple-100 text-purple-800 mb-1">
-                        Pendente
+                        Móvel Pendente
                       </Badge>
                       <p className="font-bold text-lg">{formatCurrency(order.total)}</p>
                     </div>
