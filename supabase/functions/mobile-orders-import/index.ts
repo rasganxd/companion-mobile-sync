@@ -9,10 +9,10 @@ const corsHeaders = {
 
 interface OrderItem {
   product_name: string;
-  product_code?: string;
+  product_code?: number;
   quantity: number;
-  unit_price: number;
-  total_price: number;
+  price: number;
+  total: number;
   description?: string;
 }
 
@@ -117,10 +117,12 @@ serve(async (req) => {
         product_name: item.product_name,
         product_code: item.product_code,
         quantity: item.quantity,
-        price: item.unit_price,
-        unit_price: item.unit_price,
-        total: item.total_price
+        price: item.price, // ✅ CORRETO: usar o campo price que vem do mobile
+        unit_price: item.price, // ✅ CORRETO: mesmo valor para compatibilidade
+        total: item.total // ✅ CORRETO: usar o campo total que vem do mobile
       }));
+
+      console.log('🔍 Items to insert:', itemsToInsert);
 
       const { error: itemsError } = await supabase
         .from('order_items')
