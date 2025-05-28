@@ -1,541 +1,811 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Users, Search, Package, Plus, ShoppingCart, Save, FileText } from 'lucide-react';
+import Header from '@/components/Header';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ChevronLeft, Search, Trash2, Plus } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { supabase } from '@/integrations/supabase/client';
-import AppButton from '@/components/AppButton';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock?: number;
-  code?: string;
-}
-
-interface OrderItem {
-  id: string;
-  product_id: string;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
+import { useAuth } from '@/hooks/useAuth';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { useLocation } from 'react-router-dom';
 
 interface Client {
   id: string;
   name: string;
-  company_name?: string;
-  code?: number;
+  address?: string;
+  phone?: string;
   sales_rep_id?: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  price: number;
+  unit: string;
+  description?: string;
+  has_subunit?: boolean;
+  subunit?: string;
+  subunit_ratio?: number;
+}
+
+interface OrderItem {
+  id: number;
+  productId: string;
+  productName: string;
+  code: string;
+  quantity: number;
+  price: number;
+  unit: string;
+}
+
 const PlaceOrder = () => {
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [showClientSearch, setShowClientSearch] = useState(false);
-  const [showProductSearch, setShowProductSearch] = useState(false);
+  const { salesRep, isLoading: authLoading } = useAuth();
+  const { navigateTo } = useAppNavigation();
+  const location = useLocation();
+  
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoadingClients, setIsLoadingClients] = useState(true);
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [clientSearchQuery, setClientSearchQuery] = useState('');
-  const [productSearchQuery, setProductSearchQuery] = useState('');
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [customPrice, setCustomPrice] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [showClientDialog, setShowClientDialog] = useState(false);
+  const [showProductDialog, setShowProductDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
 
-  const { salesRep, isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
+  const locationState = location.state as any;
 
-  const loadClients = useCallback(async () => {
+  // 🔍 Função para debugging detalhado
+  const debugClientValidation = (client: Client, action: string) => {
+    console.log(`🔍 [DEBUG] ${action} - Validação de Cliente:`, {
+      action,
+      timestamp: new Date().toISOString(),
+      authLoading,
+      salesRep: {
+        id: salesRep?.id,
+        name: salesRep?.name,
+        code: salesRep?.code
+      },
+      client: {
+        id: client?.id,
+        name: client?.name,
+        sales_rep_id: client?.sales_rep_id
+      },
+      validation: {
+        salesRepExists: !!salesRep?.id,
+        clientExists: !!client?.id,
+        salesRepMatch: client?.sales_rep_id === salesRep?.id,
+        authComplete: !authLoading
+      }
+    });
+  };
+
+  const loadClientsForSalesRep = async () => {
     if (!salesRep?.id) {
-      console.log('🔍 No sales rep ID available for loading clients');
+      console.warn('⚠️ loadClientsForSalesRep: Não há vendedor autenticado');
+      console.log('🔍 Estado atual da autenticação:', { salesRep, authLoading });
       return;
     }
 
-    setIsLoadingClients(true);
-    try {
-      console.log('🔄 Loading clients for sales rep:', salesRep.id);
-      
-      // Primeiro, tentar carregar do WebDatabase (localStorage)
-      const db = getDatabaseAdapter();
-      const localClients = await db.getClients();
-      
-      console.log('📋 Local clients found:', localClients.length);
-      
-      if (localClients.length > 0) {
-        // Filtrar clientes do vendedor logado
-        const salesRepClients = localClients.filter(client => 
-          client.sales_rep_id === salesRep.id
-        );
-        console.log('👤 Sales rep clients found locally:', salesRepClients.length);
-        setClients(salesRepClients);
-      } else {
-        // Se não há clientes locais, buscar do Supabase
-        console.log('🌐 No local clients found, fetching from Supabase...');
-        const { data: supabaseClients, error } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('sales_rep_id', salesRep.id)
-          .eq('active', true);
-        
-        if (error) {
-          console.error('❌ Error fetching clients from Supabase:', error);
-          toast.error('Erro ao carregar clientes do servidor');
-        } else {
-          console.log('✅ Clients fetched from Supabase:', supabaseClients?.length || 0);
-          const mappedClients = (supabaseClients || []).map(client => ({
-            id: client.id,
-            name: client.name,
-            company_name: client.company_name,
-            code: client.code,
-            sales_rep_id: client.sales_rep_id
-          }));
-          setClients(mappedClients);
-          
-          // Salvar no localStorage para próximas consultas
-          for (const client of mappedClients) {
-            await db.saveClient(client);
-          }
-        }
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar clientes:', error);
-      toast.error('Erro ao carregar clientes');
-    } finally {
-      setIsLoadingClients(false);
-    }
-  }, [salesRep?.id]);
+    console.log('🔄 Iniciando carregamento de clientes para vendedor:', {
+      salesRepId: salesRep.id,
+      salesRepName: salesRep.name,
+      authLoading
+    });
 
-  const loadProducts = useCallback(async () => {
-    setIsLoadingProducts(true);
     try {
-      console.log('🔄 Loading products...');
-      
-      // Primeiro, tentar carregar do WebDatabase (localStorage)
       const db = getDatabaseAdapter();
-      const localProducts = await db.getProducts();
+      const allClients = await db.getClients();
       
-      console.log('📦 Local products found:', localProducts.length);
+      console.log('📋 Todos os clientes carregados:', {
+        total: allClients.length,
+        salesRepId: salesRep.id,
+        clientsWithSalesRep: allClients.filter(c => c.sales_rep_id).length
+      });
       
-      if (localProducts.length > 0) {
-        setProducts(localProducts);
-      } else {
-        // Se não há produtos locais, buscar do Supabase
-        console.log('🌐 No local products found, fetching from Supabase...');
-        const { data: supabaseProducts, error } = await supabase
-          .from('products')
-          .select('*');
+      // Filtrar apenas clientes do vendedor logado
+      const salesRepClients = allClients.filter(client => {
+        const belongsToSalesRep = client.sales_rep_id === salesRep.id;
+        if (!belongsToSalesRep && client.sales_rep_id) {
+          console.log(`📋 Cliente ${client.name} pertence ao vendedor ${client.sales_rep_id}, não ao atual ${salesRep.id}`);
+        }
+        return belongsToSalesRep;
+      });
+      
+      console.log(`✅ Clientes carregados para vendedor ${salesRep.name}:`, {
+        total: salesRepClients.length,
+        clients: salesRepClients.map(c => ({
+          id: c.id,
+          name: c.name,
+          sales_rep_id: c.sales_rep_id
+        }))
+      });
+      
+      setClients(salesRepClients);
+      
+      // Se há dados de navegação, tentar encontrar o cliente
+      if (locationState?.clientId) {
+        console.log('🎯 Tentando pré-selecionar cliente:', locationState.clientId);
+        const preSelectedClient = salesRepClients.find(c => c.id === locationState.clientId);
         
-        if (error) {
-          console.error('❌ Error fetching products from Supabase:', error);
-          toast.error('Erro ao carregar produtos do servidor');
+        if (preSelectedClient) {
+          debugClientValidation(preSelectedClient, 'PRÉ-SELEÇÃO');
+          setSelectedClient(preSelectedClient);
+          console.log('✅ Cliente pré-selecionado encontrado:', preSelectedClient.name);
         } else {
-          console.log('✅ Products fetched from Supabase:', supabaseProducts?.length || 0);
-          const mappedProducts = (supabaseProducts || []).map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            stock: product.stock,
-            code: product.code
-          }));
-          setProducts(mappedProducts);
-          
-          // Salvar no localStorage para próximas consultas
-          for (const product of mappedProducts) {
-            await db.saveProduct(product);
+          console.warn('❌ Cliente pré-selecionado não encontrado no portfólio do vendedor');
+          // Verificar se o cliente existe mas pertence a outro vendedor
+          const clientInDatabase = allClients.find(c => c.id === locationState.clientId);
+          if (clientInDatabase) {
+            console.error('🚨 Cliente existe mas pertence a outro vendedor:', {
+              clientId: clientInDatabase.id,
+              clientName: clientInDatabase.name,
+              clientSalesRepId: clientInDatabase.sales_rep_id,
+              currentSalesRepId: salesRep.id
+            });
+            toast.error(`Cliente "${clientInDatabase.name}" pertence ao vendedor ID: ${clientInDatabase.sales_rep_id}`);
+          } else {
+            toast.warning('Cliente selecionado não encontrado');
           }
         }
       }
+      
     } catch (error) {
-      console.error('❌ Erro ao carregar produtos:', error);
-      toast.error('Erro ao carregar produtos');
+      console.error('❌ Erro ao carregar clientes do vendedor:', error);
+      toast.error('Erro ao carregar lista de clientes');
     } finally {
-      setIsLoadingProducts(false);
+      setDataLoading(false);
     }
-  }, []);
+  };
+
+  const loadProducts = async () => {
+    try {
+      const db = getDatabaseAdapter();
+      const allProducts = await db.getProducts();
+      setProducts(allProducts);
+      console.log('📦 Produtos carregados:', allProducts.length);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar lista de produtos');
+    }
+  };
+
+  // ✅ Aguardar autenticação completar antes de carregar dados
+  useEffect(() => {
+    console.log('🔄 useEffect - Verificando condições para carregar dados:', {
+      authLoading,
+      salesRepId: salesRep?.id,
+      shouldLoad: !authLoading && salesRep?.id
+    });
+
+    if (!authLoading && salesRep?.id) {
+      loadClientsForSalesRep();
+      loadProducts();
+    } else if (!authLoading && !salesRep?.id) {
+      console.error('❌ Autenticação completa mas sem vendedor identificado');
+      toast.error('Vendedor não identificado. Faça login novamente.');
+      setDataLoading(false);
+    }
+  }, [salesRep?.id, authLoading]);
 
   useEffect(() => {
-    // Aguardar o carregamento da autenticação terminar
-    if (isLoading) {
-      return;
+    // Carregar dados existentes se houver
+    if (locationState?.existingOrderItems) {
+      setOrderItems(locationState.existingOrderItems);
     }
-
-    // Só verificar autenticação após o carregamento terminar
-    if (!isAuthenticated()) {
-      navigate('/login');
-      return;
+    if (locationState?.paymentMethod) {
+      setPaymentMethod(locationState.paymentMethod);
     }
-
-    if (salesRep?.id) {
-      loadClients();
-    }
-    loadProducts();
-  }, [isLoading, isAuthenticated, navigate, salesRep?.id, loadClients, loadProducts]);
+  }, [locationState]);
 
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
-    (client.company_name && client.company_name.toLowerCase().includes(clientSearchQuery.toLowerCase()))
+    client.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(productSearchQuery.toLowerCase())
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    product.code.toLowerCase().includes(productSearchTerm.toLowerCase())
   );
 
-  const handleClientSelect = (client: Client) => {
-    // Validar se o cliente pertence ao vendedor
-    if (!salesRep?.id || client.sales_rep_id !== salesRep.id) {
-      toast.error('Cliente selecionado não pertence ao seu portfólio.');
+  const addProductToOrder = () => {
+    if (!selectedProduct) {
+      toast.error('Selecione um produto');
       return;
     }
-    
-    setSelectedClient(client);
-    setShowClientSearch(false);
-    setClientSearchQuery('');
-  };
 
-  const handleProductSelect = (product: Product) => {
-    const existingItemIndex = orderItems.findIndex(item => item.product_id === product.id);
-    
-    if (existingItemIndex !== -1) {
-      // Atualizar quantidade se o item já existe
-      const updatedItems = [...orderItems];
-      updatedItems[existingItemIndex].quantity += 1;
-      updatedItems[existingItemIndex].total_price = updatedItems[existingItemIndex].quantity * product.price;
-      setOrderItems(updatedItems);
-    } else {
-      // Adicionar novo item ao pedido
-      const newItem: OrderItem = {
-        id: Date.now().toString(),
-        product_id: product.id,
-        product_name: product.name,
-        quantity: 1,
-        unit_price: product.price,
-        total_price: product.price
-      };
-      setOrderItems([...orderItems, newItem]);
+    if (quantity <= 0) {
+      toast.error('Quantidade deve ser maior que zero');
+      return;
     }
+
+    const price = customPrice ? parseFloat(customPrice) : selectedProduct.price;
     
-    setShowProductSearch(false);
-    setProductSearchQuery('');
+    if (price <= 0) {
+      toast.error('Preço deve ser maior que zero');
+      return;
+    }
+
+    const newItem: OrderItem = {
+      id: Date.now(),
+      productId: selectedProduct.id,
+      productName: selectedProduct.name,
+      code: selectedProduct.code,
+      quantity,
+      price,
+      unit: selectedProduct.unit
+    };
+
+    setOrderItems([...orderItems, newItem]);
+    setSelectedProduct(null);
+    setQuantity(1);
+    setCustomPrice('');
+    setShowProductDialog(false);
     toast.success('Produto adicionado ao pedido');
   };
 
-  const updateItemQuantity = (itemId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeItemFromOrder(itemId);
-      return;
-    }
-    
-    const updatedItems = orderItems.map(item => {
-      if (item.id === itemId) {
-        return { 
-          ...item, 
-          quantity: newQuantity, 
-          total_price: newQuantity * item.unit_price 
-        };
-      }
-      return item;
-    });
-    setOrderItems(updatedItems);
-  };
-
-  const removeItemFromOrder = (itemId: string) => {
-    const updatedItems = orderItems.filter(item => item.id !== itemId);
-    setOrderItems(updatedItems);
+  const removeItem = (itemId: number) => {
+    setOrderItems(orderItems.filter(item => item.id !== itemId));
     toast.success('Item removido do pedido');
   };
 
-  const calculateTotal = () => {
-    return orderItems.reduce((total, item) => total + item.total_price, 0);
+  const updateQuantity = (itemId: number, newQuantity: number) => {
+    if (newQuantity <= 0) return;
+    
+    setOrderItems(orderItems.map(item =>
+      item.id === itemId ? { ...item, quantity: newQuantity } : item
+    ));
   };
 
-  const handleCreateOrder = async () => {
+  const updatePrice = (itemId: number, newPrice: number) => {
+    if (newPrice <= 0) return;
+    
+    setOrderItems(orderItems.map(item =>
+      item.id === itemId ? { ...item, price: newPrice } : item
+    ));
+  };
+
+  const getTotalValue = () => {
+    return orderItems.reduce((total, item) => total + (item.quantity * item.price), 0);
+  };
+
+  // ✅ Validação melhorada com logs detalhados
+  const validateOrder = (): boolean => {
+    console.log('🔍 Iniciando validação do pedido...');
+    
+    // Aguardar dados carregarem
+    if (authLoading || dataLoading) {
+      console.warn('⚠️ Validação bloqueada: dados ainda carregando', { authLoading, dataLoading });
+      toast.warning('Aguarde o carregamento dos dados...');
+      return false;
+    }
+
     if (!selectedClient) {
-      toast.error('Selecione um cliente para criar o pedido.');
-      return;
+      console.warn('⚠️ Validação falhou: nenhum cliente selecionado');
+      toast.error('Selecione um cliente');
+      return false;
+    }
+
+    if (!salesRep?.id) {
+      console.error('❌ Validação falhou: vendedor não identificado');
+      toast.error('Vendedor não identificado. Faça login novamente.');
+      return false;
+    }
+
+    // 🔍 Verificação detalhada do cliente
+    debugClientValidation(selectedClient, 'VALIDAÇÃO_PEDIDO');
+    
+    if (selectedClient.sales_rep_id !== salesRep.id) {
+      console.error('❌ Validação falhou: cliente não pertence ao vendedor:', {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        clientSalesRepId: selectedClient.sales_rep_id,
+        currentSalesRepId: salesRep.id,
+        allClientsInPortfolio: clients.map(c => ({
+          id: c.id,
+          name: c.name,
+          sales_rep_id: c.sales_rep_id
+        }))
+      });
+      
+      toast.error(`Cliente "${selectedClient.name}" não pertence ao seu portfólio. Verifique se os dados estão atualizados.`);
+      return false;
     }
 
     if (orderItems.length === 0) {
-      toast.error('Adicione itens ao pedido.');
-      return;
+      console.warn('⚠️ Validação falhou: nenhum produto no pedido');
+      toast.error('Adicione pelo menos um produto ao pedido');
+      return false;
     }
 
-    const orderData = {
-      customer_id: selectedClient.id,
-      customer_name: selectedClient.name,
-      sales_rep_id: salesRep?.id,
-      date: new Date().toISOString().split('T')[0],
-      status: 'pending',
-      total: calculateTotal(),
-      items: orderItems
-    };
+    console.log('✅ Validação do pedido passou!');
+    return true;
+  };
 
+  const saveOrder = async () => {
+    if (!validateOrder()) return;
+
+    setIsLoading(true);
     try {
       const db = getDatabaseAdapter();
-      await db.saveOrder(orderData);
-      toast.success('Pedido criado com sucesso!');
-      navigate('/home');
+      
+      console.log('💾 Salvando pedido:', {
+        clientId: selectedClient!.id,
+        clientName: selectedClient!.name,
+        salesRepId: salesRep!.id,
+        salesRepName: salesRep!.name,
+        itemsCount: orderItems.length,
+        total: getTotalValue()
+      });
+
+      const orderData = {
+        customer_id: selectedClient!.id,
+        customer_name: selectedClient!.name,
+        sales_rep_id: salesRep!.id,
+        sales_rep_name: salesRep!.name,
+        date: new Date().toISOString(),
+        total: getTotalValue(),
+        status: 'pending',
+        notes: notes || '',
+        payment_method: paymentMethod || '',
+        items: orderItems.map(item => ({
+          product_id: item.productId,
+          product_name: item.productName,
+          product_code: parseInt(item.code) || 0,
+          quantity: item.quantity,
+          price: item.price,
+          unit_price: item.price,
+          total: item.quantity * item.price,
+          unit: item.unit
+        }))
+      };
+
+      await db.saveMobileOrder(orderData);
+      
+      toast.success('Pedido salvo com sucesso!');
+      
+      // Resetar formulário
+      setSelectedClient(null);
+      setOrderItems([]);
+      setNotes('');
+      setPaymentMethod('');
+      
+      // Navegar de volta
+      navigateTo('/my-orders');
+      
     } catch (error) {
-      console.error('Erro ao criar pedido:', error);
-      toast.error('Erro ao criar pedido.');
+      console.error('❌ Erro ao salvar pedido:', error);
+      toast.error(`Erro ao salvar pedido: ${error}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Mostrar loading enquanto a autenticação está carregando
-  if (isLoading) {
+  // 🔄 Função para recarregar dados em caso de problemas
+  const refreshData = async () => {
+    console.log('🔄 Recarregando dados manualmente...');
+    setDataLoading(true);
+    await loadClientsForSalesRep();
+    await loadProducts();
+    toast.success('Dados atualizados');
+  };
+
+  // Mostrar loading enquanto autentica ou carrega dados
+  if (authLoading || dataLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg font-semibold mb-2">Carregando...</div>
-          <div className="text-gray-500">Verificando autenticação</div>
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header 
+          title="Novo Pedido" 
+          showBackButton={true} 
+          backgroundColor="blue" 
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">
+              {authLoading ? 'Verificando autenticação...' : 'Carregando dados...'}
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/home')}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-lg font-semibold">Novo Pedido</h1>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header 
+        title="Novo Pedido" 
+        showBackButton={true} 
+        backgroundColor="blue" 
+      />
+      
+      <div className="p-4 flex-1">
+        {/* Debug info - mostrar apenas em desenvolvimento */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card className="mb-4 border-orange-200 bg-orange-50">
+            <CardContent className="p-2">
+              <div className="text-xs text-orange-800">
+                <p><strong>Debug:</strong> Vendedor ID: {salesRep?.id} | Nome: {salesRep?.name}</p>
+                <p>Clientes carregados: {clients.length}</p>
+                {selectedClient && (
+                  <p>Cliente selecionado: {selectedClient.name} (Vendedor: {selectedClient.sales_rep_id})</p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={refreshData}
+                  className="mt-1 text-xs h-6"
+                >
+                  🔄 Recarregar Dados
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Client Info Bar */}
-      <div className="bg-blue-600 text-white px-4 py-2">
-        {selectedClient ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.company_name || selectedClient.name}
+        {/* Cliente Selecionado */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <Users className="mr-2" size={20} />
+              Cliente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedClient ? (
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium">{selectedClient.name}</p>
+                  {selectedClient.address && (
+                    <p className="text-sm text-gray-600">{selectedClient.address}</p>
+                  )}
+                  {selectedClient.phone && (
+                    <p className="text-sm text-gray-600">{selectedClient.phone}</p>
+                  )}
+                  <p className="text-xs text-gray-500">ID Vendedor: {selectedClient.sales_rep_id}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowClientDialog(true)}
+                >
+                  Alterar
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                onClick={() => setShowClientDialog(true)}
+                className="w-full"
+                disabled={clients.length === 0}
+              >
+                <Users className="mr-2" size={16} />
+                {clients.length === 0 ? 'Nenhum cliente disponível' : 'Selecionar Cliente'}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Dialog de Seleção de Cliente */}
+        {showClientDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowClientDialog(false)}
+                  >
+                    ✕
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar cliente..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                {filteredClients.length === 0 && searchTerm && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Nenhum cliente encontrado em seu portfólio
+                  </p>
+                )}
+                {clients.length === 0 && (
+                  <div className="mt-2">
+                    <p className="text-sm text-orange-600">
+                      ⚠️ Você não possui clientes atribuídos.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={refreshData}
+                      className="mt-2 text-xs"
+                    >
+                      🔄 Recarregar Dados
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <div className="overflow-y-auto max-h-96">
+                {filteredClients.map((client) => (
+                  <div
+                    key={client.id}
+                    className="p-3 border-b hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      debugClientValidation(client, 'SELEÇÃO_MANUAL');
+                      setSelectedClient(client);
+                      setShowClientDialog(false);
+                      setSearchTerm('');
+                    }}
+                  >
+                    <p className="font-medium">{client.name}</p>
+                    {client.address && (
+                      <p className="text-sm text-gray-600">{client.address}</p>
+                    )}
+                    <p className="text-xs text-gray-500">ID: {client.id}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <AppButton 
-              variant="gray" 
-              size="sm"
-              onClick={() => setShowClientSearch(true)}
-            >
-              Alterar
-            </AppButton>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <span>Nenhum cliente selecionado</span>
-            <AppButton 
-              variant="gray" 
-              size="sm"
-              onClick={() => setShowClientSearch(true)}
-            >
-              Selecionar Cliente
-            </AppButton>
           </div>
         )}
-      </div>
 
-      {/* Order Items */}
-      <div className="bg-white mx-4 mt-4 rounded-lg border">
-        <div className="p-4 border-b">
-          <h3 className="font-semibold">Itens do Pedido ({orderItems.length})</h3>
-        </div>
-        
-        {orderItems.length > 0 ? (
-          <div className="divide-y">
-            {orderItems.map((item) => (
-              <div key={item.id} className="p-4 flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="font-medium">{item.product_name}</div>
-                  <div className="text-sm text-gray-500">
-                    R$ {item.unit_price.toFixed(2)} x {item.quantity} = R$ {item.total_price.toFixed(2)}
+        {/* Produtos */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center justify-between">
+              <span className="flex items-center">
+                <Package className="mr-2" size={20} />
+                Produtos
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowProductDialog(true)}
+              >
+                <Plus size={16} className="mr-1" />
+                Adicionar
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {orderItems.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">
+                Nenhum produto adicionado
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {orderItems.map((item) => (
+                  <div key={item.id} className="border rounded-lg p-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1">
+                        <p className="font-medium">{item.productName}</p>
+                        <p className="text-sm text-gray-600">Código: {item.code}</p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs text-gray-600">Qtd</label>
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
+                          min="1"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Preço Unit.</label>
+                        <Input
+                          type="number"
+                          value={item.price}
+                          onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
+                          min="0"
+                          step="0.01"
+                          className="text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-600">Total</label>
+                        <p className="text-sm font-medium pt-2">
+                          R$ {(item.quantity * item.price).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Total do Pedido:</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      R$ {getTotalValue().toFixed(2)}
+                    </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => updateItemQuantity(item.id, item.quantity - 1)}
-                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Dialog de Seleção de Produto */}
+        {showProductDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Adicionar Produto</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowProductDialog(false);
+                      setSelectedProduct(null);
+                      setQuantity(1);
+                      setCustomPrice('');
+                    }}
                   >
-                    -
-                  </button>
-                  <span className="w-12 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => updateItemQuantity(item.id, item.quantity + 1)}
-                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => removeItemFromOrder(item.id)}
-                    className="p-2 text-red-500 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                    ✕
+                  </Button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Buscar produto..."
+                      value={productSearchTerm}
+                      onChange={(e) => setProductSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  {selectedProduct && (
+                    <div className="border rounded-lg p-3 bg-blue-50">
+                      <p className="font-medium">{selectedProduct.name}</p>
+                      <p className="text-sm text-gray-600">Código: {selectedProduct.code}</p>
+                      <p className="text-sm text-gray-600">Preço: R$ {selectedProduct.price.toFixed(2)}</p>
+                      
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div>
+                          <label className="text-xs text-gray-600">Quantidade</label>
+                          <Input
+                            type="number"
+                            value={quantity}
+                            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                            min="1"
+                            className="text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-600">Preço Personalizado</label>
+                          <Input
+                            type="number"
+                            value={customPrice}
+                            onChange={(e) => setCustomPrice(e.target.value)}
+                            placeholder={selectedProduct.price.toFixed(2)}
+                            min="0"
+                            step="0.01"
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button
+                        onClick={addProductToOrder}
+                        className="w-full mt-3"
+                        size="sm"
+                      >
+                        Adicionar ao Pedido
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-8 text-center text-gray-500">
-            Nenhum item adicionado ao pedido
+              
+              <div className="overflow-y-auto max-h-96">
+                {filteredProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
+                      selectedProduct?.id === product.id ? 'bg-blue-50' : ''
+                    }`}
+                    onClick={() => setSelectedProduct(product)}
+                  >
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-gray-600">Código: {product.code}</p>
+                    <p className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Add Product Button */}
-      <div className="px-4 py-4">
-        <AppButton 
-          onClick={() => setShowProductSearch(true)}
-          className="w-full flex items-center justify-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Adicionar Produto
-        </AppButton>
-      </div>
+        {/* Informações Adicionais */}
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg flex items-center">
+              <FileText className="mr-2" size={20} />
+              Informações Adicionais
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Forma de Pagamento</label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="boleto">Boleto</SelectItem>
+                  <SelectItem value="prazo">A Prazo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Observações</label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Observações do pedido..."
+                rows={3}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Order Summary */}
-      <div className="bg-white mx-4 mb-4 rounded-lg border p-4">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-lg font-semibold">Total:</span>
-          <span className="text-xl font-bold text-green-600">
-            R$ {calculateTotal().toFixed(2)}
-          </span>
+        {/* Botão Salvar */}
+        <div className="fixed bottom-4 left-4 right-4 z-40">
+          <Button
+            onClick={saveOrder}
+            disabled={isLoading || !selectedClient || orderItems.length === 0 || authLoading || dataLoading}
+            className="w-full py-3"
+            size="lg"
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2" size={20} />
+                Salvar Pedido
+              </>
+            )}
+          </Button>
         </div>
-        <AppButton 
-          onClick={handleCreateOrder}
-          disabled={!selectedClient || orderItems.length === 0}
-          className="w-full"
-          variant="blue"
-        >
-          Criar Pedido
-        </AppButton>
+        
+        <div className="h-20"></div>
       </div>
-
-      {/* Client Search Modal */}
-      {showClientSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
-              <button 
-                onClick={() => setShowClientSearch(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar cliente..."
-                  value={clientSearchQuery}
-                  onChange={(e) => setClientSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {isLoadingClients ? (
-                <div className="text-center py-4">Carregando clientes...</div>
-              ) : filteredClients.length > 0 ? (
-                filteredClients.map((client) => (
-                  <button
-                    key={client.id}
-                    onClick={() => handleClientSelect(client)}
-                    className="w-full text-left p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="font-medium">
-                      {client.company_name || client.name}
-                    </div>
-                    {client.company_name && (
-                      <div className="text-sm text-gray-500">
-                        Razão Social: {client.name}
-                      </div>
-                    )}
-                  </button>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  {clients.length === 0 ? 'Nenhum cliente cadastrado para este vendedor' : 'Nenhum cliente encontrado'}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Search Modal */}
-      {showProductSearch && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Adicionar Produto</h3>
-              <button 
-                onClick={() => setShowProductSearch(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Buscar produto..."
-                  value={productSearchQuery}
-                  onChange={(e) => setProductSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {isLoadingProducts ? (
-                <div className="text-center py-4">Carregando produtos...</div>
-              ) : filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
-                  <button
-                    key={product.id}
-                    onClick={() => handleProductSelect(product)}
-                    className="w-full text-left p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-gray-500">
-                          Código: {product.code || 'S/C'}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-blue-600">
-                          R$ {product.price.toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Estoque: {product.stock || 0}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
