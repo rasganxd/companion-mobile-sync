@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -69,21 +70,25 @@ const VisitRoutes = () => {
           throw customersError;
         }
         
-        // Buscar pedidos locais não sincronizados
+        // Buscar pedidos locais (incluindo transmitidos)
         const db = getDatabaseAdapter();
         const localOrders = await db.getOrders();
         
-        // Filtrar apenas pedidos pendentes de sincronização do dia atual
+        // Filtrar pedidos válidos do dia atual (pending_sync OU transmitted)
         const today = new Date().toISOString().split('T')[0];
-        const todayLocalOrders = localOrders.filter(order => {
+        const todayValidOrders = localOrders.filter(order => {
           const orderDate = new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0];
-          return order.sync_status === 'pending_sync' && orderDate === today;
+          // Incluir pedidos pendentes E transmitidos (excluir apenas deleted e error)
+          const isValidOrder = order.sync_status === 'pending_sync' || 
+                              order.sync_status === 'transmitted' || 
+                              order.sync_status === 'synced';
+          return isValidOrder && orderDate === today;
         });
         
         console.log('👥 Loaded customers:', customers);
-        console.log('📋 Local orders for today:', todayLocalOrders);
+        console.log('📋 Valid local orders for today (including transmitted):', todayValidOrders);
         
-        // PRIMEIRO: Calcular totais únicos por cliente (não por dia)
+        // PRIMEIRO: Calcular totais únicos por cliente (incluindo pedidos transmitidos)
         const uniqueClientStats = new Map<string, {
           hasPositive: boolean;
           hasNegative: boolean;
@@ -92,7 +97,7 @@ const VisitRoutes = () => {
         
         // Processar cada cliente único uma vez
         customers?.forEach(customer => {
-          const clientOrders = todayLocalOrders.filter(order => order.customer_id === customer.id);
+          const clientOrders = todayValidOrders.filter(order => order.customer_id === customer.id);
           
           if (clientOrders.length > 0) {
             const hasPositive = clientOrders.some(order => 
@@ -118,7 +123,7 @@ const VisitRoutes = () => {
           }
         });
         
-        // Calcular totais gerais únicos
+        // Calcular totais gerais únicos (incluindo pedidos transmitidos)
         let totalSales = 0;
         let totalPositivados = 0;
         let totalNegativados = 0;
@@ -134,11 +139,11 @@ const VisitRoutes = () => {
           }
         });
         
-        // Calcular pendentes (clientes sem pedidos locais)
-        const clientsWithOrders = new Set(todayLocalOrders.map(order => order.customer_id));
-        const totalPendentes = (customers?.length || 0) - clientsWithOrders.size;
+        // Calcular pendentes (clientes sem pedidos válidos)
+        const clientsWithValidOrders = new Set(todayValidOrders.map(order => order.customer_id));
+        const totalPendentes = (customers?.length || 0) - clientsWithValidOrders.size;
         
-        console.log('💰 Unique client stats:', {
+        console.log('💰 Unique client stats (including transmitted):', {
           totalSales,
           totalPositivados,
           totalNegativados,
@@ -177,7 +182,7 @@ const VisitRoutes = () => {
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
           
-          // Calcular status dos clientes baseado nos pedidos locais PARA ESTE DIA
+          // Calcular status dos clientes baseado nos pedidos válidos (incluindo transmitidos)
           let positivados = 0;
           let negativados = 0;
           let pendentes = 0;
@@ -194,7 +199,7 @@ const VisitRoutes = () => {
                 negativados++;
               }
             } else {
-              // Cliente sem pedidos locais = pendente
+              // Cliente sem pedidos válidos = pendente
               pendentes++;
             }
           });
@@ -230,8 +235,8 @@ const VisitRoutes = () => {
           positivadosValue
         });
         
-        console.log('📋 Processed routes by day:', processedRoutes);
-        console.log('💰 Final unique sales data:', {
+        console.log('📋 Processed routes by day (including transmitted orders):', processedRoutes);
+        console.log('💰 Final unique sales data (including transmitted):', {
           totalSales,
           totalPositivados,
           totalNegativados,

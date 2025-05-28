@@ -25,6 +25,8 @@ interface Client {
   orderTotal?: number;
   hasLocalOrders?: boolean;
   localOrdersCount?: number;
+  hasTransmittedOrders?: boolean;
+  transmittedOrdersCount?: number;
 }
 
 const ClientsList = () => {
@@ -98,7 +100,7 @@ const ClientsList = () => {
           // Continuar sem os dados de pedidos online
         }
         
-        // Buscar pedidos locais para estes clientes
+        // Buscar pedidos locais para estes clientes (incluindo transmitidos)
         const db = getDatabaseAdapter();
         const localOrders = await db.getAllOrders();
         
@@ -106,18 +108,30 @@ const ClientsList = () => {
         console.log('📋 Online orders for today:', orders);
         console.log('📱 Local orders:', localOrders);
         
-        // Determinar status de cada cliente baseado nos pedidos (online + local)
+        // Determinar status de cada cliente baseado nos pedidos (online + local incluindo transmitidos)
         const clientsWithStatus = dayClients.map(client => {
           const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
+          
+          // Incluir pedidos locais válidos (pending_sync, transmitted, synced)
           const clientLocalOrders = localOrders.filter(order => 
             order.customer_id === client.id && 
-            order.sync_status !== 'deleted'
+            (order.sync_status === 'pending_sync' || 
+             order.sync_status === 'transmitted' || 
+             order.sync_status === 'synced')
+          );
+          
+          // Separar por tipo de pedido local
+          const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
+          const transmittedLocalOrders = clientLocalOrders.filter(order => 
+            order.sync_status === 'transmitted' || order.sync_status === 'synced'
           );
           
           let status: 'positivado' | 'negativado' | 'pendente' = 'pendente';
           let orderTotal = 0;
-          let hasLocalOrders = clientLocalOrders.length > 0;
-          let localOrdersCount = clientLocalOrders.length;
+          let hasLocalOrders = pendingLocalOrders.length > 0;
+          let localOrdersCount = pendingLocalOrders.length;
+          let hasTransmittedOrders = transmittedLocalOrders.length > 0;
+          let transmittedOrdersCount = transmittedLocalOrders.length;
           
           // Verificar pedidos online primeiro
           if (clientOnlineOrders.length > 0) {
@@ -142,7 +156,7 @@ const ClientsList = () => {
             }
           }
           
-          // Se não há pedidos online, verificar pedidos locais
+          // Se não há pedidos online, verificar TODOS os pedidos locais (incluindo transmitidos)
           if (status === 'pendente' && clientLocalOrders.length > 0) {
             const hasPositiveLocal = clientLocalOrders.some(order => 
               order.status === 'pending' || 
@@ -167,28 +181,27 @@ const ClientsList = () => {
             }
           }
           
-          // Se tem pedidos locais, adicionar ao total
-          if (hasLocalOrders && status === 'positivado') {
-            const localTotal = clientLocalOrders
-              .filter(order => 
-                order.status === 'pending' || 
-                order.status === 'processed' || 
-                order.status === 'delivered'
-              )
-              .reduce((sum, order) => sum + (order.total || 0), 0);
-            orderTotal += localTotal;
-          }
+          console.log(`🔍 Client ${client.name}:`, {
+            onlineOrders: clientOnlineOrders.length,
+            localOrders: clientLocalOrders.length,
+            pendingLocal: pendingLocalOrders.length,
+            transmittedLocal: transmittedLocalOrders.length,
+            status,
+            orderTotal
+          });
           
           return {
             ...client,
             status,
             orderTotal,
             hasLocalOrders,
-            localOrdersCount
+            localOrdersCount,
+            hasTransmittedOrders,
+            transmittedOrdersCount
           };
         });
         
-        console.log(`✅ Clients with status for ${day}:`, clientsWithStatus);
+        console.log(`✅ Clients with status for ${day} (including transmitted):`, clientsWithStatus);
         setClients(clientsWithStatus);
         
       } catch (error) {
@@ -223,22 +236,25 @@ const ClientsList = () => {
   
   // Helper to determine status color and text
   const getStatusInfo = (client: Client) => {
+    const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
+    const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
+    
     switch (client.status) {
       case 'positivado':
         return {
           color: 'bg-green-100 text-green-800',
-          text: client.hasLocalOrders ? `Positivado (${client.localOrdersCount} local)` : 'Positivado'
+          text: `Positivado${localInfo}${transmittedInfo}`
         };
       case 'negativado':
         return {
           color: 'bg-red-100 text-red-800',
-          text: client.hasLocalOrders ? `Negativado (${client.localOrdersCount} local)` : 'Negativado'
+          text: `Negativado${localInfo}${transmittedInfo}`
         };
       case 'pendente':
       default:
         return {
-          color: client.hasLocalOrders ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
-          text: client.hasLocalOrders ? `Pendente (${client.localOrdersCount} local)` : 'Pendente'
+          color: (client.hasLocalOrders || client.hasTransmittedOrders) ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
+          text: `Pendente${localInfo}${transmittedInfo}`
         };
     }
   };
