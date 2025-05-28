@@ -288,6 +288,16 @@ class SQLiteDatabaseService {
     }
   }
 
+  async saveMobileOrder(order: any): Promise<void> {
+    console.log('📱 SQLite: saveMobileOrder called - delegating to saveOrder');
+    // Para SQLite, reutilizamos o método saveOrder existente
+    await this.saveOrder({
+      ...order,
+      source_project: 'mobile',
+      sync_status: 'pending_sync'
+    });
+  }
+
   async updateClientStatus(clientId: string, status: string): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {

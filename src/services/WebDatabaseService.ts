@@ -1,4 +1,3 @@
-
 import { v4 as uuidv4 } from 'uuid';
 
 class WebDatabaseService {
@@ -141,6 +140,16 @@ class WebDatabaseService {
       customer_name: orderToSave.customer_name,
       sync_status: orderToSave.sync_status,
       total: orderToSave.total
+    });
+  }
+
+  async saveMobileOrder(order: any): Promise<void> {
+    console.log('🌐 Web: saveMobileOrder called - delegating to saveOrder');
+    // Para WebDatabase, reutilizamos o método saveOrder existente
+    await this.saveOrder({
+      ...order,
+      source_project: 'mobile',
+      sync_status: 'pending_sync'
     });
   }
 
