@@ -29,6 +29,7 @@ interface Client {
   name: string;
   company_name?: string;
   code?: number;
+  sales_rep_id?: string;
 }
 
 const PlaceOrder = () => {
@@ -43,23 +44,14 @@ const PlaceOrder = () => {
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [productSearchQuery, setProductSearchQuery] = useState('');
 
-  const { salesRep, isAuthenticated, isLoading } = useAuth();
+  const { salesRep, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  console.log('🔍 PlaceOrder - Estado da autenticação:', {
-    isLoading,
-    isAuthenticated: isAuthenticated(),
-    salesRep: salesRep?.id,
-    salesRepName: salesRep?.name
-  });
 
   const loadClients = useCallback(async () => {
     if (!salesRep?.id) {
-      console.log('❌ loadClients - salesRep não disponível ainda');
       return;
     }
 
-    console.log('🔄 loadClients - Iniciando carregamento de clientes...');
     setIsLoadingClients(true);
     try {
       const db = getDatabaseAdapter();
@@ -71,10 +63,9 @@ const PlaceOrder = () => {
       );
       
       setClients(salesRepClients);
-      console.log(`✅ loadClients - Clientes carregados: ${salesRepClients.length}`);
       
     } catch (error) {
-      console.error('❌ loadClients - Erro ao carregar clientes:', error);
+      console.error('Erro ao carregar clientes:', error);
       toast.error('Erro ao carregar clientes');
     } finally {
       setIsLoadingClients(false);
@@ -82,15 +73,13 @@ const PlaceOrder = () => {
   }, [salesRep?.id]);
 
   const loadProducts = useCallback(async () => {
-    console.log('🔄 loadProducts - Iniciando carregamento de produtos...');
     setIsLoadingProducts(true);
     try {
       const db = getDatabaseAdapter();
       const productsData = await db.getProducts();
       setProducts(productsData);
-      console.log(`✅ loadProducts - Produtos carregados: ${productsData.length}`);
     } catch (error) {
-      console.error('❌ loadProducts - Erro ao carregar produtos:', error);
+      console.error('Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');
     } finally {
       setIsLoadingProducts(false);
@@ -98,27 +87,16 @@ const PlaceOrder = () => {
   }, []);
 
   useEffect(() => {
-    console.log('🔄 PlaceOrder useEffect - isLoading:', isLoading);
-    
-    // Aguardar o carregamento da autenticação terminar
-    if (isLoading) {
-      console.log('⏳ PlaceOrder - Aguardando carregamento da autenticação...');
-      return;
-    }
-
-    // Só verificar autenticação após o carregamento terminar
     if (!isAuthenticated()) {
-      console.log('❌ PlaceOrder - Usuário não autenticado, redirecionando para login');
       navigate('/login');
       return;
     }
 
-    console.log('✅ PlaceOrder - Usuário autenticado, carregando dados');
     if (salesRep?.id) {
       loadClients();
     }
     loadProducts();
-  }, [isLoading, isAuthenticated, navigate, salesRep?.id, loadClients, loadProducts]);
+  }, [isAuthenticated, navigate, salesRep?.id, loadClients, loadProducts]);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
@@ -130,7 +108,12 @@ const PlaceOrder = () => {
   );
 
   const handleClientSelect = (client: Client) => {
-    console.log('🔍 handleClientSelect - Cliente selecionado:', client);
+    // Validar se o cliente pertence ao vendedor
+    if (!salesRep?.id || client.sales_rep_id !== salesRep.id) {
+      toast.error('Cliente selecionado não pertence ao seu portfólio.');
+      return;
+    }
+    
     setSelectedClient(client);
     setShowClientSearch(false);
     setClientSearchQuery('');
@@ -223,18 +206,6 @@ const PlaceOrder = () => {
       toast.error('Erro ao criar pedido.');
     }
   };
-
-  // Mostrar loading enquanto a autenticação está carregando
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-lg font-semibold mb-2">Carregando...</div>
-          <div className="text-gray-500">Verificando autenticação</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
