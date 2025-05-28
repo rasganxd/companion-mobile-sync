@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -44,7 +43,7 @@ const PlaceOrder = () => {
   const [clientSearchQuery, setClientSearchQuery] = useState('');
   const [productSearchQuery, setProductSearchQuery] = useState('');
 
-  const { salesRep, isAuthenticated } = useAuth();
+  const { salesRep, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const loadClients = useCallback(async () => {
@@ -87,6 +86,12 @@ const PlaceOrder = () => {
   }, []);
 
   useEffect(() => {
+    // Aguardar o carregamento da autenticação terminar
+    if (isLoading) {
+      return;
+    }
+
+    // Só verificar autenticação após o carregamento terminar
     if (!isAuthenticated()) {
       navigate('/login');
       return;
@@ -96,7 +101,7 @@ const PlaceOrder = () => {
       loadClients();
     }
     loadProducts();
-  }, [isAuthenticated, navigate, salesRep?.id, loadClients, loadProducts]);
+  }, [isLoading, isAuthenticated, navigate, salesRep?.id, loadClients, loadProducts]);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
@@ -206,6 +211,18 @@ const PlaceOrder = () => {
       toast.error('Erro ao criar pedido.');
     }
   };
+
+  // Mostrar loading enquanto a autenticação está carregando
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg font-semibold mb-2">Carregando...</div>
+          <div className="text-gray-500">Verificando autenticação</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
