@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, RefreshCw, Send, Users } from 'lucide-react';
 import Header from '@/components/Header';
@@ -209,11 +208,12 @@ const MyOrders = () => {
       
       <div className="p-4 flex-1">
         {/* Filtros */}
-        <div className="flex gap-2 mb-4 overflow-x-auto">
+        <div className="flex flex-wrap gap-2 mb-4">
           <Button
             variant={activeFilter === 'all' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveFilter('all')}
+            className="text-xs px-3 py-2"
           >
             Todos ({orders.length})
           </Button>
@@ -221,6 +221,7 @@ const MyOrders = () => {
             variant={activeFilter === 'pending' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveFilter('pending')}
+            className="text-xs px-3 py-2"
           >
             Pendentes ({getFilteredOrdersCount('pending')})
           </Button>
@@ -228,6 +229,7 @@ const MyOrders = () => {
             variant={activeFilter === 'transmitted' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveFilter('transmitted')}
+            className="text-xs px-3 py-2"
           >
             Transmitidos ({getFilteredOrdersCount('transmitted')})
           </Button>
@@ -236,25 +238,25 @@ const MyOrders = () => {
         {/* Resumo */}
         <Card className="mb-4">
           <CardContent className="pt-6">
-            <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-blue-600">{getFilteredOrdersCount(activeFilter)}</p>
-                <p className="text-sm text-gray-600">
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">{getFilteredOrdersCount(activeFilter)}</p>
+                <p className="text-xs sm:text-sm text-gray-600">
                   {activeFilter === 'all' ? 'Total de Pedidos' : 
                    activeFilter === 'pending' ? 'Pedidos Pendentes' : 'Pedidos Transmitidos'}
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(getTotalValue())}</p>
-                <p className="text-sm text-gray-600">Valor Total</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{formatCurrency(getTotalValue())}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Valor Total</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Botões de Ação */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <Button onClick={() => navigateTo('/new-order')} className="w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+          <Button onClick={() => navigateTo('/new-order')} className="w-full text-sm py-2">
             <Plus size={16} className="mr-2" />
             Novo Pedido
           </Button>
@@ -263,7 +265,7 @@ const MyOrders = () => {
             onClick={() => navigateTo('/transmit-orders')} 
             variant="outline"
             disabled={getFilteredOrdersCount('pending') === 0}
-            className="w-full"
+            className="w-full text-sm py-2"
           >
             <Send size={16} className="mr-2" />
             Transmitir ({getFilteredOrdersCount('pending')})
@@ -271,8 +273,8 @@ const MyOrders = () => {
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <Button onClick={loadAllOrders} variant="outline" size="sm">
-            <RefreshCw size={16} className="mr-1" />
+          <Button onClick={loadAllOrders} variant="outline" size="sm" className="text-xs px-3 py-2">
+            <RefreshCw size={14} className="mr-1" />
             Atualizar
           </Button>
         </div>
@@ -302,12 +304,12 @@ const MyOrders = () => {
         ) : (
           <div className="space-y-4">
             {Object.entries(groupedOrders).map(([customerName, customerOrders]) => (
-              <Card key={customerName}>
+              <Card key={customerName} className="overflow-hidden">
                 <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
-                    <Users size={20} className="mr-2 text-blue-600" />
-                    {customerName}
-                    <Badge variant="secondary" className="ml-2">
+                  <CardTitle className="flex items-center text-base sm:text-lg flex-wrap">
+                    <Users size={20} className="mr-2 text-blue-600 flex-shrink-0" />
+                    <span className="truncate min-w-0 flex-1">{customerName}</span>
+                    <Badge variant="secondary" className="ml-2 text-xs flex-shrink-0">
                       {customerOrders.length} pedido(s)
                     </Badge>
                   </CardTitle>
@@ -315,23 +317,23 @@ const MyOrders = () => {
                 <CardContent className="pt-0">
                   <div className="space-y-3">
                     {customerOrders.map((order) => (
-                      <div key={order.id} className="border rounded-lg p-3 bg-white">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-medium">
+                      <div key={order.id} className="border rounded-lg p-3 bg-white overflow-hidden">
+                        <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate">
                               Pedido #{order.id?.substring(0, 8)}
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-xs text-gray-500">
                               {formatDate(order.date)}
                             </p>
                           </div>
                           
-                          <div className="text-right">
-                            <div className="flex gap-1 mb-1">
-                              <Badge className={statusColors[order.status] || statusColors.pending}>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <div className="flex flex-wrap gap-1 justify-end">
+                              <Badge className={`${statusColors[order.status] || statusColors.pending} text-xs`}>
                                 {getStatusLabel(order.status)}
                               </Badge>
-                              <Badge className={syncStatusColors[order.sync_status] || syncStatusColors.pending_sync}>
+                              <Badge className={`${syncStatusColors[order.sync_status] || syncStatusColors.pending_sync} text-xs`}>
                                 {getSyncStatusLabel(order.sync_status)}
                               </Badge>
                             </div>
@@ -342,13 +344,13 @@ const MyOrders = () => {
                         </div>
                         
                         {order.reason && (
-                          <p className="text-sm text-red-600 mb-2 italic">
+                          <p className="text-xs text-red-600 mb-2 italic truncate">
                             Motivo: {order.reason}
                           </p>
                         )}
                         
                         {order.notes && (
-                          <p className="text-sm text-gray-600 mb-2 italic">
+                          <p className="text-xs text-gray-600 mb-2 italic truncate">
                             "{order.notes}"
                           </p>
                         )}
@@ -359,13 +361,14 @@ const MyOrders = () => {
                           </p>
                         )}
                         
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => navigateTo(`/order-details/${order.id}`)}
+                            className="text-xs px-2 py-1 h-auto"
                           >
-                            <Eye size={14} className="mr-1" />
+                            <Eye size={12} className="mr-1" />
                             Ver
                           </Button>
                           
@@ -374,8 +377,9 @@ const MyOrders = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => editOrder(order)}
+                              className="text-xs px-2 py-1 h-auto"
                             >
-                              <Edit size={14} className="mr-1" />
+                              <Edit size={12} className="mr-1" />
                               Editar
                             </Button>
                           )}
@@ -384,8 +388,9 @@ const MyOrders = () => {
                             variant="destructive"
                             size="sm"
                             onClick={() => deleteOrder(order.id!, order.sync_status)}
+                            className="text-xs px-2 py-1 h-auto"
                           >
-                            <Trash2 size={14} className="mr-1" />
+                            <Trash2 size={12} className="mr-1" />
                             Deletar
                           </Button>
                         </div>
