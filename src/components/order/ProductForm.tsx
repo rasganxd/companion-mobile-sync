@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import ProductNavigation from './ProductNavigation';
 import QuantityInput from './QuantityInput';
 import { supabase } from '@/integrations/supabase/client';
+import { useProductPricing } from '@/hooks/useProductPricing';
 
 interface Product {
   id: string;
@@ -15,6 +16,9 @@ interface Product {
   stock: number;
   unit?: string;
   cost?: number;
+  has_subunit?: boolean;
+  subunit?: string;
+  subunit_ratio?: number;
 }
 
 interface PaymentTable {
@@ -45,6 +49,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
   onAddItem
 }) => {
   const [paymentTables, setPaymentTables] = useState<PaymentTable[]>([]);
+  const { displayUnit, mainUnit, subUnit, ratio, pricePerMainUnit } = useProductPricing(product);
 
   useEffect(() => {
     const fetchPaymentTables = async () => {
@@ -82,18 +87,18 @@ const ProductForm: React.FC<ProductFormProps> = ({
       {/* Product Details Grid - Smaller spacing */}
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Unidade:</Label>
+          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Unidade de Venda:</Label>
           <Input
-            value={product.unit || 'UN'}
+            value={displayUnit}
             readOnly
             className="h-7 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
           />
         </div>
         
         <div>
-          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Preço Unitário:</Label>
+          <Label className="block mb-0.5 text-xs font-medium text-gray-700">Preço {mainUnit}:</Label>
           <Input
-            value={`R$ ${product.cost?.toFixed(2) || '0,00'}`}
+            value={`R$ ${pricePerMainUnit.toFixed(2)}`}
             readOnly
             className="h-7 w-full bg-gray-100 border border-gray-300 text-xs cursor-not-allowed"
           />
@@ -127,7 +132,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         quantity={quantity} 
         onQuantityChange={onQuantityChange} 
         onAddItem={onAddItem} 
-        price={product.price} 
+        product={product}
       />
     </div>
   );

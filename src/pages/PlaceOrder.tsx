@@ -12,6 +12,7 @@ import ProductHeader from '@/components/order/ProductHeader';
 import OrderItemsList from '@/components/order/OrderItemsList';
 import ActionButtons from '@/components/order/ActionButtons';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useProductPricing } from '@/hooks/useProductPricing';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,9 @@ interface Product {
   stock: number;
   unit?: string;
   cost?: number;
+  has_subunit?: boolean;
+  subunit?: string;
+  subunit_ratio?: number;
 }
 
 const PlaceOrder = () => {
@@ -75,6 +79,9 @@ const PlaceOrder = () => {
   // Novo estado para controlar o dialog de descarte
   const [showDiscardDialog, setShowDiscardDialog] = useState(false);
   
+  const currentProduct = products[currentProductIndex] || null;
+  const { unitPrice, displayUnit } = useProductPricing(currentProduct);
+  
   // Load client data and products from Supabase
   useEffect(() => {
     const fetchData = async () => {
@@ -82,10 +89,10 @@ const PlaceOrder = () => {
         setIsLoading(true);
         console.log('🛒 PlaceOrder - received state:', location.state);
         
-        // Fetch products
+        // Fetch products with all necessary fields for pricing
         const { data: productsData, error: productsError } = await supabase
           .from('products')
-          .select('id, name, price, code, stock, unit, cost')
+          .select('id, name, price, code, stock, unit, cost, has_subunit, subunit, subunit_ratio')
           .order('name');
         
         if (productsError) throw productsError;
@@ -212,8 +219,6 @@ const PlaceOrder = () => {
     }
   };
   
-  const currentProduct = products[currentProductIndex] || null;
-  
   // Nova função para filtrar produtos
   const handleProductSearchChange = (value: string) => {
     setProductSearchQuery(value);
@@ -289,15 +294,15 @@ const PlaceOrder = () => {
         productId: currentProduct.id,
         productName: currentProduct.name,
         quantity: parseFloat(quantity),
-        price: currentProduct.price,
+        price: unitPrice, // Usar o preço unitário calculado correto
         code: currentProduct.code?.toString() || '',
-        unit: currentProduct.unit || 'UN'
+        unit: displayUnit // Usar a unidade de venda correta
       };
       
       setOrderItems([...orderItems, newItem]);
     }
     
-    toast.success(`${quantity} ${currentProduct.unit || 'UN'} de ${currentProduct.name} adicionado`);
+    toast.success(`${quantity} ${displayUnit} de ${currentProduct.name} adicionado`);
     setQuantity('');
   };
   
