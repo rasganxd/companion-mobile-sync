@@ -49,20 +49,31 @@ const ClientSearchDialog: React.FC<ClientSearchDialogProps> = ({
           <CommandList>
             <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
             <CommandGroup heading="Clientes">
-              {filteredClients.map((client) => (
-                <CommandItem
-                  key={client.id}
-                  onSelect={() => onSelectClient(client)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{client.company_name || client.name}</span>
-                    {client.company_name && client.name && (
-                      <span className="text-sm text-gray-500">Razão Social: {client.name}</span>
-                    )}
-                  </div>
-                </CommandItem>
-              ))}
+              {filteredClients.map((client) => {
+                // Debug logs
+                console.log('🔍 ClientSearchDialog - client:', client);
+                console.log('🔍 ClientSearchDialog - company_name:', client.company_name);
+                console.log('🔍 ClientSearchDialog - name:', client.name);
+                
+                // Priorizar nome fantasia
+                const displayName = client.company_name || client.name;
+                const secondaryName = client.company_name ? client.name : null;
+                
+                return (
+                  <CommandItem
+                    key={client.id}
+                    onSelect={() => onSelectClient(client)}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{displayName}</span>
+                      {secondaryName && (
+                        <span className="text-sm text-gray-500">Razão Social: {secondaryName}</span>
+                      )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

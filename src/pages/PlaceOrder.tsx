@@ -120,6 +120,8 @@ const PlaceOrder = () => {
         
         if (clientsError) throw clientsError;
         
+        console.log('🔍 PlaceOrder - clientsData from Supabase:', clientsData);
+        
         setClients(clientsData || []);
         setFilteredClients(clientsData || []);
         
@@ -146,8 +148,11 @@ const PlaceOrder = () => {
           
           if (client) {
             console.log('✅ Client found in database:', client);
+            console.log('🔍 Client company_name:', client.company_name);
+            console.log('🔍 Client name (razão social):', client.name);
             await loadClientExistingOrder(client);
-            toast.success(`Cliente ${client.company_name || client.name} selecionado automaticamente`);
+            const displayName = client.company_name || client.name;
+            toast.success(`Cliente ${displayName} selecionado automaticamente`);
           } else {
             // If not found in database, create a temporary client object with the passed data
             console.log('⚠️ Client not found in database, using passed data');
@@ -174,6 +179,10 @@ const PlaceOrder = () => {
 
   const loadClientExistingOrder = async (client: Client) => {
     try {
+      console.log('🔍 loadClientExistingOrder - client recebido:', client);
+      console.log('🔍 loadClientExistingOrder - company_name:', client.company_name);
+      console.log('🔍 loadClientExistingOrder - name:', client.name);
+      
       setSelectedClient(client);
       
       // Verificar se há pedido existente para este cliente
@@ -355,9 +364,11 @@ const PlaceOrder = () => {
   };
 
   const handleSelectClient = async (client: Client) => {
+    console.log('🔍 handleSelectClient - client selecionado:', client);
     await loadClientExistingOrder(client);
     setSearchOpen(false);
-    toast.success(`Cliente ${client.company_name || client.name} selecionado`);
+    const displayName = client.company_name || client.name;
+    toast.success(`Cliente ${displayName} selecionado`);
   };
 
   const handleFinishOrder = async () => {
@@ -378,10 +389,13 @@ const PlaceOrder = () => {
       
       // Create or update order locally with offline status
       const orderId = existingOrderId || `local_${Date.now()}`;
+      const customerDisplayName = selectedClient.company_name || selectedClient.name;
+      console.log('🔍 handleFinishOrder - customerDisplayName:', customerDisplayName);
+      
       const orderData = {
         id: orderId,
         customer_id: selectedClient.id,
-        customer_name: selectedClient.company_name || selectedClient.name, // Priorizar nome fantasia
+        customer_name: customerDisplayName, // Usar nome fantasia prioritariamente
         total: parseFloat(calculateTotal()),
         status: 'pending',
         payment_method: paymentMethod,

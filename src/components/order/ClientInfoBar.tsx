@@ -18,12 +18,21 @@ const ClientInfoBar: React.FC<ClientInfoBarProps> = ({
   selectedClient,
   onClientSearch
 }) => {
+  // Debug logs para investigar o problema
+  console.log('🔍 ClientInfoBar - selectedClient:', selectedClient);
+  console.log('🔍 ClientInfoBar - company_name:', selectedClient.company_name);
+  console.log('🔍 ClientInfoBar - name (razão social):', selectedClient.name);
+  
+  // Determinar qual nome exibir (priorizar nome fantasia)
+  const displayName = selectedClient.company_name || selectedClient.name;
+  console.log('🔍 ClientInfoBar - displayName final:', displayName);
+  
   return (
     <div className="bg-app-blue text-white px-3 py-1 text-sm">
       {selectedClient.id ? (
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {selectedClient.company_name || selectedClient.name}
+            <span className="font-semibold">{selectedClient.code || 'S/N'}</span> - {displayName}
           </div>
           <AppButton 
             variant="gray" 
