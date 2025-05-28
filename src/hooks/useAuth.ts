@@ -22,11 +22,14 @@ export const useAuth = () => {
       if (authenticatedSalesRep) {
         try {
           const salesRepData = JSON.parse(authenticatedSalesRep);
+          console.log('🔍 useAuth - Loaded sales rep from localStorage:', salesRepData);
           setSalesRep(salesRepData);
         } catch (error) {
           console.error('Error parsing sales rep data:', error);
           localStorage.removeItem('authenticated_sales_rep');
         }
+      } else {
+        console.log('🔍 useAuth - No authenticated sales rep found in localStorage');
       }
       
       setIsLoading(false);

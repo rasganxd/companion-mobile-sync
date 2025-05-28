@@ -13,6 +13,7 @@ import OrderItemsList from '@/components/order/OrderItemsList';
 import ActionButtons from '@/components/order/ActionButtons';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useProductPricing } from '@/hooks/useProductPricing';
+import { useAuth } from '@/hooks/useAuth';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,8 @@ interface Product {
 const PlaceOrder = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { salesRep } = useAuth();
+  
   const [products, setProducts] = useState<Product[]>([]);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
@@ -89,6 +92,16 @@ const PlaceOrder = () => {
         setIsLoading(true);
         console.log('🛒 PlaceOrder - received state:', location.state);
         
+        // Verificar se o vendedor está logado
+        if (!salesRep || !salesRep.id) {
+          console.error('❌ Sales rep not found or not logged in');
+          toast.error('Vendedor não encontrado. Faça login novamente.');
+          navigate('/login');
+          return;
+        }
+
+        console.log('👤 Logged sales rep:', salesRep);
+        
         // Fetch products with all necessary fields for pricing
         const { data: productsData, error: productsError } = await supabase
           .from('products')
@@ -111,16 +124,17 @@ const PlaceOrder = () => {
           setPaymentMethod(paymentTablesData[0].name);
         }
         
-        // Fetch all clients for search
+        // Fetch ONLY clients that belong to the logged sales rep
         const { data: clientsData, error: clientsError } = await supabase
           .from('customers')
           .select('id, name, company_name, code')
           .eq('active', true)
+          .eq('sales_rep_id', salesRep.id) // FILTRO CRUCIAL: apenas clientes do vendedor logado
           .order('company_name');
         
         if (clientsError) throw clientsError;
         
-        console.log('🔍 PlaceOrder - clientsData from Supabase:', clientsData);
+        console.log(`🔍 PlaceOrder - loaded ${clientsData?.length || 0} clients for sales rep ${salesRep.name}:`, clientsData);
         
         setClients(clientsData || []);
         setFilteredClients(clientsData || []);
@@ -175,7 +189,7 @@ const PlaceOrder = () => {
     };
     
     fetchData();
-  }, [location.state]);
+  }, [location.state, salesRep]);
 
   const loadClientExistingOrder = async (client: Client) => {
     try {
@@ -487,6 +501,24 @@ const PlaceOrder = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-lg text-gray-600">Carregando dados...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salesRep || !salesRep.id) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header 
+          title="Digitação de Pedidos"
+          backgroundColor="blue"
+          showBackButton
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-lg text-red-600">Erro: Vendedor não identificado</div>
+            <div className="text-sm text-gray-500 mt-2">Faça login novamente</div>
           </div>
         </div>
       </div>

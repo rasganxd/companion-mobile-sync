@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Download, Eye, Check, X, RefreshCw, AlertCircle } from 'lucide-react';
+import { Download, Eye, Check, X, RefreshCw, AlertCircle, User, AlertTriangle } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ interface PendingMobileOrder {
   code: number;
   customer_id: string;
   customer_name: string;
+  sales_rep_id?: string;
+  sales_rep_name?: string;
   date: string;
   status: string;
   total: number;
@@ -94,6 +96,12 @@ const MobileOrdersImport = () => {
 
       console.log('📦 Mobile order data:', mobileOrder);
 
+      // Verificação de segurança para pedidos sem vendedor
+      if (!mobileOrder.sales_rep_id) {
+        toast.error('Erro: Este pedido não possui vendedor associado e não pode ser importado. Entre em contato com o suporte.');
+        return;
+      }
+
       // Usar o DatabaseAdapter para salvar no banco local
       const db = getDatabaseAdapter();
       
@@ -102,6 +110,8 @@ const MobileOrdersImport = () => {
         id: mobileOrder.id,
         customer_id: mobileOrder.customer_id,
         customer_name: mobileOrder.customer_name,
+        sales_rep_id: mobileOrder.sales_rep_id,
+        sales_rep_name: mobileOrder.sales_rep_name,
         date: mobileOrder.date,
         status: mobileOrder.status,
         total: mobileOrder.total,
@@ -136,6 +146,7 @@ const MobileOrdersImport = () => {
       const { error: logError } = await supabase
         .from('sync_logs')
         .insert({
+          sales_rep_id: mobileOrder.sales_rep_id,
           event_type: 'mobile_import',
           data_type: 'orders',
           records_count: 1,
@@ -144,7 +155,9 @@ const MobileOrdersImport = () => {
             order_id: orderId,
             imported_by: 'desktop_admin',
             import_date: new Date().toISOString(),
-            total: mobileOrder.total
+            total: mobileOrder.total,
+            sales_rep_id: mobileOrder.sales_rep_id,
+            sales_rep_name: mobileOrder.sales_rep_name
           }
         });
 
@@ -313,6 +326,23 @@ const MobileOrdersImport = () => {
                       <p className="text-sm text-gray-500">
                         Pedido #{order.code} • {formatDate(order.created_at)}
                       </p>
+                      
+                      {/* Informações do Vendedor */}
+                      {order.sales_rep_id && order.sales_rep_name ? (
+                        <div className="flex items-center gap-1 mt-1">
+                          <User size={14} className="text-blue-600" />
+                          <span className="text-sm font-medium text-blue-600">
+                            {order.sales_rep_name}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 mt-1">
+                          <AlertTriangle size={14} className="text-red-500" />
+                          <span className="text-sm font-medium text-red-500">
+                            Vendedor não identificado
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-right">
                       <Badge variant="secondary" className="bg-purple-100 text-purple-800 mb-1">
@@ -363,9 +393,9 @@ const MobileOrdersImport = () => {
                     
                     <Button
                       onClick={() => importOrder(order.id)}
-                      disabled={importingOrderId === order.id}
+                      disabled={importingOrderId === order.id || !order.sales_rep_id}
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
                     >
                       {importingOrderId === order.id ? (
                         <RefreshCw className="animate-spin mr-1" size={14} />
@@ -385,6 +415,18 @@ const MobileOrdersImport = () => {
                       Rejeitar
                     </Button>
                   </div>
+                  
+                  {/* Warning para pedidos sem vendedor */}
+                  {!order.sales_rep_id && (
+                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle size={16} className="text-red-500" />
+                        <span className="text-sm text-red-700 font-medium">
+                          Este pedido não pode ser importado pois não possui vendedor associado.
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}

@@ -61,6 +61,21 @@ serve(async (req) => {
 
     console.log('✅ User authenticated:', user.id);
 
+    // Buscar informações do vendedor baseado no user autenticado
+    const { data: salesRep, error: salesRepError } = await supabase
+      .from('sales_reps')
+      .select('id, code, name, email')
+      .eq('auth_user_id', user.id)
+      .eq('active', true)
+      .single();
+
+    if (salesRepError || !salesRep) {
+      console.error('❌ Sales rep not found for user:', user.id, salesRepError);
+      throw new Error('Sales representative not found for authenticated user');
+    }
+
+    console.log('✅ Sales rep found:', salesRep);
+
     // Parse dos dados do pedido
     const orderData: MobileOrder = await req.json();
     console.log('📦 Received order data:', orderData);
@@ -69,6 +84,22 @@ serve(async (req) => {
     if (!orderData.customer_id || !orderData.total || !orderData.date) {
       throw new Error('Missing required order fields: customer_id, total, date');
     }
+
+    // Verificar se o cliente pertence ao vendedor
+    const { data: customer, error: customerError } = await supabase
+      .from('customers')
+      .select('id, name, company_name, sales_rep_id')
+      .eq('id', orderData.customer_id)
+      .eq('sales_rep_id', salesRep.id)
+      .eq('active', true)
+      .single();
+
+    if (customerError || !customer) {
+      console.error('❌ Customer validation failed:', customerError);
+      throw new Error('Customer not found or does not belong to the authenticated sales representative');
+    }
+
+    console.log('✅ Customer validated:', customer);
 
     // Gerar código do pedido
     const { data: codeData, error: codeError } = await supabase.rpc('get_next_order_code');
@@ -82,7 +113,9 @@ serve(async (req) => {
     // Preparar dados do pedido para inserção na tabela orders_mobile
     const orderToInsert = {
       customer_id: orderData.customer_id,
-      customer_name: orderData.customer_name,
+      customer_name: orderData.customer_name || customer.company_name || customer.name,
+      sales_rep_id: salesRep.id,
+      sales_rep_name: salesRep.name,
       date: orderData.date,
       status: orderData.status,
       total: orderData.total,
@@ -90,8 +123,8 @@ serve(async (req) => {
       payment_method: orderData.payment_method || '',
       code: codeData,
       source_project: 'mobile',
-      imported: false, // Não importado ainda
-      sync_status: 'pending_import' // Status especial para pedidos móveis
+      imported: false,
+      sync_status: 'pending_import'
     };
 
     // Inserir pedido na tabela orders_mobile
@@ -143,6 +176,7 @@ serve(async (req) => {
     const { error: logError } = await supabase
       .from('sync_logs')
       .insert({
+        sales_rep_id: salesRep.id,
         event_type: 'mobile_order_received',
         data_type: 'orders',
         records_count: 1,
@@ -152,7 +186,9 @@ serve(async (req) => {
           customer_id: orderData.customer_id,
           total: orderData.total,
           source: 'mobile_app',
-          imported: false
+          imported: false,
+          sales_rep_id: salesRep.id,
+          sales_rep_name: salesRep.name
         }
       });
 
@@ -165,6 +201,8 @@ serve(async (req) => {
         success: true,
         order_id: createdOrder.id,
         code: createdOrder.code,
+        sales_rep_id: salesRep.id,
+        sales_rep_name: salesRep.name,
         message: 'Pedido recebido e aguardando importação manual',
         status: 'pending_import'
       }),
