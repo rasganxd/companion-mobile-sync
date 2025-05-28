@@ -1,125 +1,123 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Server, CheckCircle, XCircle } from 'lucide-react';
+import { Database, CheckCircle, XCircle, User, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import ApiService, { ApiConfig } from '@/services/ApiService';
+import ApiService from '@/services/ApiService';
+import { supabase } from '@/integrations/supabase/client';
 
 const ApiSettings = () => {
   const navigate = useNavigate();
   const apiService = ApiService.getInstance();
   
-  const [config, setConfig] = useState<ApiConfig>({
-    baseUrl: '',
-    apiKey: '',
-    salesRepId: '' // Mantido para compatibilidade, mas não usado
-  });
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   useEffect(() => {
-    const savedConfig = apiService.getConfig();
-    if (savedConfig) {
-      setConfig(savedConfig);
-      testConnection();
-    }
+    checkUserSession();
+    testConnection();
   }, []);
 
-  const handleInputChange = (field: keyof ApiConfig, value: string) => {
-    setConfig(prev => ({
-      ...prev,
-      [field]: value
-    }));
+  const checkUserSession = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error getting session:', error);
+        return;
+      }
+      
+      if (session?.user) {
+        setUserInfo({
+          email: session.user.email,
+          name: session.user.user_metadata?.name || 'Usuário',
+          sales_rep_id: session.user.user_metadata?.sales_rep_id || 'N/A'
+        });
+      }
+    } catch (error) {
+      console.error('Error checking user session:', error);
+    }
   };
 
   const testConnection = async () => {
-    if (!config.baseUrl || !config.apiKey) {
-      toast.error('Preencha URL base e API Key primeiro');
-      return;
-    }
-
     setIsLoading(true);
     try {
-      apiService.setConfig(config);
       const connected = await apiService.testConnection();
       setIsConnected(connected);
       
       if (connected) {
-        toast.success('Conexão com API estabelecida com sucesso!');
+        toast.success('Conexão com Supabase estabelecida com sucesso!');
       } else {
-        toast.error('Falha ao conectar com a API');
+        toast.error('Falha ao conectar com Supabase');
       }
     } catch (error) {
       setIsConnected(false);
-      toast.error(`Erro de conexão: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro de conexão: ${errorMessage}`);
+      console.error('Connection test error:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const saveConfig = () => {
-    if (!config.baseUrl || !config.apiKey) {
-      toast.error('URL base e API Key são obrigatórios');
-      return;
+  const handleContinue = () => {
+    if (isConnected) {
+      toast.success('Sistema configurado e pronto para uso!');
+      navigate('/sync-settings');
+    } else {
+      toast.error('Resolva os problemas de conexão antes de continuar');
     }
-
-    apiService.setConfig(config);
-    toast.success('Configurações salvas com sucesso!');
-    navigate('/sync-settings');
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
-        title="Configuração da API" 
+        title="Status da Conexão" 
         showBackButton={true} 
         backgroundColor="blue" 
       />
       
       <div className="p-4 flex-1">
+        {/* User Info Card */}
+        {userInfo && (
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="mr-2" size={20} />
+                Informações do Usuário
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Email:</span>
+                <span className="font-medium">{userInfo.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nome:</span>
+                <span className="font-medium">{userInfo.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">ID Vendedor:</span>
+                <span className="font-medium font-mono text-sm">{userInfo.sales_rep_id}</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Connection Status Card */}
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <Server className="mr-2" size={20} />
-              Configuração da API REST
+              <Database className="mr-2" size={20} />
+              Status da Conexão Supabase
             </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="baseUrl">URL Base da API</Label>
-              <Input
-                id="baseUrl"
-                placeholder="https://seu-projeto.lovableproject.com"
-                value={config.baseUrl}
-                onChange={(e) => handleInputChange('baseUrl', e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="sua-api-key-aqui"
-                value={config.apiKey}
-                onChange={(e) => handleInputChange('apiKey', e.target.value)}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="mb-4">
-          <CardHeader>
-            <CardTitle>Status da Conexão</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between mb-4">
-              <span>Status:</span>
+              <span>Status da Conexão:</span>
               <div className="flex items-center">
                 {isConnected === null ? (
                   <span className="text-gray-500">Não testado</span>
@@ -136,10 +134,27 @@ const ApiSettings = () => {
                 )}
               </div>
             </div>
+
+            <div className="flex items-center justify-between mb-4">
+              <span>Autenticação:</span>
+              <div className="flex items-center">
+                {userInfo ? (
+                  <>
+                    <CheckCircle className="text-green-500 mr-1" size={16} />
+                    <span className="text-green-500">Logado</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="text-red-500 mr-1" size={16} />
+                    <span className="text-red-500">Não logado</span>
+                  </>
+                )}
+              </div>
+            </div>
             
             <Button 
               onClick={testConnection}
-              disabled={isLoading || !config.baseUrl || !config.apiKey}
+              disabled={isLoading}
               className="w-full mb-2"
               variant="outline"
             >
@@ -147,30 +162,51 @@ const ApiSettings = () => {
             </Button>
             
             <Button 
-              onClick={saveConfig}
+              onClick={handleContinue}
               disabled={!isConnected}
               className="w-full"
             >
-              Salvar Configurações
+              Continuar para Sincronização
             </Button>
           </CardContent>
         </Card>
 
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-medium mb-2">Como obter suas credenciais:</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
-            <li>• A URL base é o endereço do seu projeto Desktop no Lovable</li>
-            <li>• A API Key deve ser gerada nas configurações do projeto Desktop</li>
-          </ul>
-          
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>✅ Autenticação Automática:</strong> O sistema agora usa automaticamente 
-              sua autenticação Supabase para filtrar os dados. Não é mais necessário configurar 
-              ID do vendedor - isso é feito automaticamente pelo JWT token.
-            </p>
-          </div>
-        </div>
+        {/* Information Card */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertCircle className="mr-2" size={20} />
+              Informações do Sistema
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>✅ Autenticação Automática:</strong> O sistema usa automaticamente 
+                  sua autenticação Supabase para filtrar os dados. Não é necessário configurar 
+                  credenciais adicionais.
+                </p>
+              </div>
+              
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>📱 Modo Mobile:</strong> Os pedidos criados no mobile aguardam 
+                  importação manual no sistema desktop para maior controle.
+                </p>
+              </div>
+              
+              {!isConnected && (
+                <div className="p-3 bg-red-50 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>❌ Problemas de Conexão:</strong> Verifique se você está logado 
+                    e se sua conexão com internet está funcionando. Tente fazer logout e login novamente.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

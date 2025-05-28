@@ -48,7 +48,7 @@ class ApiService {
   private static instance: ApiService;
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co';
   private apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
-  private useMobileImportEndpoint = true; // ✅ Mobile usa endpoint de importação por padrão
+  private useMobileImportEndpoint = true;
 
   private constructor() {}
 
@@ -84,7 +84,6 @@ class ApiService {
     console.log(`📱 Mobile import mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
-  // Método para bloquear uso do endpoint orders-api no mobile
   private validateEndpointUsage(): void {
     if (this.useMobileImportEndpoint) {
       console.log('✅ Using mobile import endpoint - pedidos aguardam importação manual');
@@ -211,19 +210,38 @@ class ApiService {
 
   async testConnection(): Promise<boolean> {
     try {
-      if (this.useMobileImportEndpoint) {
-        // Test mobile import endpoint
-        const { data, error } = await supabase.functions.invoke('mobile-orders-import', {
-          body: { test: true }
-        });
-        return !error;
-      } else {
-        // Test regular API
-        await this.request('/orders?limit=1');
-        return true;
+      console.log('🔄 Testing Supabase connection...');
+      
+      // Verificar se o usuário está autenticado
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      
+      if (authError) {
+        console.error('❌ Auth error:', authError);
+        throw new Error(`Erro de autenticação: ${authError.message}`);
       }
+      
+      if (!session) {
+        console.error('❌ No active session');
+        throw new Error('Usuário não está logado');
+      }
+      
+      console.log('✅ User authenticated:', session.user.email);
+      
+      // Fazer uma query simples para testar a conexão
+      const { data, error } = await supabase
+        .from('customers')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.error('❌ Database connection error:', error);
+        throw new Error(`Erro na conexão com banco: ${error.message}`);
+      }
+      
+      console.log('✅ Database connection successful');
+      return true;
     } catch (error) {
-      console.error('Connection test failed:', error);
+      console.error('❌ Connection test failed:', error);
       return false;
     }
   }
@@ -232,7 +250,6 @@ class ApiService {
     try {
       console.log('📝 Creating order with data:', order);
       
-      // Validar uso do endpoint
       this.validateEndpointUsage();
       
       if (this.useMobileImportEndpoint) {
@@ -246,7 +263,6 @@ class ApiService {
         } as Order;
       }
 
-      // ❌ BLOQUEADO: Usar endpoint regular se não estiver em modo móvel
       console.warn('❌ ATENÇÃO: Usando endpoint direto - pedido aparecerá imediatamente no sistema');
       
       const code = await this.getNextOrderCode();
@@ -284,7 +300,6 @@ class ApiService {
     try {
       console.log('📦 Creating order with items:', { order, items });
       
-      // Validar uso do endpoint
       this.validateEndpointUsage();
       
       if (this.useMobileImportEndpoint) {
@@ -299,12 +314,10 @@ class ApiService {
         } as Order;
       }
 
-      // ❌ BLOQUEADO: Criar pedido primeiro usando endpoint regular
       console.warn('❌ ATENÇÃO: Usando endpoint direto - pedido aparecerá imediatamente no sistema');
       
       const createdOrder = await this.createOrder(order);
       
-      // Se temos um ID válido, criar os itens
       if (items.length > 0 && createdOrder.id && createdOrder.id !== 'created-successfully') {
         console.log('📋 Creating order items...');
         const itemPromises = items.map(item => 
