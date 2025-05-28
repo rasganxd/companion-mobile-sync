@@ -23,7 +23,7 @@ class WebDatabaseService {
   }
 
   private ensureStorageStructure(): void {
-    const tables = ['clients', 'orders', 'products', 'visit_routes', 'sync_log'];
+    const tables = ['clients', 'orders', 'products', 'visit_routes', 'sync_log', 'payment_tables', 'sales_reps'];
     
     tables.forEach(table => {
       if (!localStorage.getItem(table)) {
@@ -228,6 +228,118 @@ class WebDatabaseService {
     });
     
     return activeOrders;
+  }
+
+  async saveClient(client: any): Promise<void> {
+    const clients = this.getTableData('clients');
+    const now = new Date().toISOString();
+    
+    const clientToSave = {
+      ...client,
+      updated_at: now,
+      sync_status: 'synced'
+    };
+    
+    // Check if client already exists (for updates)
+    const existingIndex = clients.findIndex(c => c.id === clientToSave.id);
+    
+    if (existingIndex >= 0) {
+      console.log(`📝 Updating existing client ${clientToSave.id}`);
+      clients[existingIndex] = clientToSave;
+    } else {
+      console.log(`📝 Creating new client ${clientToSave.id}`);
+      clients.push(clientToSave);
+    }
+    
+    this.setTableData('clients', clients);
+    console.log('💾 Client saved to localStorage:', {
+      id: clientToSave.id,
+      name: clientToSave.name,
+      sync_status: clientToSave.sync_status
+    });
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    const products = this.getTableData('products');
+    const now = new Date().toISOString();
+    
+    const productToSave = {
+      ...product,
+      updated_at: now,
+      sync_status: 'synced'
+    };
+    
+    // Check if product already exists (for updates)
+    const existingIndex = products.findIndex(p => p.id === productToSave.id);
+    
+    if (existingIndex >= 0) {
+      console.log(`📝 Updating existing product ${productToSave.id}`);
+      products[existingIndex] = productToSave;
+    } else {
+      console.log(`📝 Creating new product ${productToSave.id}`);
+      products.push(productToSave);
+    }
+    
+    this.setTableData('products', products);
+    console.log('💾 Product saved to localStorage:', {
+      id: productToSave.id,
+      name: productToSave.name,
+      sync_status: productToSave.sync_status
+    });
+  }
+
+  async savePaymentTable(paymentTable: any): Promise<void> {
+    const paymentTables = this.getTableData('payment_tables');
+    const now = new Date().toISOString();
+    
+    const paymentTableToSave = {
+      ...paymentTable,
+      updated_at: now
+    };
+    
+    // Check if payment table already exists (for updates)
+    const existingIndex = paymentTables.findIndex(pt => pt.id === paymentTableToSave.id);
+    
+    if (existingIndex >= 0) {
+      console.log(`📝 Updating existing payment table ${paymentTableToSave.id}`);
+      paymentTables[existingIndex] = paymentTableToSave;
+    } else {
+      console.log(`📝 Creating new payment table ${paymentTableToSave.id}`);
+      paymentTables.push(paymentTableToSave);
+    }
+    
+    this.setTableData('payment_tables', paymentTables);
+    console.log('💾 Payment table saved to localStorage:', {
+      id: paymentTableToSave.id,
+      name: paymentTableToSave.name
+    });
+  }
+
+  async saveSalesRep(salesRep: any): Promise<void> {
+    const salesReps = this.getTableData('sales_reps');
+    const now = new Date().toISOString();
+    
+    const salesRepToSave = {
+      ...salesRep,
+      updated_at: now
+    };
+    
+    // Check if sales rep already exists (for updates)
+    const existingIndex = salesReps.findIndex(sr => sr.id === salesRepToSave.id);
+    
+    if (existingIndex >= 0) {
+      console.log(`📝 Updating existing sales rep ${salesRepToSave.id}`);
+      salesReps[existingIndex] = salesRepToSave;
+    } else {
+      console.log(`📝 Creating new sales rep ${salesRepToSave.id}`);
+      salesReps.push(salesRepToSave);
+    }
+    
+    this.setTableData('sales_reps', salesReps);
+    console.log('💾 Sales rep saved to localStorage:', {
+      id: salesRepToSave.id,
+      name: salesRepToSave.name
+    });
   }
 
   async closeDatabase(): Promise<void> {

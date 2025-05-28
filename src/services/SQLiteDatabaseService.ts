@@ -126,6 +126,29 @@ class SQLiteDatabaseService {
         status TEXT NOT NULL,
         details TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS payment_tables (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT,
+        terms TEXT,
+        installments TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS sales_reps (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        code INTEGER,
+        email TEXT,
+        phone TEXT,
+        active INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT
+      );
     `;
 
     await this.db.execute(createTablesSQL);
@@ -325,6 +348,121 @@ class SQLiteDatabaseService {
     } catch (error) {
       console.error('❌ Error getting client by ID:', error);
       return null;
+    }
+  }
+
+  async saveClient(client: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    const now = new Date().toISOString();
+    
+    try {
+      await this.db!.run(
+        'INSERT OR REPLACE INTO clients (id, name, phone, address, email, lastVisit, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          client.id, 
+          client.name, 
+          client.phone || '',
+          client.address || '',
+          client.email || '',
+          client.lastVisit || '',
+          'synced',
+          now
+        ]
+      );
+      
+      console.log('💾 Client saved to SQLite:', {
+        id: client.id,
+        name: client.name,
+        sync_status: 'synced'
+      });
+    } catch (error) {
+      console.error('❌ Error saving client:', error);
+    }
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    const now = new Date().toISOString();
+    
+    try {
+      await this.db!.run(
+        'INSERT OR REPLACE INTO products (id, name, description, price, stock, image_url, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          product.id, 
+          product.name, 
+          product.description || '',
+          product.price || 0,
+          product.stock || 0,
+          product.image_url || '',
+          'synced',
+          now
+        ]
+      );
+      
+      console.log('💾 Product saved to SQLite:', {
+        id: product.id,
+        name: product.name,
+        sync_status: 'synced'
+      });
+    } catch (error) {
+      console.error('❌ Error saving product:', error);
+    }
+  }
+
+  async savePaymentTable(paymentTable: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    const now = new Date().toISOString();
+    
+    try {
+      await this.db!.run(
+        'INSERT OR REPLACE INTO payment_tables (id, name, description, type, terms, installments, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          paymentTable.id, 
+          paymentTable.name, 
+          paymentTable.description || '',
+          paymentTable.type || '',
+          JSON.stringify(paymentTable.terms || {}),
+          JSON.stringify(paymentTable.installments || []),
+          paymentTable.active ? 1 : 0,
+          paymentTable.created_at || now,
+          now
+        ]
+      );
+      
+      console.log('💾 Payment table saved to SQLite:', {
+        id: paymentTable.id,
+        name: paymentTable.name
+      });
+    } catch (error) {
+      console.error('❌ Error saving payment table:', error);
+    }
+  }
+
+  async saveSalesRep(salesRep: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    const now = new Date().toISOString();
+    
+    try {
+      await this.db!.run(
+        'INSERT OR REPLACE INTO sales_reps (id, name, code, email, phone, active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          salesRep.id, 
+          salesRep.name, 
+          salesRep.code || 0,
+          salesRep.email || '',
+          salesRep.phone || '',
+          salesRep.active ? 1 : 0,
+          salesRep.created_at || now,
+          now
+        ]
+      );
+      
+      console.log('💾 Sales rep saved to SQLite:', {
+        id: salesRep.id,
+        name: salesRep.name
+      });
+    } catch (error) {
+      console.error('❌ Error saving sales rep:', error);
     }
   }
 
