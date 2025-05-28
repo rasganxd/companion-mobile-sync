@@ -4,8 +4,11 @@ import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ApiService from '@/services/ApiService';
 import { LocalOrder } from '@/types/order';
+import { logOrderAction } from '@/utils/orderAuditLogger';
+import { useAuth } from '@/hooks/useAuth';
 
 export const useOrderTransmission = () => {
+  const { salesRep } = useAuth();
   const [pendingOrders, setPendingOrders] = useState<LocalOrder[]>([]);
   const [transmittedOrders, setTransmittedOrders] = useState<LocalOrder[]>([]);
   const [errorOrders, setErrorOrders] = useState<LocalOrder[]>([]);
@@ -79,12 +82,35 @@ export const useOrderTransmission = () => {
           await apiService.createOrderWithItems(orderData, order.items || []);
           await db.markOrderAsTransmitted(order.id);
           
+          // Log da transmissão
+          logOrderAction({
+            action: 'ORDER_TRANSMITTED',
+            orderId: order.id,
+            salesRepId: salesRep?.id,
+            salesRepName: salesRep?.name,
+            customerName: order.customer_name,
+            syncStatus: 'transmitted',
+            details: { total: order.total, itemsCount: order.items?.length || 0 }
+          });
+          
           successCount++;
           console.log('✅ Order transmitted successfully:', order.id);
           
         } catch (error) {
           console.error('❌ Error transmitting order:', order.id, error);
           await db.updateSyncStatus('orders', order.id, 'error');
+          
+          // Log do erro
+          logOrderAction({
+            action: 'ORDER_TRANSMISSION_FAILED',
+            orderId: order.id,
+            salesRepId: salesRep?.id,
+            salesRepName: salesRep?.name,
+            customerName: order.customer_name,
+            syncStatus: 'error',
+            details: { error: error.toString() }
+          });
+          
           errorCount++;
         }
       }
@@ -111,6 +137,16 @@ export const useOrderTransmission = () => {
     try {
       const db = getDatabaseAdapter();
       await db.updateSyncStatus('orders', orderId, 'pending_sync');
+      
+      // Log da tentativa
+      logOrderAction({
+        action: 'ORDER_RETRY_QUEUED',
+        orderId,
+        salesRepId: salesRep?.id,
+        salesRepName: salesRep?.name,
+        syncStatus: 'pending_sync'
+      });
+      
       toast.success('Pedido recolocado na fila de transmissão');
       await loadOrders();
     } catch (error) {
@@ -134,6 +170,16 @@ export const useOrderTransmission = () => {
       
       for (const order of errorOrders) {
         await db.updateSyncStatus('orders', order.id, 'pending_sync');
+        
+        // Log da tentativa
+        logOrderAction({
+          action: 'ORDER_RETRY_QUEUED',
+          orderId: order.id,
+          salesRepId: salesRep?.id,
+          salesRepName: salesRep?.name,
+          customerName: order.customer_name,
+          syncStatus: 'pending_sync'
+        });
       }
       
       toast.success(`${errorOrders.length} pedido(s) recolocados na fila de transmissão`);
@@ -145,14 +191,32 @@ export const useOrderTransmission = () => {
   };
 
   const deleteTransmittedOrder = async (orderId: string) => {
-    if (!confirm('Tem certeza que deseja excluir este pedido permanentemente?')) {
+    // Buscar dados do pedido antes de deletar para log
+    const orderToDelete = transmittedOrders.find(order => order.id === orderId);
+    
+    if (!confirm('Tem certeza que deseja excluir este pedido transmitido permanentemente? Esta ação não pode ser desfeita.')) {
       return;
     }
 
     try {
       const db = getDatabaseAdapter();
       await db.deleteOrder(orderId);
-      toast.success('Pedido excluído com sucesso');
+      
+      // Log da exclusão
+      logOrderAction({
+        action: 'ORDER_DELETED_TRANSMITTED',
+        orderId,
+        salesRepId: salesRep?.id,
+        salesRepName: salesRep?.name,
+        customerName: orderToDelete?.customer_name,
+        syncStatus: 'transmitted',
+        details: { 
+          total: orderToDelete?.total,
+          deletedBy: 'transmission_page'
+        }
+      });
+      
+      toast.success('Pedido transmitido excluído com sucesso');
       await loadOrders();
     } catch (error) {
       console.error('Error deleting order:', error);

@@ -112,19 +112,24 @@ const MyOrders = () => {
   }, [activeFilter, orders]);
 
   const deleteOrder = async (orderId: string, syncStatus: string) => {
-    if (syncStatus === 'transmitted') {
-      toast.error('Pedidos transmitidos não podem ser deletados aqui. Use a aba "Transmitidos" em Transmitir Pedidos.');
-      return;
-    }
+    // Confirmar exclusão com mensagem apropriada baseada no status
+    const confirmMessage = syncStatus === 'transmitted' 
+      ? 'Tem certeza que deseja deletar este pedido transmitido? Esta ação não pode ser desfeita.'
+      : 'Tem certeza que deseja deletar este pedido?';
 
-    if (!confirm('Tem certeza que deseja deletar este pedido?')) {
+    if (!confirm(confirmMessage)) {
       return;
     }
 
     try {
       const db = getDatabaseAdapter();
       await db.deleteOrder(orderId);
-      toast.success('Pedido deletado com sucesso');
+      
+      const successMessage = syncStatus === 'transmitted' 
+        ? 'Pedido transmitido deletado com sucesso'
+        : 'Pedido deletado com sucesso';
+      
+      toast.success(successMessage);
       loadAllOrders(); // Recarregar lista
     } catch (error) {
       console.error('Error deleting order:', error);
@@ -391,7 +396,7 @@ const MyOrders = () => {
                             className="text-xs px-2 py-1 h-auto"
                           >
                             <Trash2 size={12} className="mr-1" />
-                            Deletar
+                            {order.sync_status === 'transmitted' ? 'Excluir Transmitido' : 'Deletar'}
                           </Button>
                         </div>
                       </div>
