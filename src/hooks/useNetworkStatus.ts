@@ -29,7 +29,7 @@ export const useNetworkStatus = () => {
           });
 
           // Escutar mudanças de status
-          const listener = Network.addListener('networkStatusChange', (status) => {
+          const listener = await Network.addListener('networkStatusChange', (status) => {
             console.log('📶 Network status changed:', status);
             setNetworkStatus({
               connected: status.connected,
@@ -65,11 +65,15 @@ export const useNetworkStatus = () => {
       }
     };
 
-    const cleanup = initializeNetworkStatus();
+    let cleanup: (() => void) | undefined;
+    
+    initializeNetworkStatus().then(cleanupFn => {
+      cleanup = cleanupFn;
+    });
     
     return () => {
-      if (cleanup instanceof Promise) {
-        cleanup.then(cleanupFn => cleanupFn && cleanupFn());
+      if (cleanup) {
+        cleanup();
       }
     };
   }, []);

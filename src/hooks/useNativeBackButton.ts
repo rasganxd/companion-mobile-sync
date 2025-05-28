@@ -26,11 +26,19 @@ export const useNativeBackButton = () => {
     };
 
     // Registrar listener para o botão físico de voltar
-    const backButtonListener = App.addListener('backButton', handleBackButton);
+    let backButtonListener: any = null;
+    
+    const setupListener = async () => {
+      backButtonListener = await App.addListener('backButton', handleBackButton);
+    };
+    
+    setupListener();
     
     return () => {
       console.log('🧹 Cleaning up native back button handler...');
-      backButtonListener.remove();
+      if (backButtonListener) {
+        backButtonListener.remove();
+      }
     };
   }, [goBack, canGoBack, getCurrentPath]);
 };
