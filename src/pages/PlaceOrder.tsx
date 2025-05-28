@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ChevronLeft, Search, Trash2, Plus } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import AppButton from '@/components/AppButton';
 
 interface Product {
@@ -48,23 +49,59 @@ const PlaceOrder = () => {
 
   const loadClients = useCallback(async () => {
     if (!salesRep?.id) {
+      console.log('🔍 No sales rep ID available for loading clients');
       return;
     }
 
     setIsLoadingClients(true);
     try {
+      console.log('🔄 Loading clients for sales rep:', salesRep.id);
+      
+      // Primeiro, tentar carregar do WebDatabase (localStorage)
       const db = getDatabaseAdapter();
-      const allClients = await db.getClients();
+      const localClients = await db.getClients();
       
-      // Filtrar clientes do vendedor logado
-      const salesRepClients = allClients.filter(client => 
-        client.sales_rep_id === salesRep.id
-      );
+      console.log('📋 Local clients found:', localClients.length);
       
-      setClients(salesRepClients);
+      if (localClients.length > 0) {
+        // Filtrar clientes do vendedor logado
+        const salesRepClients = localClients.filter(client => 
+          client.sales_rep_id === salesRep.id
+        );
+        console.log('👤 Sales rep clients found locally:', salesRepClients.length);
+        setClients(salesRepClients);
+      } else {
+        // Se não há clientes locais, buscar do Supabase
+        console.log('🌐 No local clients found, fetching from Supabase...');
+        const { data: supabaseClients, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('sales_rep_id', salesRep.id)
+          .eq('active', true);
+        
+        if (error) {
+          console.error('❌ Error fetching clients from Supabase:', error);
+          toast.error('Erro ao carregar clientes do servidor');
+        } else {
+          console.log('✅ Clients fetched from Supabase:', supabaseClients?.length || 0);
+          const mappedClients = (supabaseClients || []).map(client => ({
+            id: client.id,
+            name: client.name,
+            company_name: client.company_name,
+            code: client.code,
+            sales_rep_id: client.sales_rep_id
+          }));
+          setClients(mappedClients);
+          
+          // Salvar no localStorage para próximas consultas
+          for (const client of mappedClients) {
+            await db.saveClient(client);
+          }
+        }
+      }
       
     } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
+      console.error('❌ Erro ao carregar clientes:', error);
       toast.error('Erro ao carregar clientes');
     } finally {
       setIsLoadingClients(false);
@@ -74,11 +111,45 @@ const PlaceOrder = () => {
   const loadProducts = useCallback(async () => {
     setIsLoadingProducts(true);
     try {
+      console.log('🔄 Loading products...');
+      
+      // Primeiro, tentar carregar do WebDatabase (localStorage)
       const db = getDatabaseAdapter();
-      const productsData = await db.getProducts();
-      setProducts(productsData);
+      const localProducts = await db.getProducts();
+      
+      console.log('📦 Local products found:', localProducts.length);
+      
+      if (localProducts.length > 0) {
+        setProducts(localProducts);
+      } else {
+        // Se não há produtos locais, buscar do Supabase
+        console.log('🌐 No local products found, fetching from Supabase...');
+        const { data: supabaseProducts, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) {
+          console.error('❌ Error fetching products from Supabase:', error);
+          toast.error('Erro ao carregar produtos do servidor');
+        } else {
+          console.log('✅ Products fetched from Supabase:', supabaseProducts?.length || 0);
+          const mappedProducts = (supabaseProducts || []).map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            stock: product.stock,
+            code: product.code
+          }));
+          setProducts(mappedProducts);
+          
+          // Salvar no localStorage para próximas consultas
+          for (const product of mappedProducts) {
+            await db.saveProduct(product);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
+      console.error('❌ Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');
     } finally {
       setIsLoadingProducts(false);
@@ -393,7 +464,7 @@ const PlaceOrder = () => {
                 ))
               ) : (
                 <div className="text-center py-4 text-gray-500">
-                  Nenhum cliente encontrado
+                  {clients.length === 0 ? 'Nenhum cliente cadastrado para este vendedor' : 'Nenhum cliente encontrado'}
                 </div>
               )}
             </div>
@@ -458,7 +529,7 @@ const PlaceOrder = () => {
                 ))
               ) : (
                 <div className="text-center py-4 text-gray-500">
-                  Nenhum produto encontrado
+                  {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
                 </div>
               )}
             </div>
