@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
@@ -81,9 +82,37 @@ class SyncService {
   }
 
   private async loadSettings(): Promise<void> {
-    // In a real app, load from localStorage or preferences
+    // Load last sync time from localStorage
+    this.loadLastSyncTime();
+    
+    // In a real app, load sync settings from localStorage or preferences
     // For now we just use defaults
     this.setupAutoSync();
+  }
+
+  private loadLastSyncTime(): void {
+    try {
+      const lastSyncString = localStorage.getItem('lastSyncTime');
+      if (lastSyncString) {
+        this.lastSync = new Date(lastSyncString);
+        console.log('📅 Loaded last sync time from localStorage:', this.lastSync);
+      } else {
+        console.log('📅 No previous sync time found in localStorage');
+      }
+    } catch (error) {
+      console.error('❌ Error loading last sync time:', error);
+    }
+  }
+
+  private saveLastSyncTime(): void {
+    try {
+      if (this.lastSync) {
+        localStorage.setItem('lastSyncTime', this.lastSync.toISOString());
+        console.log('💾 Saved last sync time to localStorage:', this.lastSync);
+      }
+    } catch (error) {
+      console.error('❌ Error saving last sync time:', error);
+    }
   }
 
   private setupAutoSync(): void {
@@ -326,8 +355,9 @@ class SyncService {
         console.warn('Failed to mark update as consumed');
       }
 
-      // Update last sync time
+      // Update last sync time and save to localStorage
       this.lastSync = new Date();
+      this.saveLastSyncTime();
       this.notifyStatusChange();
       
       toast.success("Sincronização concluída com sucesso");
