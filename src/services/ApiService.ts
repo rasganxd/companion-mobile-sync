@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -41,13 +40,15 @@ export interface Customer {
 export interface ApiConfig {
   baseUrl: string;
   apiKey: string;
-  salesRepId: string; // Mantido para compatibilidade, mas não usado
+  salesRepId: string;
+  useMobileImportEndpoint?: boolean;
 }
 
 class ApiService {
   private static instance: ApiService;
-  private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/rest/v1';
+  private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co';
   private apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
+  private useMobileImportEndpoint = false;
 
   private constructor() {}
 
@@ -67,7 +68,6 @@ class ApiService {
       'Accept': 'application/json'
     };
 
-    // Adicionar header para forçar retorno de dados em operações POST
     if (method === 'POST') {
       headers['Prefer'] = 'return=representation';
     }
@@ -77,6 +77,11 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  setMobileImportMode(enabled: boolean): void {
+    this.useMobileImportEndpoint = enabled;
+    console.log(`📱 Mobile import mode ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   private async request<T>(
@@ -103,7 +108,6 @@ class ApiService {
       });
 
       console.log('📡 Response status:', response.status, response.statusText);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -116,26 +120,14 @@ class ApiService {
           throw new Error('Acesso negado');
         }
         
-        // Parse error message for better user feedback
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.message && errorData.message.includes('null value in column "code"')) {
-            throw new Error('Erro: Campo código obrigatório não foi gerado. Tente novamente.');
-          }
-        } catch (parseError) {
-          // If can't parse, use original error
-        }
-        
         throw new Error(`Erro na API: ${response.status} - ${errorText}`);
       }
 
-      // Verificar se há conteúdo na resposta
       const contentLength = response.headers.get('content-length');
       const hasContent = contentLength && parseInt(contentLength) > 0;
       
       if (!hasContent || contentLength === '0') {
         console.log('⚠️ Empty response from server, but request was successful');
-        // Retornar um objeto vazio com sucesso para operações POST
         if (options.method === 'POST') {
           return { success: true } as T;
         }
@@ -162,6 +154,33 @@ class ApiService {
     }
   }
 
+  private async requestMobileImport<T>(
+    orderData: any,
+    items: any[]
+  ): Promise<T> {
+    try {
+      console.log('📱 Using mobile import endpoint...');
+      
+      const { data, error } = await supabase.functions.invoke('mobile-orders-import', {
+        body: {
+          ...orderData,
+          items: items
+        }
+      });
+
+      if (error) {
+        console.error('❌ Mobile import error:', error);
+        throw new Error(`Erro na importação móvel: ${error.message}`);
+      }
+
+      console.log('✅ Mobile import successful:', data);
+      return data as T;
+    } catch (error) {
+      console.error('❌ Mobile import request error:', error);
+      throw error;
+    }
+  }
+
   private async getNextOrderCode(): Promise<number> {
     try {
       console.log('🔢 Getting next order code...');
@@ -183,41 +202,58 @@ class ApiService {
 
   async testConnection(): Promise<boolean> {
     try {
-      await this.request('/orders?limit=1');
-      return true;
+      if (this.useMobileImportEndpoint) {
+        // Test mobile import endpoint
+        const { data, error } = await supabase.functions.invoke('mobile-orders-import', {
+          body: { test: true }
+        });
+        return !error;
+      } else {
+        // Test regular API
+        await this.request('/orders?limit=1');
+        return true;
+      }
     } catch (error) {
       console.error('Connection test failed:', error);
       return false;
     }
   }
 
-  // Orders CRUD operations
   async createOrder(order: Omit<Order, 'id'>): Promise<Order> {
     try {
       console.log('📝 Creating order with data:', order);
       
-      // Get next order code
+      if (this.useMobileImportEndpoint) {
+        console.log('📱 Using mobile import endpoint for order creation');
+        const response = await this.requestMobileImport<any>(order, []);
+        
+        return {
+          ...order,
+          id: response.order_id || 'mobile-import-success',
+          code: response.code
+        } as Order;
+      }
+
+      // Usar endpoint regular se não estiver em modo móvel
       const code = await this.getNextOrderCode();
-      
-      // Remove sales_rep_id se estiver vazio - será automaticamente inferido pelo RLS via auth.uid()
       const cleanOrder = { ...order, code };
+      
       if (cleanOrder.sales_rep_id === '' || !cleanOrder.sales_rep_id) {
         delete cleanOrder.sales_rep_id;
       }
       
       console.log('📝 Creating order with code:', cleanOrder);
       
-      const response = await this.request<Order[] | { success: boolean }>('/orders', {
+      const response = await this.request<Order[] | { success: boolean }>('/rest/v1/orders', {
         method: 'POST',
         body: JSON.stringify(cleanOrder),
       });
       
-      // Se a resposta for apenas um indicador de sucesso, criar um objeto de ordem básico
       if (response && typeof response === 'object' && 'success' in response) {
         console.log('✅ Order created successfully (no data returned)');
         return {
           ...cleanOrder,
-          id: 'created-successfully' // Placeholder ID
+          id: 'created-successfully'
         } as Order;
       }
       
@@ -230,82 +266,23 @@ class ApiService {
     }
   }
 
-  async getOrders(filters: {
-    customer_id?: string;
-    status?: string;
-    start_date?: string;
-    end_date?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<Order[]> {
-    const params = new URLSearchParams();
-    
-    // Removido: sales_rep_id filtro manual - RLS cuida automaticamente
-    
-    if (filters.customer_id) {
-      params.append('customer_id', `eq.${filters.customer_id}`);
-    }
-    if (filters.status) {
-      params.append('status', `eq.${filters.status}`);
-    }
-    if (filters.start_date) {
-      params.append('date', `gte.${filters.start_date}`);
-    }
-    if (filters.end_date) {
-      params.append('date', `lte.${filters.end_date}`);
-    }
-    if (filters.limit) {
-      params.append('limit', filters.limit.toString());
-    }
-    if (filters.offset) {
-      params.append('offset', filters.offset.toString());
-    }
-
-    return await this.request<Order[]>(`/orders?${params.toString()}`);
-  }
-
-  async updateOrder(id: string, updates: Partial<Order>): Promise<Order> {
-    const response = await this.request<Order[]>(`/orders?id=eq.${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    });
-    
-    return response[0];
-  }
-
-  async deleteOrder(id: string): Promise<void> {
-    await this.request(`/orders?id=eq.${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async createOrderItem(item: Omit<OrderItem, 'id'>): Promise<OrderItem> {
-    const response = await this.request<OrderItem[] | { success: boolean }>('/order_items', {
-      method: 'POST',
-      body: JSON.stringify(item),
-    });
-    
-    // Se a resposta for apenas um indicador de sucesso, criar um objeto de item básico
-    if (response && typeof response === 'object' && 'success' in response) {
-      return {
-        ...item,
-        id: 'created-successfully'
-      } as OrderItem;
-    }
-    
-    const itemArray = response as OrderItem[];
-    return itemArray[0];
-  }
-
-  async getOrderItems(orderId: string): Promise<OrderItem[]> {
-    return await this.request<OrderItem[]>(`/order_items?order_id=eq.${orderId}`);
-  }
-
   async createOrderWithItems(order: Omit<Order, 'id'>, items: Omit<OrderItem, 'id' | 'order_id'>[]): Promise<Order> {
     try {
       console.log('📦 Creating order with items:', { order, items });
       
-      // Criar pedido primeiro
+      if (this.useMobileImportEndpoint) {
+        console.log('📱 Using mobile import endpoint for order with items');
+        const response = await this.requestMobileImport<any>(order, items);
+        
+        return {
+          ...order,
+          id: response.order_id || 'mobile-import-success',
+          code: response.code,
+          items: items as OrderItem[]
+        } as Order;
+      }
+
+      // Criar pedido primeiro usando endpoint regular
       const createdOrder = await this.createOrder(order);
       
       // Se temos um ID válido, criar os itens
@@ -331,15 +308,80 @@ class ApiService {
     }
   }
 
-  // Customers CRUD operations
+  async getOrders(filters: {
+    customer_id?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<Order[]> {
+    const params = new URLSearchParams();
+    
+    if (filters.customer_id) {
+      params.append('customer_id', `eq.${filters.customer_id}`);
+    }
+    if (filters.status) {
+      params.append('status', `eq.${filters.status}`);
+    }
+    if (filters.start_date) {
+      params.append('date', `gte.${filters.start_date}`);
+    }
+    if (filters.end_date) {
+      params.append('date', `lte.${filters.end_date}`);
+    }
+    if (filters.limit) {
+      params.append('limit', filters.limit.toString());
+    }
+    if (filters.offset) {
+      params.append('offset', filters.offset.toString());
+    }
+
+    return await this.request<Order[]>(`/rest/v1/orders?${params.toString()}`);
+  }
+
+  async updateOrder(id: string, updates: Partial<Order>): Promise<Order> {
+    const response = await this.request<Order[]>(`/rest/v1/orders?id=eq.${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+    
+    return response[0];
+  }
+
+  async deleteOrder(id: string): Promise<void> {
+    await this.request(`/rest/v1/orders?id=eq.${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async createOrderItem(item: Omit<OrderItem, 'id'>): Promise<OrderItem> {
+    const response = await this.request<OrderItem[] | { success: boolean }>('/rest/v1/order_items', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    });
+    
+    if (response && typeof response === 'object' && 'success' in response) {
+      return {
+        ...item,
+        id: 'created-successfully'
+      } as OrderItem;
+    }
+    
+    const itemArray = response as OrderItem[];
+    return itemArray[0];
+  }
+
+  async getOrderItems(orderId: string): Promise<OrderItem[]> {
+    return await this.request<OrderItem[]>(`/rest/v1/order_items?order_id=eq.${orderId}`);
+  }
+
   async getCustomers(filters: {
     search?: string;
     limit?: number;
     offset?: number;
   } = {}): Promise<Customer[]> {
     const params = new URLSearchParams();
-    
-    // Removido: sales_rep_id filtro manual - RLS cuida automaticamente
     
     if (filters.search) {
       params.append('name', `ilike.%${filters.search}%`);
@@ -351,12 +393,11 @@ class ApiService {
       params.append('offset', filters.offset.toString());
     }
 
-    return await this.request<Customer[]>(`/customers?${params.toString()}`);
+    return await this.request<Customer[]>(`/rest/v1/customers?${params.toString()}`);
   }
 
   async createCustomer(customer: Omit<Customer, 'id'>): Promise<Customer> {
-    // Removido: sales_rep_id é automaticamente inferido pelo RLS via auth.uid()
-    const response = await this.request<Customer[]>('/customers', {
+    const response = await this.request<Customer[]>('/rest/v1/customers', {
       method: 'POST',
       body: JSON.stringify(customer),
     });
@@ -364,17 +405,19 @@ class ApiService {
     return response[0];
   }
 
-  // Método para configurar a API (mantido para compatibilidade)
   setConfig(config: ApiConfig): void {
-    // Método mantido para compatibilidade, mas não usado
-    console.log('setConfig called - using direct Supabase integration with auth.uid()');
+    if (config.useMobileImportEndpoint !== undefined) {
+      this.setMobileImportMode(config.useMobileImportEndpoint);
+    }
+    console.log('setConfig called - using direct Supabase integration with mobile import support');
   }
 
   getConfig(): ApiConfig | null {
     return {
       baseUrl: this.baseUrl,
       apiKey: this.apiKey,
-      salesRepId: 'auto-supabase-auth' // Indicador de que usa auth automático
+      salesRepId: 'auto-supabase-auth',
+      useMobileImportEndpoint: this.useMobileImportEndpoint
     };
   }
 }
