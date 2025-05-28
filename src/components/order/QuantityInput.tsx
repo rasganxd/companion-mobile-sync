@@ -40,14 +40,14 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   return (
-    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-      <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border border-blue-200 shadow-sm">
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Quantidade:</Label>
+            <Label className="block mb-2 text-sm font-semibold text-gray-700">Quantidade:</Label>
             <Input 
               type="number" 
-              className="h-8 text-center text-sm font-medium border border-gray-300 focus:border-app-blue" 
+              className="h-9 text-center text-sm font-medium border-2 border-gray-300 focus:border-app-blue focus:ring-2 focus:ring-app-blue/20 transition-all duration-200" 
               value={quantity} 
               onChange={e => onQuantityChange(e.target.value)} 
               placeholder="0" 
@@ -57,10 +57,10 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           </div>
           
           <div>
-            <Label className="block mb-1 text-xs font-medium text-gray-700">Preço:</Label>
+            <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço:</Label>
             <Input 
               type="text" 
-              className="h-8 text-center text-sm font-medium bg-gray-100 border border-gray-300" 
+              className="h-9 text-center text-sm font-medium bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-300 cursor-not-allowed" 
               value={`R$ ${unitPrice.toFixed(2)}`} 
               readOnly 
             />
@@ -69,18 +69,18 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
         
         {/* Mostrar informação de conversão se houver subunidade */}
         {subUnit && ratio > 1 && (
-          <div className="text-xs text-gray-600 text-center bg-white p-2 rounded border">
-            <div>1 {mainUnit} = {ratio} {subUnit}</div>
-            <div>Preço por {mainUnit}: R$ {(unitPrice * ratio).toFixed(2)}</div>
+          <div className="text-sm text-gray-700 text-center bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+            <div className="font-medium">1 {mainUnit} = {ratio} {subUnit}</div>
+            <div className="text-gray-600 mt-1">Preço por {mainUnit}: R$ {(unitPrice * ratio).toFixed(2)}</div>
           </div>
         )}
         
         <Button 
           variant="default" 
-          className="w-full h-8 bg-green-600 hover:bg-green-700 text-white text-xs font-medium" 
+          className="w-full h-9 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-98 shadow-md hover:shadow-lg" 
           onClick={onAddItem}
         >
-          <Plus size={16} className="mr-1" />
+          <Plus size={18} className="mr-2" />
           Adicionar ao Pedido
         </Button>
       </div>

@@ -23,53 +23,57 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   isSubmitting
 }) => {
   return (
-    <div className="p-1.5 bg-white border-t shadow-lg flex-shrink-0">
+    <div className="p-2 bg-gradient-to-r from-white to-gray-50 border-t-2 border-gray-200 shadow-lg flex-shrink-0">
       {/* Clear cart button if there are items */}
       {orderItems.length > 0 && (
-        <div className="mb-1">
+        <div className="mb-2">
           <AppButton 
             variant="gray" 
-            className="flex items-center justify-center h-6 text-xs w-full text-red-600 border-red-200 hover:bg-red-50"
+            className="flex items-center justify-center h-8 text-sm w-full text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200 transform hover:scale-[1.02]"
             onClick={onClearCart}
           >
-            <Trash2 size={10} className="mr-1" />
+            <Trash2 size={12} className="mr-2" />
             Limpar Carrinho
           </AppButton>
         </div>
       )}
       
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         <AppButton 
           variant="gray" 
-          className={`flex items-center justify-center h-6 text-xs ${
+          className={`flex items-center justify-center h-8 text-sm border-2 transition-all duration-200 ${
             orderItems.length > 0 
               ? 'opacity-50 cursor-not-allowed' 
-              : ''
+              : 'hover:scale-[1.02] transform'
           }`}
           onClick={onGoBack}
         >
-          <ArrowLeft size={10} className="mr-1" />
+          <ArrowLeft size={12} className="mr-2" />
           Voltar
         </AppButton>
         
         <AppButton 
           variant="blue" 
-          className="flex items-center justify-center h-6 text-xs"
+          className="flex items-center justify-center h-8 text-sm border-2 border-app-blue hover:scale-[1.02] transform transition-all duration-200 shadow-sm hover:shadow-md"
           onClick={onViewOrder}
           disabled={orderItems.length === 0}
         >
-          <Eye size={10} className="mr-1" />
+          <Eye size={12} className="mr-2" />
           Gravar
         </AppButton>
         
         <AppButton 
           variant="blue" 
-          className="flex items-center justify-center h-6 text-xs bg-green-600 hover:bg-green-700 text-white"
+          className="flex items-center justify-center h-8 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-2 border-green-600 hover:scale-[1.02] transform transition-all duration-200 shadow-sm hover:shadow-md"
           onClick={onFinishOrder}
           disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
         >
-          <ShoppingCart size={10} className="mr-1" />
-          {isSubmitting ? 'Salvando...' : 'Finalizar'}
+          <ShoppingCart size={12} className="mr-2" />
+          {isSubmitting ? (
+            <span className="animate-pulse">Salvando...</span>
+          ) : (
+            'Finalizar'
+          )}
         </AppButton>
       </div>
     </div>
