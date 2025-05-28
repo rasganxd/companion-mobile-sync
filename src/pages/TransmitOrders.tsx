@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -130,7 +131,8 @@ const TransmitOrders = () => {
               source_project: 'mobile'
             };
             
-            await apiService.createOrder(negativeOrder);
+            const result = await apiService.createOrder(negativeOrder);
+            console.log('✅ Negative order transmitted:', result);
           } else {
             // Regular order with items
             const orderData = {
@@ -145,40 +147,53 @@ const TransmitOrders = () => {
             };
             
             const items = order.items || [];
-            await apiService.createOrderWithItems(orderData, items);
+            const result = await apiService.createOrderWithItems(orderData, items);
+            console.log('✅ Regular order transmitted:', result);
           }
           
           // Mark as synced locally ONLY if transmission was successful
           await db.updateSyncStatus('orders', order.id, 'synced');
           successCount++;
           
-          console.log('✅ Order transmitted successfully:', order.id);
+          console.log('✅ Order transmitted and marked as synced:', order.id);
+          
+          // Show individual success message
+          toast.success(`Pedido de ${order.customer_name} transmitido!`);
+          
         } catch (error) {
           console.error('❌ Error transmitting order:', order.id, error);
           errorCount++;
           
           // Show specific error message
           const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+          console.error('❌ Detailed error for order', order.customer_name, ':', errorMessage);
           toast.error(`Erro no pedido ${order.customer_name}: ${errorMessage}`);
+          
+          // Mark as error in local database
+          try {
+            await db.updateSyncStatus('orders', order.id, 'error');
+          } catch (dbError) {
+            console.error('❌ Failed to update order status to error:', dbError);
+          }
         }
       }
 
       // Show final results
       if (successCount > 0) {
-        toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
+        toast.success(`${successCount} pedido(s) transmitido(s) com sucesso! 🎉`);
       }
       
       if (errorCount > 0) {
         toast.error(`${errorCount} pedido(s) falharam na transmissão`);
       }
 
-      console.log(`Transmissão concluída: ${successCount} sucesso, ${errorCount} erros`);
+      console.log(`✅ Transmissão concluída: ${successCount} sucesso, ${errorCount} erros`);
 
-      // Reload pending orders
+      // Reload pending orders to update the list
       await loadPendingOrders();
       
     } catch (error) {
-      console.error('Error during transmission:', error);
+      console.error('❌ Error during transmission:', error);
       toast.error('Erro geral na transmissão de pedidos');
     } finally {
       setIsTransmitting(false);

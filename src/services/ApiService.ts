@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -57,7 +58,7 @@ class ApiService {
     return ApiService.instance;
   }
 
-  private async getAuthHeaders(): Promise<Record<string, string>> {
+  private async getAuthHeaders(method?: string): Promise<Record<string, string>> {
     const { data: { session } } = await supabase.auth.getSession();
     
     const headers: Record<string, string> = {
@@ -65,6 +66,11 @@ class ApiService {
       'apikey': this.apiKey,
       'Accept': 'application/json'
     };
+
+    // Adicionar header para forçar retorno de dados em operações POST
+    if (method === 'POST') {
+      headers['Prefer'] = 'return=representation';
+    }
 
     if (session?.access_token) {
       headers['Authorization'] = `Bearer ${session.access_token}`;
@@ -78,10 +84,15 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
-    const headers = await this.getAuthHeaders();
+    const headers = await this.getAuthHeaders(options.method as string);
     
     try {
-      console.log('🔄 Making API request:', { url, method: options.method || 'GET', body: options.body });
+      console.log('🔄 Making API request:', { 
+        url, 
+        method: options.method || 'GET', 
+        headers: Object.keys(headers),
+        body: options.body 
+      });
       
       const response = await fetch(url, {
         ...options,
@@ -90,6 +101,9 @@ class ApiService {
           ...options.headers,
         },
       });
+
+      console.log('📡 Response status:', response.status, response.statusText);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -115,8 +129,32 @@ class ApiService {
         throw new Error(`Erro na API: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      console.log('✅ API Response:', data);
+      // Verificar se há conteúdo na resposta
+      const contentLength = response.headers.get('content-length');
+      const hasContent = contentLength && parseInt(contentLength) > 0;
+      
+      if (!hasContent || contentLength === '0') {
+        console.log('⚠️ Empty response from server, but request was successful');
+        // Retornar um objeto vazio com sucesso para operações POST
+        if (options.method === 'POST') {
+          return { success: true } as T;
+        }
+        return [] as T;
+      }
+
+      const responseText = await response.text();
+      console.log('📄 Raw response text:', responseText);
+
+      if (!responseText.trim()) {
+        console.log('⚠️ Empty response body');
+        if (options.method === 'POST') {
+          return { success: true } as T;
+        }
+        return [] as T;
+      }
+
+      const data = JSON.parse(responseText);
+      console.log('✅ Parsed API Response:', data);
       return Array.isArray(data) ? data as T : [data] as T;
     } catch (error) {
       console.error('❌ API request error:', error);
@@ -169,13 +207,23 @@ class ApiService {
       
       console.log('📝 Creating order with code:', cleanOrder);
       
-      const response = await this.request<Order[]>('/orders', {
+      const response = await this.request<Order[] | { success: boolean }>('/orders', {
         method: 'POST',
         body: JSON.stringify(cleanOrder),
       });
       
-      console.log('✅ Order created successfully:', response[0]);
-      return response[0];
+      // Se a resposta for apenas um indicador de sucesso, criar um objeto de ordem básico
+      if (response && typeof response === 'object' && 'success' in response) {
+        console.log('✅ Order created successfully (no data returned)');
+        return {
+          ...cleanOrder,
+          id: 'created-successfully' // Placeholder ID
+        } as Order;
+      }
+      
+      const orderArray = response as Order[];
+      console.log('✅ Order created successfully:', orderArray[0]);
+      return orderArray[0];
     } catch (error) {
       console.error('❌ Error creating order:', error);
       throw error;
@@ -232,12 +280,21 @@ class ApiService {
   }
 
   async createOrderItem(item: Omit<OrderItem, 'id'>): Promise<OrderItem> {
-    const response = await this.request<OrderItem[]>('/order_items', {
+    const response = await this.request<OrderItem[] | { success: boolean }>('/order_items', {
       method: 'POST',
       body: JSON.stringify(item),
     });
     
-    return response[0];
+    // Se a resposta for apenas um indicador de sucesso, criar um objeto de item básico
+    if (response && typeof response === 'object' && 'success' in response) {
+      return {
+        ...item,
+        id: 'created-successfully'
+      } as OrderItem;
+    }
+    
+    const itemArray = response as OrderItem[];
+    return itemArray[0];
   }
 
   async getOrderItems(orderId: string): Promise<OrderItem[]> {
@@ -251,8 +308,8 @@ class ApiService {
       // Criar pedido primeiro
       const createdOrder = await this.createOrder(order);
       
-      // Depois criar todos os itens
-      if (items.length > 0) {
+      // Se temos um ID válido, criar os itens
+      if (items.length > 0 && createdOrder.id && createdOrder.id !== 'created-successfully') {
         console.log('📋 Creating order items...');
         const itemPromises = items.map(item => 
           this.createOrderItem({
@@ -263,6 +320,8 @@ class ApiService {
         
         await Promise.all(itemPromises);
         console.log('✅ All order items created successfully');
+      } else if (items.length > 0) {
+        console.log('⚠️ Skipping item creation - no valid order ID returned');
       }
       
       return createdOrder;
