@@ -27,10 +27,20 @@ interface Product {
   code: number;
   price: number;
   unit: string;
-  stock?: number;
+  stock: number;
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
+}
+
+interface PaymentTable {
+  id: string;
+  name: string;
+  description?: string;
+  type?: string;
+  payable_to?: string;
+  payment_location?: string;
+  active: boolean;
 }
 
 interface OrderItem {
@@ -50,7 +60,9 @@ const PlaceOrder = () => {
   
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [paymentTables, setPaymentTables] = useState<PaymentTable[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedPaymentTable, setSelectedPaymentTable] = useState<PaymentTable | null>(null);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
   const [customPrice, setCustomPrice] = useState('');
@@ -121,11 +133,27 @@ const PlaceOrder = () => {
           .order('name');
         
         if (supabaseProducts && !error) {
-          await db.saveProducts(supabaseProducts);
-          setProducts(supabaseProducts);
+          // Garantir que todos os produtos tenham stock definido
+          const productsWithStock = supabaseProducts.map(product => ({
+            ...product,
+            stock: product.stock || 0
+          }));
+          await db.saveProducts(productsWithStock);
+          setProducts(productsWithStock);
         }
       } else {
         setProducts(localProducts);
+      }
+
+      // Carregar tabelas de pagamento
+      const { data: paymentTablesData, error: paymentError } = await supabase
+        .from('payment_tables')
+        .select('*')
+        .eq('active', true)
+        .order('name');
+      
+      if (paymentTablesData && !paymentError) {
+        setPaymentTables(paymentTablesData);
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
@@ -243,7 +271,9 @@ const PlaceOrder = () => {
       state: {
         orderItems,
         client: selectedClient,
-        paymentMethod: 'A definir',
+        paymentMethod: selectedPaymentTable?.name || 'A definir',
+        paymentTable: selectedPaymentTable?.name || 'A definir',
+        paymentTableId: selectedPaymentTable?.id || null,
         clientId: selectedClient.id,
         clientName: selectedClient.name
       }
@@ -300,6 +330,48 @@ const PlaceOrder = () => {
                 {selectedClient ? 'Alterar' : 'Selecionar'}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção da Forma de Pagamento */}
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-4">
+            <Label className="text-sm font-medium text-gray-600 block mb-3">Forma de Pagamento:</Label>
+            <Select 
+              value={selectedPaymentTable?.id || ''} 
+              onValueChange={(value) => {
+                const table = paymentTables.find(t => t.id === value);
+                setSelectedPaymentTable(table || null);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione a forma de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">A definir</SelectItem>
+                {paymentTables.map((table) => (
+                  <SelectItem key={table.id} value={table.id}>
+                    <div>
+                      <div className="font-medium">{table.name}</div>
+                      {table.description && (
+                        <div className="text-sm text-gray-500">{table.description}</div>
+                      )}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedPaymentTable && (
+              <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                <p className="font-medium">{selectedPaymentTable.name}</p>
+                {selectedPaymentTable.description && (
+                  <p className="text-gray-600">{selectedPaymentTable.description}</p>
+                )}
+                {selectedPaymentTable.type && (
+                  <p className="text-gray-600">Tipo: {selectedPaymentTable.type}</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
