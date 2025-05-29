@@ -73,6 +73,7 @@ const PlaceOrder = () => {
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
 
   const locationState = location.state as any;
   const currentProduct = products[currentProductIndex];
@@ -99,6 +100,12 @@ const PlaceOrder = () => {
       setOrderItems(locationState.existingOrderItems);
     }
   }, [locationState]);
+
+  useEffect(() => {
+    if (currentProduct && unitPrice) {
+      setCustomPrice(unitPrice.toFixed(2));
+    }
+  }, [currentProduct?.id, selectedUnit, unitPrice]);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -203,9 +210,40 @@ const PlaceOrder = () => {
     }
   };
 
+  const handlePriceChange = (value: string) => {
+    // Allow empty string and valid numbers with up to 2 decimal places
+    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+      setCustomPrice(value);
+    }
+  };
+
+  const getPriceValidation = () => {
+    if (!currentProduct || !customPrice) return { isValid: true, message: '' };
+    
+    const price = parseFloat(customPrice);
+    if (isNaN(price)) return { isValid: false, message: 'Preço inválido' };
+
+    if (currentProduct.min_price && price < currentProduct.min_price) {
+      return { 
+        isValid: false, 
+        message: `Preço mínimo: R$ ${currentProduct.min_price.toFixed(2)}` 
+      };
+    }
+
+    if (currentProduct.max_price && price > currentProduct.max_price) {
+      return { 
+        isValid: false, 
+        message: `Preço máximo: R$ ${currentProduct.max_price.toFixed(2)}` 
+      };
+    }
+
+    return { isValid: true, message: '' };
+  };
+
   const calculateItemTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    return (qty * unitPrice).toFixed(2);
+    const price = parseFloat(customPrice) || 0;
+    return (qty * price).toFixed(2);
   };
 
   const addItem = () => {
@@ -225,13 +263,25 @@ const PlaceOrder = () => {
       return;
     }
 
+    const price = parseFloat(customPrice);
+    if (!price || price <= 0) {
+      toast.error('Informe um preço válido');
+      return;
+    }
+
+    const priceValidation = getPriceValidation();
+    if (!priceValidation.isValid) {
+      toast.error(priceValidation.message);
+      return;
+    }
+
     const newItem: OrderItem = {
       id: Date.now(),
       productId: currentProduct.id,
       productName: currentProduct.name,
       code: currentProduct.code,
       quantity: qty,
-      price: unitPrice,
+      price: price,
       unit: displayUnit
     };
 
@@ -450,11 +500,28 @@ const PlaceOrder = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-gray-600">Preço:</Label>
-                      <div className="bg-blue-50 p-2 rounded border border-blue-200">
-                        <p className="font-semibold text-blue-700">
-                          R$ {unitPrice.toFixed(2)}
-                        </p>
+                      <div className="relative">
+                        <Input
+                          type="text"
+                          value={customPrice}
+                          onChange={(e) => handlePriceChange(e.target.value)}
+                          placeholder="0.00"
+                          className={`text-center font-medium h-8 ${
+                            !getPriceValidation().isValid 
+                              ? 'border-red-500 bg-red-50' 
+                              : 'bg-blue-50 border-blue-200'
+                          }`}
+                        />
+                        <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">R$</span>
                       </div>
+                      {!getPriceValidation().isValid && (
+                        <p className="text-xs text-red-600 mt-1">{getPriceValidation().message}</p>
+                      )}
+                      {currentProduct.min_price && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Mín: R$ {currentProduct.min_price.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
@@ -491,7 +558,7 @@ const PlaceOrder = () => {
                   </div>
                   
                   {/* Total do Item - Compacto */}
-                  {quantity && (
+                  {quantity && customPrice && (
                     <div className="bg-blue-100 p-2 rounded-lg border border-blue-200">
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
@@ -511,7 +578,15 @@ const PlaceOrder = () => {
         <Button 
           onClick={addItem}
           className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg font-semibold"
-          disabled={!selectedClient || !currentProduct || !quantity || parseFloat(quantity) <= 0}
+          disabled={
+            !selectedClient || 
+            !currentProduct || 
+            !quantity || 
+            parseFloat(quantity) <= 0 || 
+            !customPrice || 
+            parseFloat(customPrice) <= 0 ||
+            !getPriceValidation().isValid
+          }
         >
           <Plus size={20} className="mr-2" />
           Gravar Item
