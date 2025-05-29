@@ -332,10 +332,10 @@ const PlaceOrder = () => {
           </CardContent>
         </Card>
 
-        {/* Seção da Forma de Pagamento */}
+        {/* Seção da Forma de Pagamento - Compacta */}
         <Card className="bg-white shadow-sm">
-          <CardContent className="p-4">
-            <Label className="text-sm font-medium text-gray-600 block mb-3">Forma de Pagamento:</Label>
+          <CardContent className="p-3">
+            <Label className="text-sm font-medium text-gray-600 block mb-2">Forma de Pagamento:</Label>
             <Select 
               value={selectedPaymentTable?.id || 'none'} 
               onValueChange={(value) => {
@@ -347,34 +347,18 @@ const PlaceOrder = () => {
                 }
               }}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full h-9">
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">A definir</SelectItem>
                 {paymentTables.map((table) => (
                   <SelectItem key={table.id} value={table.id}>
-                    <div>
-                      <div className="font-medium">{table.name}</div>
-                      {table.description && (
-                        <div className="text-sm text-gray-500">{table.description}</div>
-                      )}
-                    </div>
+                    {table.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedPaymentTable && (
-              <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                <p className="font-medium">{selectedPaymentTable.name}</p>
-                {selectedPaymentTable.description && (
-                  <p className="text-gray-600">{selectedPaymentTable.description}</p>
-                )}
-                {selectedPaymentTable.type && (
-                  <p className="text-gray-600">Tipo: {selectedPaymentTable.type}</p>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 
