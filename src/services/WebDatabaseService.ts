@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 
 class WebDatabaseService {
@@ -68,6 +69,80 @@ class WebDatabaseService {
 
   async getProducts(): Promise<any[]> {
     return this.getTableData('products');
+  }
+
+  // ✅ NOVO: Método para salvar clientes no localStorage
+  async saveClient(client: any): Promise<void> {
+    const clients = this.getTableData('clients');
+    const existingIndex = clients.findIndex(c => c.id === client.id);
+    
+    if (existingIndex >= 0) {
+      clients[existingIndex] = { ...client, updated_at: new Date().toISOString() };
+      console.log(`📝 Updated existing client: ${client.name} (${client.id})`);
+    } else {
+      clients.push({ ...client, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      console.log(`📝 Added new client: ${client.name} (${client.id})`);
+    }
+    
+    this.setTableData('clients', clients);
+  }
+
+  // ✅ NOVO: Método para salvar múltiplos clientes
+  async saveClients(clientsArray: any[]): Promise<void> {
+    console.log(`💾 Saving ${clientsArray.length} clients to localStorage`);
+    
+    const existingClients = this.getTableData('clients');
+    const clientsMap = new Map(existingClients.map(c => [c.id, c]));
+    
+    // Adicionar ou atualizar clientes
+    clientsArray.forEach(client => {
+      clientsMap.set(client.id, {
+        ...client,
+        updated_at: new Date().toISOString()
+      });
+    });
+    
+    const updatedClients = Array.from(clientsMap.values());
+    this.setTableData('clients', updatedClients);
+    
+    console.log(`✅ Successfully saved ${clientsArray.length} clients`);
+  }
+
+  // ✅ NOVO: Método para salvar produto no localStorage
+  async saveProduct(product: any): Promise<void> {
+    const products = this.getTableData('products');
+    const existingIndex = products.findIndex(p => p.id === product.id);
+    
+    if (existingIndex >= 0) {
+      products[existingIndex] = { ...product, updated_at: new Date().toISOString() };
+      console.log(`📝 Updated existing product: ${product.name} (${product.id})`);
+    } else {
+      products.push({ ...product, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      console.log(`📝 Added new product: ${product.name} (${product.id})`);
+    }
+    
+    this.setTableData('products', products);
+  }
+
+  // ✅ NOVO: Método para salvar múltiplos produtos
+  async saveProducts(productsArray: any[]): Promise<void> {
+    console.log(`💾 Saving ${productsArray.length} products to localStorage`);
+    
+    const existingProducts = this.getTableData('products');
+    const productsMap = new Map(existingProducts.map(p => [p.id, p]));
+    
+    // Adicionar ou atualizar produtos
+    productsArray.forEach(product => {
+      productsMap.set(product.id, {
+        ...product,
+        updated_at: new Date().toISOString()
+      });
+    });
+    
+    const updatedProducts = Array.from(productsMap.values());
+    this.setTableData('products', updatedProducts);
+    
+    console.log(`✅ Successfully saved ${productsArray.length} products`);
   }
 
   async getPendingSyncItems(table: string): Promise<any[]> {

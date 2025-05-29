@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useLocation } from 'react-router-dom';
@@ -62,67 +63,172 @@ const PlaceOrder = () => {
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   const locationState = location.state as any;
 
-  const loadClientsForSalesRep = async () => {
+  // ✅ NOVO: Função para buscar clientes do Supabase com fallback
+  const loadClientsWithFallback = async () => {
     if (!salesRep?.id) {
       console.warn('⚠️ Não há vendedor autenticado');
-      return;
+      return [];
     }
 
     try {
       const db = getDatabaseAdapter();
-      const allClients = await db.getClients();
+      let localClients = await db.getClients();
       
-      console.log('📋 Todos os clientes carregados:', allClients.length);
-      console.log('🔍 Vendedor atual:', salesRep.id);
+      console.log('🔍 Clientes no localStorage:', localClients.length);
       
-      // Filtrar apenas clientes do vendedor logado
-      const salesRepClients = allClients.filter(client => {
-        const belongsToSalesRep = client.sales_rep_id === salesRep.id;
-        console.log(`Cliente ${client.name} (${client.id}): sales_rep_id=${client.sales_rep_id}, pertence ao vendedor=${belongsToSalesRep}`);
-        return belongsToSalesRep;
+      // Filtrar clientes do vendedor logado
+      const salesRepClients = localClients.filter(client => client.sales_rep_id === salesRep.id);
+      
+      // ✅ FALLBACK: Se não há clientes locais ou poucos clientes, buscar do Supabase
+      if (salesRepClients.length === 0) {
+        console.log('🌐 localStorage vazio ou sem clientes do vendedor, buscando do Supabase...');
+        
+        const { data: supabaseClients, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('sales_rep_id', salesRep.id)
+          .eq('active', true);
+        
+        if (error) {
+          console.error('❌ Erro ao buscar clientes do Supabase:', error);
+          toast.error('Erro ao carregar clientes do servidor');
+          return salesRepClients;
+        }
+        
+        if (supabaseClients && supabaseClients.length > 0) {
+          console.log(`✅ Encontrados ${supabaseClients.length} clientes no Supabase`);
+          
+          // Sincronizar com localStorage
+          if (db.saveClients) {
+            await db.saveClients(supabaseClients);
+            console.log('💾 Clientes sincronizados com localStorage');
+          }
+          
+          return supabaseClients;
+        } else {
+          console.log('⚠️ Nenhum cliente encontrado no Supabase para este vendedor');
+          toast.warning('Você não possui clientes atribuídos. Entre em contato com o administrador.');
+          return [];
+        }
+      }
+      
+      console.log(`✅ Usando ${salesRepClients.length} clientes do localStorage`);
+      return salesRepClients;
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar clientes:', error);
+      toast.error('Erro ao carregar lista de clientes');
+      return [];
+    }
+  };
+
+  // ✅ NOVO: Função para buscar produtos do Supabase com fallback
+  const loadProductsWithFallback = async () => {
+    try {
+      const db = getDatabaseAdapter();
+      let localProducts = await db.getProducts();
+      
+      console.log('🔍 Produtos no localStorage:', localProducts.length);
+      
+      // ✅ FALLBACK: Se não há produtos locais, buscar do Supabase
+      if (localProducts.length === 0) {
+        console.log('🌐 localStorage vazio, buscando produtos do Supabase...');
+        
+        const { data: supabaseProducts, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name');
+        
+        if (error) {
+          console.error('❌ Erro ao buscar produtos do Supabase:', error);
+          toast.error('Erro ao carregar produtos do servidor');
+          return localProducts;
+        }
+        
+        if (supabaseProducts && supabaseProducts.length > 0) {
+          console.log(`✅ Encontrados ${supabaseProducts.length} produtos no Supabase`);
+          
+          // Sincronizar com localStorage
+          if (db.saveProducts) {
+            await db.saveProducts(supabaseProducts);
+            console.log('💾 Produtos sincronizados com localStorage');
+          }
+          
+          return supabaseProducts;
+        } else {
+          console.log('⚠️ Nenhum produto encontrado no Supabase');
+          return [];
+        }
+      }
+      
+      console.log(`✅ Usando ${localProducts.length} produtos do localStorage`);
+      return localProducts;
+      
+    } catch (error) {
+      console.error('❌ Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar lista de produtos');
+      return [];
+    }
+  };
+
+  // ✅ ATUALIZADO: Carregar dados com fallback
+  const loadData = async () => {
+    setIsLoadingData(true);
+    try {
+      console.log('🔄 Iniciando carregamento de dados...');
+      
+      // Carregar clientes e produtos em paralelo
+      const [clientsData, productsData] = await Promise.all([
+        loadClientsWithFallback(),
+        loadProductsWithFallback()
+      ]);
+      
+      console.log('📊 Dados carregados:', {
+        clients: clientsData.length,
+        products: productsData.length,
+        salesRepId: salesRep?.id
       });
       
-      console.log(`✅ Clientes filtrados para o vendedor ${salesRep.name}: ${salesRepClients.length} clientes`);
-      console.log('🎯 Clientes do vendedor:', salesRepClients.map(c => `${c.name} (${c.id})`));
+      setClients(clientsData);
+      setProducts(productsData);
       
-      setClients(salesRepClients);
-      
-      // Se há dados de navegação, tentar encontrar o cliente
-      if (locationState?.clientId) {
-        const preSelectedClient = salesRepClients.find(c => c.id === locationState.clientId);
+      // ✅ CORRIGIDO: Buscar cliente pré-selecionado após carregar os dados
+      if (locationState?.clientId && clientsData.length > 0) {
+        const preSelectedClient = clientsData.find(c => c.id === locationState.clientId);
+        
         if (preSelectedClient) {
-          setSelectedClient(preSelectedClient);
           console.log('✅ Cliente pré-selecionado encontrado:', preSelectedClient.name);
+          console.log('🔍 Dados do cliente:', {
+            id: preSelectedClient.id,
+            name: preSelectedClient.name,
+            sales_rep_id: preSelectedClient.sales_rep_id,
+            expectedSalesRepId: salesRep?.id
+          });
+          
+          setSelectedClient(preSelectedClient);
         } else {
-          console.warn('❌ Cliente pré-selecionado não encontrado ou não pertence ao vendedor');
-          toast.warning('Cliente selecionado não pertence ao seu portfólio');
+          console.warn('❌ Cliente pré-selecionado não encontrado na lista carregada');
+          console.log('🔍 Cliente procurado:', locationState.clientId);
+          console.log('🔍 Clientes disponíveis:', clientsData.map(c => ({ id: c.id, name: c.name })));
         }
       }
       
     } catch (error) {
-      console.error('❌ Erro ao carregar clientes do vendedor:', error);
-      toast.error('Erro ao carregar lista de clientes');
-    }
-  };
-
-  const loadProducts = async () => {
-    try {
-      const db = getDatabaseAdapter();
-      const allProducts = await db.getProducts();
-      setProducts(allProducts);
-      console.log('📦 Produtos carregados:', allProducts.length);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-      toast.error('Erro ao carregar lista de produtos');
+      console.error('❌ Erro no carregamento de dados:', error);
+      toast.error('Erro ao carregar dados necessários');
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
   useEffect(() => {
-    loadClientsForSalesRep();
-    loadProducts();
+    if (salesRep?.id) {
+      loadData();
+    }
   }, [salesRep?.id]);
 
   useEffect(() => {
@@ -205,34 +311,54 @@ const PlaceOrder = () => {
     return orderItems.reduce((total, item) => total + (item.quantity * item.price), 0);
   };
 
+  // ✅ CORRIGIDO: Validação com logs mais detalhados
   const validateOrder = (): boolean => {
+    console.log('🔍 Validando pedido...');
+    
     if (!selectedClient) {
+      console.error('❌ Validação falhou: Nenhum cliente selecionado');
       toast.error('Selecione um cliente');
       return false;
     }
 
-    // Verificar novamente se o cliente pertence ao vendedor (segurança adicional)
+    console.log('🔍 Dados do cliente selecionado:', {
+      id: selectedClient.id,
+      name: selectedClient.name,
+      sales_rep_id: selectedClient.sales_rep_id,
+      currentSalesRepId: salesRep?.id
+    });
+
+    // ✅ VALIDAÇÃO MAIS ROBUSTA: Verificar se o cliente pertence ao vendedor
+    if (!selectedClient.sales_rep_id) {
+      console.error('❌ Validação falhou: Cliente sem sales_rep_id definido');
+      toast.error('Cliente com dados incompletos. Tente sincronizar os dados.');
+      return false;
+    }
+
     if (selectedClient.sales_rep_id !== salesRep?.id) {
-      toast.error('Cliente selecionado não pertence ao seu portfólio');
-      console.error('❌ Tentativa de criar pedido para cliente de outro vendedor:', {
-        clientId: selectedClient.id,
-        clientName: selectedClient.name,
+      console.error('❌ Validação falhou: Cliente não pertence ao vendedor atual');
+      console.error('🔍 Detalhes:', {
         clientSalesRepId: selectedClient.sales_rep_id,
-        currentSalesRepId: salesRep?.id
+        currentSalesRepId: salesRep?.id,
+        clientName: selectedClient.name
       });
+      toast.error('Cliente selecionado não pertence ao seu portfólio');
       return false;
     }
 
     if (orderItems.length === 0) {
+      console.error('❌ Validação falhou: Nenhum produto no pedido');
       toast.error('Adicione pelo menos um produto ao pedido');
       return false;
     }
 
     if (!salesRep?.id) {
+      console.error('❌ Validação falhou: Vendedor não identificado');
       toast.error('Vendedor não identificado. Faça login novamente.');
       return false;
     }
 
+    console.log('✅ Validação do pedido passou com sucesso');
     return true;
   };
 
@@ -294,6 +420,25 @@ const PlaceOrder = () => {
       setIsLoading(false);
     }
   };
+
+  // ✅ Mostrar loading durante carregamento inicial
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header 
+          title="Novo Pedido" 
+          showBackButton={true} 
+          backgroundColor="blue" 
+        />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando dados...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -385,6 +530,11 @@ const PlaceOrder = () => {
                     key={client.id}
                     className="p-3 border-b hover:bg-gray-50 cursor-pointer"
                     onClick={() => {
+                      console.log('🎯 Cliente selecionado:', {
+                        id: client.id,
+                        name: client.name,
+                        sales_rep_id: client.sales_rep_id
+                      });
                       setSelectedClient(client);
                       setShowClientDialog(false);
                       setSearchTerm('');
