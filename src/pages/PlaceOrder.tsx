@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -302,30 +303,30 @@ const PlaceOrder = () => {
       <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
       <div className="p-4 flex-1 space-y-4">
-        {/* Seção do Cliente */}
+        {/* Seção do Cliente - Compacta */}
         <Card className="bg-white shadow-sm">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div className="flex-1">
-                <Label className="text-sm font-medium text-gray-600 block mb-1">Cliente:</Label>
+                <Label className="text-sm font-medium text-gray-600 block">Cliente:</Label>
                 {selectedClient ? (
                   <div>
-                    <p className="font-semibold text-lg text-gray-900">{selectedClient.name}</p>
+                    <p className="font-semibold text-base text-gray-900">{selectedClient.name}</p>
                     {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
                       <p className="text-sm text-gray-600">{selectedClient.company_name}</p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500 italic">Nenhum cliente selecionado</p>
+                  <p className="text-gray-500 italic text-sm">Nenhum cliente selecionado</p>
                 )}
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowClientSelection(true)}
-                className="ml-4"
+                className="ml-4 h-8 px-3"
               >
-                <Users size={16} className="mr-1" />
+                <Users size={14} className="mr-1" />
                 {selectedClient ? 'Alterar' : 'Selecionar'}
               </Button>
             </div>
