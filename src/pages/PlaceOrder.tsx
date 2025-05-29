@@ -349,7 +349,7 @@ const PlaceOrder = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
-      <div className="p-4 flex-1 space-y-4">
+      <div className="p-2 flex-1 space-y-4">
         {/* Seção do Cliente - Compacta */}
         <Card className="bg-white shadow-sm">
           <CardContent className="p-3">
@@ -577,7 +577,7 @@ const PlaceOrder = () => {
         {/* Botão Gravar Item */}
         <Button 
           onClick={addItem}
-          className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg font-semibold"
+          className="w-full bg-green-600 hover:bg-green-700 h-9 text-base font-semibold"
           disabled={
             !selectedClient || 
             !currentProduct || 
@@ -588,7 +588,7 @@ const PlaceOrder = () => {
             !getPriceValidation().isValid
           }
         >
-          <Plus size={20} className="mr-2" />
+          <Plus size={18} className="mr-2" />
           Gravar Item
         </Button>
 
@@ -638,10 +638,10 @@ const PlaceOrder = () => {
         {orderItems.length > 0 && (
           <Button 
             onClick={finishOrder}
-            className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg font-semibold"
+            className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-base font-semibold"
             size="lg"
           >
-            <ShoppingCart size={20} className="mr-2" />
+            <ShoppingCart size={18} className="mr-2" />
             Finalizar Pedido
           </Button>
         )}
