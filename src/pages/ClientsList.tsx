@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -9,6 +10,7 @@ import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/hooks/useAuth';
+import ClientsListContent from '@/components/clients/ClientsListContent';
 
 interface Client {
   id: string;
@@ -37,10 +39,8 @@ const ClientsList = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   
-  // ✅ Obter o vendedor logado
   const { salesRep, isLoading: authLoading } = useAuth();
   
-  // Mapeamento dos dias da semana
   const dayMapping: { [key: string]: string } = {
     'monday': 'Segunda',
     'tuesday': 'Terça', 
@@ -56,7 +56,6 @@ const ClientsList = () => {
       try {
         setLoading(true);
         
-        // ✅ Verificar se o vendedor está autenticado
         if (authLoading) {
           console.log('🔄 Aguardando autenticação...');
           return;
@@ -71,7 +70,6 @@ const ClientsList = () => {
         
         console.log(`📅 Loading clients for: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
         
-        // Encontrar a chave em inglês correspondente ao dia em português
         const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
         
         if (!englishDay) {
@@ -82,12 +80,11 @@ const ClientsList = () => {
         
         console.log(`🔍 Fetching customers for ${day} (${englishDay}) from Supabase...`);
         
-        // ✅ Buscar clientes ativos com dias de visita definidos para o dia específico E do vendedor logado
         const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
           .eq('active', true)
-          .eq('sales_rep_id', salesRep.id) // ✅ FILTRO POR VENDEDOR
+          .eq('sales_rep_id', salesRep.id)
           .not('visit_days', 'is', null);
         
         if (customersError) {
@@ -95,14 +92,12 @@ const ClientsList = () => {
           throw customersError;
         }
         
-        // Filtrar clientes que têm esse dia nas suas visit_days
         const dayClients = customers?.filter(customer => 
           customer.visit_days && 
           Array.isArray(customer.visit_days) && 
           customer.visit_days.includes(englishDay)
         ) || [];
         
-        // Buscar pedidos do dia atual para estes clientes (online)
         const today = new Date().toISOString().split('T')[0];
         const clientIds = dayClients.map(client => client.id);
         
@@ -115,14 +110,11 @@ const ClientsList = () => {
         
         if (ordersError) {
           console.error('❌ Error fetching orders:', ordersError);
-          // Continuar sem os dados de pedidos online
         }
         
-        // ✅ Buscar pedidos locais para estes clientes (incluindo transmitidos) E filtrar por vendedor
         const db = getDatabaseAdapter();
         const allLocalOrders = await db.getAllOrders();
         
-        // ✅ Filtrar pedidos locais pelo vendedor logado
         const localOrders = allLocalOrders.filter(order => 
           order.sales_rep_id === salesRep.id && clientIds.includes(order.customer_id)
         );
@@ -131,11 +123,9 @@ const ClientsList = () => {
         console.log('📋 Online orders for today:', orders);
         console.log('📱 Local orders for salesperson:', localOrders);
         
-        // Determinar status de cada cliente baseado nos pedidos (online + local incluindo transmitidos)
         const clientsWithStatus = dayClients.map(client => {
           const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
           
-          // Incluir pedidos locais válidos (pending_sync, transmitted, synced)
           const clientLocalOrders = localOrders.filter(order => 
             order.customer_id === client.id && 
             (order.sync_status === 'pending_sync' || 
@@ -143,7 +133,6 @@ const ClientsList = () => {
              order.sync_status === 'synced')
           );
           
-          // Separar por tipo de pedido local
           const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
           const transmittedLocalOrders = clientLocalOrders.filter(order => 
             order.sync_status === 'transmitted' || order.sync_status === 'synced'
@@ -156,7 +145,6 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
-          // Verificar pedidos online primeiro
           if (clientOnlineOrders.length > 0) {
             const hasPositive = clientOnlineOrders.some(order => 
               order.status === 'pending' || 
@@ -179,7 +167,6 @@ const ClientsList = () => {
             }
           }
           
-          // Se não há pedidos online, verificar TODOS os pedidos locais (incluindo transmitidos)
           if (status === 'pendente' && clientLocalOrders.length > 0) {
             const hasPositiveLocal = clientLocalOrders.some(order => 
               order.status === 'pending' || 
@@ -243,10 +230,9 @@ const ClientsList = () => {
     console.log('👤 Selected client:', client);
     console.log('📅 Day:', day);
     
-    // Navegar para a tela de atividades passando todas as informações necessárias
     navigate('/client-activities', {
       state: {
-        clientName: client.company_name || client.name, // Priorizar nome fantasia
+        clientName: client.company_name || client.name,
         clientId: client.id,
         day: day
       }
@@ -257,40 +243,7 @@ const ClientsList = () => {
     console.log('🔙 Going back to visit routes');
     goBack();
   };
-  
-  // Helper to determine status color and text
-  const getStatusInfo = (client: Client) => {
-    const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
-    const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
-    
-    switch (client.status) {
-      case 'positivado':
-        return {
-          color: 'bg-green-100 text-green-800',
-          text: `Positivado${localInfo}${transmittedInfo}`
-        };
-      case 'negativado':
-        return {
-          color: 'bg-red-100 text-red-800',
-          text: `Negativado${localInfo}${transmittedInfo}`
-        };
-      case 'pendente':
-      default:
-        return {
-          color: (client.hasLocalOrders || client.hasTransmittedOrders) ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
-          text: `Pendente${localInfo}${transmittedInfo}`
-        };
-    }
-  };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  // ✅ Loading state enquanto verifica autenticação
   if (authLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -304,7 +257,6 @@ const ClientsList = () => {
     );
   }
 
-  // ✅ Verificar se o vendedor está autenticado
   if (!salesRep) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -325,61 +277,13 @@ const ClientsList = () => {
       
       <div className="flex-1 p-4">
         <ScrollArea className="h-full">
-          {loading ? (
-            <div className="text-center text-gray-500 py-8">
-              <div className="text-lg">Carregando clientes...</div>
-              <div className="text-sm mt-2">Buscando clientes para {day}</div>
-            </div>
-          ) : clients.length > 0 ? (
-            <div className="space-y-3">
-              <div className="text-sm text-gray-600 mb-3">
-                {clients.length} cliente{clients.length !== 1 ? 's' : ''} encontrado{clients.length !== 1 ? 's' : ''} para {day} - {salesRep.name}
-              </div>
-              
-              {clients.map(client => {
-                const statusInfo = getStatusInfo(client);
-                
-                return (
-                  <div 
-                    key={client.id}
-                    className="bg-white rounded-lg shadow p-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => handleClientSelect(client)}
-                  >
-                    <div className="bg-blue-100 p-2 rounded-full">
-                      <User className="h-5 w-5 text-app-blue" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <div className="font-medium">{client.company_name || client.name}</div>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${statusInfo.color}`}>
-                          {statusInfo.text}
-                        </span>
-                      </div>
-                      {client.company_name && client.name && (
-                        <div className="text-sm text-gray-500">Razão Social: {client.name}</div>
-                      )}
-                      <div className="text-xs text-gray-400 mt-1">
-                        Código: {client.code || 'N/A'}
-                        {client.address && (
-                          <span className="ml-2">• {client.address}</span>
-                        )}
-                        {(client.status === 'positivado' && client.orderTotal && client.orderTotal > 0) && (
-                          <span className="ml-2 text-green-600 font-medium">
-                            • {formatCurrency(client.orderTotal)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              <div className="text-lg mb-2">Nenhum cliente registrado</div>
-              <div className="text-sm">Não há clientes cadastrados para {day} - {salesRep.name}</div>
-            </div>
-          )}
+          <ClientsListContent
+            loading={loading}
+            clients={clients}
+            day={day}
+            salesRep={salesRep}
+            onClientSelect={handleClientSelect}
+          />
         </ScrollArea>
       </div>
       
