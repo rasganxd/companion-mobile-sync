@@ -1,24 +1,23 @@
+
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Search, Package, Plus, ShoppingCart, Save, FileText } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowLeft, ArrowRight, Plus, ShoppingCart, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppNavigation } from '@/hooks/useAppNavigation';
-import { useLocation } from 'react-router-dom';
+import { useProductPricing } from '@/hooks/useProductPricing';
 
 interface Client {
   id: string;
   name: string;
-  address?: string;
-  phone?: string;
+  company_name?: string;
   sales_rep_id?: string;
 }
 
@@ -28,7 +27,6 @@ interface Product {
   code: string;
   price: number;
   unit: string;
-  description?: string;
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
@@ -46,283 +44,133 @@ interface OrderItem {
 
 const PlaceOrder = () => {
   const { salesRep } = useAuth();
-  const { navigateTo } = useAppNavigation();
+  const navigate = useNavigate();
   const location = useLocation();
   
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
+  const [quantity, setQuantity] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('main');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [productSearchTerm, setProductSearchTerm] = useState('');
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
-  const [customPrice, setCustomPrice] = useState<string>('');
-  const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('');
-  const [showClientDialog, setShowClientDialog] = useState(false);
-  const [showProductDialog, setShowProductDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [showClientSelection, setShowClientSelection] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const locationState = location.state as any;
+  const currentProduct = products[currentProductIndex];
+  const { unitPrice, displayUnit, mainUnit, subUnit, ratio } = useProductPricing(currentProduct);
 
-  // ✅ NOVO: Função para limpar cache local inconsistente
-  const clearInconsistentCache = async () => {
-    console.log('🧹 Limpando cache inconsistente...');
-    try {
-      const db = getDatabaseAdapter();
-      
-      // Para WebDatabase, limpar localStorage
-      if (typeof localStorage !== 'undefined') {
-        localStorage.removeItem('clients');
-        localStorage.removeItem('products');
-        console.log('🧹 Cache localStorage limpo');
-      }
-      
-      // Para SQLite, não fazemos nada aqui pois vamos recriar os dados
-      console.log('🧹 Limpeza de cache concluída');
-    } catch (error) {
-      console.error('❌ Erro ao limpar cache:', error);
-    }
-  };
-
-  // ✅ ATUALIZADO: Função melhorada para buscar clientes com filtros rigorosos
-  const loadClientsWithFallback = async () => {
-    if (!salesRep?.id) {
-      console.warn('⚠️ Não há vendedor autenticado');
-      return [];
-    }
-
-    console.log('🔍 Vendedor logado:', {
-      id: salesRep.id,
-      name: salesRep.name,
-      code: salesRep.code
-    });
-
-    try {
-      const db = getDatabaseAdapter();
-      let localClients = await db.getClients();
-      
-      console.log('🔍 Clientes no cache local (ANTES do filtro):', {
-        total: localClients.length,
-        clientes: localClients.map(c => ({
-          id: c.id,
-          name: c.name,
-          sales_rep_id: c.sales_rep_id
-        }))
-      });
-      
-      // ✅ FILTRO RIGOROSO: Aplicar filtro logo após buscar do cache local
-      const salesRepClients = localClients.filter(client => {
-        const belongs = client.sales_rep_id === salesRep.id;
-        if (!belongs) {
-          console.warn(`❌ Cliente ${client.name} (${client.id}) pertence ao vendedor ${client.sales_rep_id}, mas vendedor logado é ${salesRep.id}`);
-        }
-        return belongs;
-      });
-      
-      console.log('🔍 Clientes após filtro por vendedor:', {
-        vendedorLogado: salesRep.id,
-        clientesFiltrados: salesRepClients.length,
-        clientesDetalhes: salesRepClients.map(c => ({
-          id: c.id,
-          name: c.name,
-          sales_rep_id: c.sales_rep_id
-        }))
-      });
-      
-      // ✅ FALLBACK: Se não há clientes locais do vendedor, buscar do Supabase
-      if (salesRepClients.length === 0) {
-        console.log('🌐 Nenhum cliente local encontrado para o vendedor, buscando do Supabase...');
-        
-        // Limpar cache inconsistente antes de buscar novos dados
-        await clearInconsistentCache();
-        
-        const { data: supabaseClients, error } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('sales_rep_id', salesRep.id)
-          .eq('active', true);
-        
-        if (error) {
-          console.error('❌ Erro ao buscar clientes do Supabase:', error);
-          toast.error('Erro ao carregar clientes do servidor');
-          return [];
-        }
-        
-        if (supabaseClients && supabaseClients.length > 0) {
-          console.log(`✅ Encontrados ${supabaseClients.length} clientes no Supabase para vendedor ${salesRep.id}`);
-          console.log('📋 Clientes do Supabase:', supabaseClients.map(c => ({
-            id: c.id,
-            name: c.name,
-            sales_rep_id: c.sales_rep_id
-          })));
-          
-          // ✅ VERIFICAÇÃO DUPLA: Garantir que todos os clientes pertencem ao vendedor
-          const verifiedClients = supabaseClients.filter(client => client.sales_rep_id === salesRep.id);
-          
-          if (verifiedClients.length !== supabaseClients.length) {
-            console.error('❌ ALERTA: Alguns clientes do Supabase não pertencem ao vendedor logado!');
-          }
-          
-          // Sincronizar com cache local
-          await db.saveClients(verifiedClients);
-          console.log('💾 Clientes sincronizados com cache local');
-          
-          return verifiedClients;
-        } else {
-          console.log('⚠️ Nenhum cliente encontrado no Supabase para este vendedor');
-          toast.warning('Você não possui clientes atribuídos. Entre em contato com o administrador.');
-          return [];
-        }
-      }
-      
-      console.log(`✅ Usando ${salesRepClients.length} clientes do cache local`);
-      return salesRepClients;
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar clientes:', error);
-      toast.error('Erro ao carregar lista de clientes');
-      return [];
-    }
-  };
-
-  // ✅ ATUALIZADO: Função melhorada para buscar produtos
-  const loadProductsWithFallback = async () => {
-    try {
-      const db = getDatabaseAdapter();
-      let localProducts = await db.getProducts();
-      
-      console.log('🔍 Produtos no cache local:', localProducts.length);
-      
-      // ✅ FALLBACK: Se não há produtos locais, buscar do Supabase
-      if (localProducts.length === 0) {
-        console.log('🌐 Cache de produtos vazio, buscando do Supabase...');
-        
-        const { data: supabaseProducts, error } = await supabase
-          .from('products')
-          .select('*')
-          .order('name');
-        
-        if (error) {
-          console.error('❌ Erro ao buscar produtos do Supabase:', error);
-          toast.error('Erro ao carregar produtos do servidor');
-          return localProducts;
-        }
-        
-        if (supabaseProducts && supabaseProducts.length > 0) {
-          console.log(`✅ Encontrados ${supabaseProducts.length} produtos no Supabase`);
-          
-          // Sincronizar com cache local
-          await db.saveProducts(supabaseProducts);
-          console.log('💾 Produtos sincronizados com cache local');
-          
-          return supabaseProducts;
-        } else {
-          console.log('⚠️ Nenhum produto encontrado no Supabase');
-          return [];
-        }
-      }
-      
-      console.log(`✅ Usando ${localProducts.length} produtos do cache local`);
-      return localProducts;
-      
-    } catch (error) {
-      console.error('❌ Erro ao carregar produtos:', error);
-      toast.error('Erro ao carregar lista de produtos');
-      return [];
-    }
-  };
-
-  // ✅ ATUALIZADO: Carregar dados com fallback
-  const loadData = async () => {
-    setIsLoadingData(true);
-    try {
-      console.log('🔄 Iniciando carregamento de dados...');
-      
-      // Carregar clientes e produtos em paralelo
-      const [clientsData, productsData] = await Promise.all([
-        loadClientsWithFallback(),
-        loadProductsWithFallback()
-      ]);
-      
-      console.log('📊 Dados carregados:', {
-        clients: clientsData.length,
-        products: productsData.length,
-        salesRepId: salesRep?.id
-      });
-      
-      setClients(clientsData);
-      setProducts(productsData);
-      
-      // ✅ CORRIGIDO: Buscar cliente pré-selecionado após carregar os dados
-      if (locationState?.clientId && clientsData.length > 0) {
-        const preSelectedClient = clientsData.find(c => c.id === locationState.clientId);
-        
-        if (preSelectedClient) {
-          console.log('✅ Cliente pré-selecionado encontrado:', preSelectedClient.name);
-          console.log('🔍 Dados do cliente:', {
-            id: preSelectedClient.id,
-            name: preSelectedClient.name,
-            sales_rep_id: preSelectedClient.sales_rep_id,
-            expectedSalesRepId: salesRep?.id
-          });
-          
-          setSelectedClient(preSelectedClient);
-        } else {
-          console.warn('❌ Cliente pré-selecionado não encontrado na lista carregada');
-          console.log('🔍 Cliente procurado:', locationState.clientId);
-          console.log('🔍 Clientes disponíveis:', clientsData.map(c => ({ id: c.id, name: c.name })));
-        }
-      }
-      
-    } catch (error) {
-      console.error('❌ Erro no carregamento de dados:', error);
-      toast.error('Erro ao carregar dados necessários');
-    } finally {
-      setIsLoadingData(false);
-    }
-  };
-
+  // Carregar dados iniciais
   useEffect(() => {
     if (salesRep?.id) {
       loadData();
     }
   }, [salesRep?.id]);
 
+  // Cliente pré-selecionado
   useEffect(() => {
-    // Carregar dados existentes se houver
+    if (locationState?.clientId && clients.length > 0) {
+      const preSelectedClient = clients.find(c => c.id === locationState.clientId);
+      if (preSelectedClient) {
+        setSelectedClient(preSelectedClient);
+      }
+    }
+  }, [locationState?.clientId, clients]);
+
+  // Itens existentes
+  useEffect(() => {
     if (locationState?.existingOrderItems) {
       setOrderItems(locationState.existingOrderItems);
     }
-    if (locationState?.paymentMethod) {
-      setPaymentMethod(locationState.paymentMethod);
-    }
   }, [locationState]);
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-    product.code.toLowerCase().includes(productSearchTerm.toLowerCase())
-  );
-
-  const addProductToOrder = () => {
-    if (!selectedProduct) {
-      toast.error('Selecione um produto');
-      return;
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const db = getDatabaseAdapter();
+      
+      // Carregar clientes
+      let localClients = await db.getClients();
+      const salesRepClients = localClients.filter(client => client.sales_rep_id === salesRep?.id);
+      
+      if (salesRepClients.length === 0) {
+        const { data: supabaseClients, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('sales_rep_id', salesRep.id)
+          .eq('active', true);
+        
+        if (supabaseClients && !error) {
+          await db.saveClients(supabaseClients);
+          setClients(supabaseClients);
+        }
+      } else {
+        setClients(salesRepClients);
+      }
+      
+      // Carregar produtos
+      let localProducts = await db.getProducts();
+      if (localProducts.length === 0) {
+        const { data: supabaseProducts, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('name');
+        
+        if (supabaseProducts && !error) {
+          await db.saveProducts(supabaseProducts);
+          setProducts(supabaseProducts);
+        }
+      } else {
+        setProducts(localProducts);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      toast.error('Erro ao carregar dados');
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    if (quantity <= 0) {
-      toast.error('Quantidade deve ser maior que zero');
-      return;
+  const navigateProduct = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentProductIndex > 0) {
+      setCurrentProductIndex(currentProductIndex - 1);
+    } else if (direction === 'next' && currentProductIndex < products.length - 1) {
+      setCurrentProductIndex(currentProductIndex + 1);
     }
-
-    const price = customPrice ? parseFloat(customPrice) : selectedProduct.price;
     
+    // Reset form
+    setQuantity('');
+    setCustomPrice('');
+    setSelectedUnit('main');
+  };
+
+  const calculateItemTotal = () => {
+    const qty = parseFloat(quantity) || 0;
+    const price = customPrice ? parseFloat(customPrice) : unitPrice;
+    return (qty * price).toFixed(2);
+  };
+
+  const addItem = () => {
+    if (!selectedClient) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+    
+    if (!currentProduct) {
+      toast.error('Nenhum produto selecionado');
+      return;
+    }
+    
+    const qty = parseFloat(quantity);
+    if (!qty || qty <= 0) {
+      toast.error('Informe uma quantidade válida');
+      return;
+    }
+    
+    const price = customPrice ? parseFloat(customPrice) : unitPrice;
     if (price <= 0) {
       toast.error('Preço deve ser maior que zero');
       return;
@@ -330,177 +178,67 @@ const PlaceOrder = () => {
 
     const newItem: OrderItem = {
       id: Date.now(),
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      code: selectedProduct.code,
-      quantity,
-      price,
-      unit: selectedProduct.unit
+      productId: currentProduct.id,
+      productName: currentProduct.name,
+      code: currentProduct.code,
+      quantity: qty,
+      price: price,
+      unit: displayUnit
     };
 
     setOrderItems([...orderItems, newItem]);
-    setSelectedProduct(null);
-    setQuantity(1);
+    
+    // Reset form
+    setQuantity('');
     setCustomPrice('');
-    setShowProductDialog(false);
-    toast.success('Produto adicionado ao pedido');
+    setSelectedUnit('main');
+    
+    toast.success('Item adicionado ao pedido');
   };
 
   const removeItem = (itemId: number) => {
     setOrderItems(orderItems.filter(item => item.id !== itemId));
-    toast.success('Item removido do pedido');
-  };
-
-  const updateQuantity = (itemId: number, newQuantity: number) => {
-    if (newQuantity <= 0) return;
-    
-    setOrderItems(orderItems.map(item =>
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
-    ));
-  };
-
-  const updatePrice = (itemId: number, newPrice: number) => {
-    if (newPrice <= 0) return;
-    
-    setOrderItems(orderItems.map(item =>
-      item.id === itemId ? { ...item, price: newPrice } : item
-    ));
+    toast.success('Item removido');
   };
 
   const getTotalValue = () => {
     return orderItems.reduce((total, item) => total + (item.quantity * item.price), 0);
   };
 
-  // ✅ ATUALIZADO: Validação mais rigorosa
-  const validateOrder = (): boolean => {
-    console.log('🔍 Validando pedido...');
-    console.log('🔍 Vendedor logado atual:', {
-      id: salesRep?.id,
-      name: salesRep?.name
-    });
-    
+  const finishOrder = () => {
     if (!selectedClient) {
-      console.error('❌ Validação falhou: Nenhum cliente selecionado');
       toast.error('Selecione um cliente');
-      return false;
+      return;
     }
-
-    console.log('🔍 Cliente selecionado:', {
-      id: selectedClient.id,
-      name: selectedClient.name,
-      sales_rep_id: selectedClient.sales_rep_id
-    });
-
-    // ✅ VALIDAÇÃO CRÍTICA: Verificar se o cliente pertence ao vendedor
-    if (!selectedClient.sales_rep_id) {
-      console.error('❌ CRÍTICO: Cliente sem sales_rep_id definido');
-      toast.error('Cliente com dados incompletos. Tente sincronizar os dados.');
-      return false;
-    }
-
-    if (selectedClient.sales_rep_id !== salesRep?.id) {
-      console.error('❌ CRÍTICO: Cliente não pertence ao vendedor atual');
-      console.error('🚨 DETALHES DO ERRO:', {
-        clienteSalesRepId: selectedClient.sales_rep_id,
-        vendedorLogadoId: salesRep?.id,
-        clienteNome: selectedClient.name,
-        vendedorNome: salesRep?.name
-      });
-      toast.error(`ERRO: Cliente "${selectedClient.name}" não pertence ao seu portfólio. Este cliente pertence ao vendedor ${selectedClient.sales_rep_id}.`);
-      
-      // ✅ CORREÇÃO AUTOMÁTICA: Remover cliente inválido da seleção
-      setSelectedClient(null);
-      return false;
-    }
-
+    
     if (orderItems.length === 0) {
-      console.error('❌ Validação falhou: Nenhum produto no pedido');
-      toast.error('Adicione pelo menos um produto ao pedido');
-      return false;
+      toast.error('Adicione pelo menos um item ao pedido');
+      return;
     }
 
-    if (!salesRep?.id) {
-      console.error('❌ Validação falhou: Vendedor não identificado');
-      toast.error('Vendedor não identificado. Faça login novamente.');
-      return false;
-    }
-
-    console.log('✅ Validação do pedido passou com sucesso');
-    return true;
+    navigate('/order-review', {
+      state: {
+        orderItems,
+        client: selectedClient,
+        paymentMethod: 'A definir',
+        clientId: selectedClient.id,
+        clientName: selectedClient.name
+      }
+    });
   };
 
-  const saveOrder = async () => {
-    if (!validateOrder()) return;
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    setIsLoading(true);
-    try {
-      const db = getDatabaseAdapter();
-      
-      console.log('💾 Salvando pedido:', {
-        clientId: selectedClient!.id,
-        clientName: selectedClient!.name,
-        salesRepId: salesRep!.id,
-        salesRepName: salesRep!.name,
-        itemsCount: orderItems.length,
-        total: getTotalValue()
-      });
-
-      const orderData = {
-        customer_id: selectedClient!.id,
-        customer_name: selectedClient!.name,
-        sales_rep_id: salesRep!.id,
-        sales_rep_name: salesRep!.name,
-        date: new Date().toISOString(),
-        total: getTotalValue(),
-        status: 'pending',
-        notes: notes || '',
-        payment_method: paymentMethod || '',
-        items: orderItems.map(item => ({
-          product_id: item.productId,
-          product_name: item.productName,
-          product_code: parseInt(item.code) || 0,
-          quantity: item.quantity,
-          price: item.price,
-          unit_price: item.price,
-          total: item.quantity * item.price,
-          unit: item.unit
-        }))
-      };
-
-      await db.saveMobileOrder(orderData);
-      
-      toast.success('Pedido salvo com sucesso!');
-      
-      // Resetar formulário
-      setSelectedClient(null);
-      setOrderItems([]);
-      setNotes('');
-      setPaymentMethod('');
-      
-      // Navegar de volta
-      navigateTo('/my-orders');
-      
-    } catch (error) {
-      console.error('❌ Erro ao salvar pedido:', error);
-      toast.error(`Erro ao salvar pedido: ${error}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // ✅ Mostrar loading durante carregamento inicial
-  if (isLoadingData) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Header 
-          title="Novo Pedido" 
-          showBackButton={true} 
-          backgroundColor="blue" 
-        />
+        <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando dados...</p>
+            <p className="text-gray-600">Carregando...</p>
           </div>
         </div>
       </div>
@@ -509,357 +247,259 @@ const PlaceOrder = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        title="Novo Pedido" 
-        showBackButton={true} 
-        backgroundColor="blue" 
-      />
+      <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
-      <div className="p-4 flex-1">
-        {/* Cliente Selecionado */}
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <Users className="mr-2" size={20} />
-              Cliente
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {selectedClient ? (
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium">{selectedClient.name}</p>
-                  {selectedClient.address && (
-                    <p className="text-sm text-gray-600">{selectedClient.address}</p>
-                  )}
-                  {selectedClient.phone && (
-                    <p className="text-sm text-gray-600">{selectedClient.phone}</p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowClientDialog(true)}
-                >
-                  Alterar
-                </Button>
+      <div className="p-4 flex-1 space-y-4">
+        {/* Seção do Cliente */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Cliente Selecionado:</Label>
+                {selectedClient ? (
+                  <div>
+                    <p className="font-medium text-lg">{selectedClient.name}</p>
+                    {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
+                      <p className="text-sm text-gray-600">{selectedClient.company_name}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500">Nenhum cliente selecionado</p>
+                )}
               </div>
-            ) : (
               <Button 
-                onClick={() => setShowClientDialog(true)}
-                className="w-full"
+                variant="outline" 
+                size="sm"
+                onClick={() => setShowClientSelection(true)}
               >
-                <Users className="mr-2" size={16} />
-                Selecionar Cliente
+                <Users size={16} className="mr-2" />
+                {selectedClient ? 'Alterar' : 'Selecionar'}
               </Button>
-            )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Dialog de Seleção de Cliente */}
-        {showClientDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowClientDialog(false)}
-                  >
-                    ✕
-                  </Button>
+        {/* Seção do Produto */}
+        {products.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-gray-600">Produto:</Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigateProduct('prev')}
+                      disabled={currentProductIndex === 0}
+                    >
+                      <ArrowLeft size={16} />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigateProduct('next')}
+                      disabled={currentProductIndex === products.length - 1}
+                    >
+                      <ArrowRight size={16} />
+                    </Button>
+                  </div>
                 </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Buscar cliente..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {filteredClients.length === 0 && searchTerm && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Nenhum cliente encontrado em seu portfólio
-                  </p>
-                )}
-                {clients.length === 0 && (
-                  <p className="text-sm text-orange-600 mt-2">
-                    ⚠️ Você não possui clientes atribuídos. Entre em contato com o administrador.
-                  </p>
-                )}
-              </div>
-              <div className="overflow-y-auto max-h-96">
-                {filteredClients.map((client) => (
-                  <div
-                    key={client.id}
-                    className="p-3 border-b hover:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      console.log('🎯 Cliente selecionado:', {
-                        id: client.id,
-                        name: client.name,
-                        sales_rep_id: client.sales_rep_id
-                      });
-                      setSelectedClient(client);
-                      setShowClientDialog(false);
-                      setSearchTerm('');
-                    }}
-                  >
-                    <p className="font-medium">{client.name}</p>
-                    {client.address && (
-                      <p className="text-sm text-gray-600">{client.address}</p>
+                
+                {currentProduct && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                        {currentProduct.code}
+                      </span>
+                      <h3 className="font-medium">{currentProduct.name}</h3>
+                    </div>
+                    
+                    {/* Unidades */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label className="text-sm">Unidade de Venda:</Label>
+                        <p className="text-sm font-medium">{displayUnit}</p>
+                      </div>
+                      <div>
+                        <Label className="text-sm">Preço Unitário:</Label>
+                        <p className="text-sm font-medium">R$ {unitPrice.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Seletor de Unidade (se houver subunidade) */}
+                    {currentProduct.has_subunit && subUnit && (
+                      <div className="mb-4">
+                        <Label className="text-sm">Unidade:</Label>
+                        <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => setSelectedUnit(value)}>
+                          <SelectTrigger className="mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sub">{subUnit}</SelectItem>
+                            <SelectItem value="main">{mainUnit}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 mt-1">
+                          1 {mainUnit} = {ratio} {subUnit}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Quantidade e Preço */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <Label className="text-sm">Quantidade:</Label>
+                        <Input
+                          type="number"
+                          value={quantity}
+                          onChange={(e) => setQuantity(e.target.value)}
+                          placeholder="0"
+                          min="0"
+                          step="0.01"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm">Preço (opcional):</Label>
+                        <Input
+                          type="number"
+                          value={customPrice}
+                          onChange={(e) => setCustomPrice(e.target.value)}
+                          placeholder={unitPrice.toFixed(2)}
+                          min="0"
+                          step="0.01"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    
+                    {quantity && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Total do Item:</span>
+                          <span className="text-lg font-bold text-blue-600">
+                            R$ {calculateItemTotal()}
+                          </span>
+                        </div>
+                      </div>
                     )}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Produtos */}
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center justify-between">
-              <span className="flex items-center">
-                <Package className="mr-2" size={20} />
-                Produtos
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowProductDialog(true)}
-              >
-                <Plus size={16} className="mr-1" />
-                Adicionar
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {orderItems.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">
-                Nenhum produto adicionado
-              </p>
-            ) : (
-              <div className="space-y-3">
+        {/* Botão Gravar Item */}
+        <Button 
+          onClick={addItem}
+          className="w-full"
+          disabled={!selectedClient || !currentProduct || !quantity}
+        >
+          <Plus size={16} className="mr-2" />
+          Gravar Item
+        </Button>
+
+        {/* Lista de Itens */}
+        {orderItems.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <Label className="text-sm font-medium text-gray-600 block mb-3">
+                Itens do Pedido ({orderItems.length}):
+              </Label>
+              <div className="space-y-2">
                 {orderItems.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-3">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1">
-                        <p className="font-medium">{item.productName}</p>
-                        <p className="text-sm text-gray-600">Código: {item.code}</p>
-                      </div>
-                      <Button
-                        variant="destructive"
+                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{item.productName}</p>
+                      <p className="text-xs text-gray-600">
+                        {item.quantity} {item.unit} × R$ {item.price.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">R$ {(item.quantity * item.price).toFixed(2)}</span>
+                      <Button 
+                        variant="destructive" 
                         size="sm"
                         onClick={() => removeItem(item.id)}
                       >
-                        ✕
+                        ×
                       </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-xs text-gray-600">Qtd</label>
-                        <Input
-                          type="number"
-                          value={item.quantity}
-                          onChange={(e) => updateQuantity(item.id, parseInt(e.target.value) || 0)}
-                          min="1"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-600">Preço Unit.</label>
-                        <Input
-                          type="number"
-                          value={item.price}
-                          onChange={(e) => updatePrice(item.id, parseFloat(e.target.value) || 0)}
-                          min="0"
-                          step="0.01"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-600">Total</label>
-                        <p className="text-sm font-medium pt-2">
-                          R$ {(item.quantity * item.price).toFixed(2)}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 ))}
                 
                 <div className="border-t pt-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold">Total do Pedido:</span>
-                    <span className="text-lg font-bold text-blue-600">
+                    <span className="font-semibold">Total do Pedido:</span>
+                    <span className="text-xl font-bold text-blue-600">
                       R$ {getTotalValue().toFixed(2)}
                     </span>
                   </div>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Dialog de Seleção de Produto */}
-        {showProductDialog && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
-              <div className="p-4 border-b">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Adicionar Produto</h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowProductDialog(false);
-                      setSelectedProduct(null);
-                      setQuantity(1);
-                      setCustomPrice('');
-                    }}
-                  >
-                    ✕
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Buscar produto..."
-                      value={productSearchTerm}
-                      onChange={(e) => setProductSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  {selectedProduct && (
-                    <div className="border rounded-lg p-3 bg-blue-50">
-                      <p className="font-medium">{selectedProduct.name}</p>
-                      <p className="text-sm text-gray-600">Código: {selectedProduct.code}</p>
-                      <p className="text-sm text-gray-600">Preço: R$ {selectedProduct.price.toFixed(2)}</p>
-                      
-                      <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div>
-                          <label className="text-xs text-gray-600">Quantidade</label>
-                          <Input
-                            type="number"
-                            value={quantity}
-                            onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                            min="1"
-                            className="text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-gray-600">Preço Personalizado</label>
-                          <Input
-                            type="number"
-                            value={customPrice}
-                            onChange={(e) => setCustomPrice(e.target.value)}
-                            placeholder={selectedProduct.price.toFixed(2)}
-                            min="0"
-                            step="0.01"
-                            className="text-sm"
-                          />
-                        </div>
-                      </div>
-                      
-                      <Button
-                        onClick={addProductToOrder}
-                        className="w-full mt-3"
-                        size="sm"
-                      >
-                        Adicionar ao Pedido
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="overflow-y-auto max-h-96">
-                {filteredProducts.map((product) => (
-                  <div
-                    key={product.id}
-                    className={`p-3 border-b hover:bg-gray-50 cursor-pointer ${
-                      selectedProduct?.id === product.id ? 'bg-blue-50' : ''
-                    }`}
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-gray-600">Código: {product.code}</p>
-                    <p className="text-sm text-gray-600">R$ {product.price.toFixed(2)}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
-        {/* Informações Adicionais */}
-        <Card className="mb-4">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg flex items-center">
-              <FileText className="mr-2" size={20} />
-              Informações Adicionais
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Forma de Pagamento</label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a forma de pagamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                  <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                  <SelectItem value="pix">PIX</SelectItem>
-                  <SelectItem value="boleto">Boleto</SelectItem>
-                  <SelectItem value="prazo">A Prazo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium mb-1">Observações</label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Observações do pedido..."
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Botão Salvar */}
-        <div className="fixed bottom-4 left-4 right-4 z-40">
-          <Button
-            onClick={saveOrder}
-            disabled={isLoading || !selectedClient || orderItems.length === 0}
-            className="w-full py-3"
+        {/* Botão Finalizar */}
+        {orderItems.length > 0 && (
+          <Button 
+            onClick={finishOrder}
+            className="w-full bg-green-600 hover:bg-green-700"
             size="lg"
           >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2" size={20} />
-                Salvar Pedido
-              </>
-            )}
+            <ShoppingCart size={16} className="mr-2" />
+            Finalizar Pedido
           </Button>
-        </div>
-        
+        )}
+
         <div className="h-20"></div>
       </div>
+
+      {/* Dialog de Seleção de Cliente */}
+      {showClientSelection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowClientSelection(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <Input
+                placeholder="Buscar cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="overflow-y-auto max-h-96">
+              {filteredClients.map((client) => (
+                <div
+                  key={client.id}
+                  className="p-3 border-b hover:bg-gray-50 cursor-pointer"
+                  onClick={() => {
+                    setSelectedClient(client);
+                    setShowClientSelection(false);
+                    setSearchTerm('');
+                  }}
+                >
+                  <p className="font-medium">{client.name}</p>
+                  {client.company_name && client.company_name !== client.name && (
+                    <p className="text-sm text-gray-600">{client.company_name}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
