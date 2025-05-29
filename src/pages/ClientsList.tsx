@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User } from 'lucide-react';
@@ -9,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Client {
   id: string;
@@ -37,6 +37,9 @@ const ClientsList = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // ✅ Obter o vendedor logado
+  const { salesRep, isLoading: authLoading } = useAuth();
+  
   // Mapeamento dos dias da semana
   const dayMapping: { [key: string]: string } = {
     'monday': 'Segunda',
@@ -52,7 +55,21 @@ const ClientsList = () => {
     const loadClients = async () => {
       try {
         setLoading(true);
-        console.log(`📅 Loading clients for: ${day}`);
+        
+        // ✅ Verificar se o vendedor está autenticado
+        if (authLoading) {
+          console.log('🔄 Aguardando autenticação...');
+          return;
+        }
+        
+        if (!salesRep?.id) {
+          console.log('❌ Vendedor não autenticado');
+          toast.error('Vendedor não autenticado');
+          setClients([]);
+          return;
+        }
+        
+        console.log(`📅 Loading clients for: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
         
         // Encontrar a chave em inglês correspondente ao dia em português
         const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
@@ -65,11 +82,12 @@ const ClientsList = () => {
         
         console.log(`🔍 Fetching customers for ${day} (${englishDay}) from Supabase...`);
         
-        // Buscar clientes ativos com dias de visita definidos para o dia específico
+        // ✅ Buscar clientes ativos com dias de visita definidos para o dia específico E do vendedor logado
         const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
           .eq('active', true)
+          .eq('sales_rep_id', salesRep.id) // ✅ FILTRO POR VENDEDOR
           .not('visit_days', 'is', null);
         
         if (customersError) {
@@ -100,13 +118,18 @@ const ClientsList = () => {
           // Continuar sem os dados de pedidos online
         }
         
-        // Buscar pedidos locais para estes clientes (incluindo transmitidos)
+        // ✅ Buscar pedidos locais para estes clientes (incluindo transmitidos) E filtrar por vendedor
         const db = getDatabaseAdapter();
-        const localOrders = await db.getAllOrders();
+        const allLocalOrders = await db.getAllOrders();
         
-        console.log('👥 Day clients:', dayClients);
+        // ✅ Filtrar pedidos locais pelo vendedor logado
+        const localOrders = allLocalOrders.filter(order => 
+          order.sales_rep_id === salesRep.id && clientIds.includes(order.customer_id)
+        );
+        
+        console.log('👥 Day clients for salesperson:', dayClients);
         console.log('📋 Online orders for today:', orders);
-        console.log('📱 Local orders:', localOrders);
+        console.log('📱 Local orders for salesperson:', localOrders);
         
         // Determinar status de cada cliente baseado nos pedidos (online + local incluindo transmitidos)
         const clientsWithStatus = dayClients.map(client => {
@@ -201,11 +224,12 @@ const ClientsList = () => {
           };
         });
         
-        console.log(`✅ Clients with status for ${day} (including transmitted):`, clientsWithStatus);
+        console.log(`✅ Clients with status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
         setClients(clientsWithStatus);
         
       } catch (error) {
         console.error('❌ Error loading clients:', error);
+        toast.error('Erro ao carregar clientes');
         setClients([]);
       } finally {
         setLoading(false);
@@ -213,7 +237,7 @@ const ClientsList = () => {
     };
     
     loadClients();
-  }, [day]);
+  }, [day, salesRep, authLoading]);
   
   const handleClientSelect = (client: Client) => {
     console.log('👤 Selected client:', client);
@@ -266,6 +290,35 @@ const ClientsList = () => {
     }).format(value);
   };
 
+  // ✅ Loading state enquanto verifica autenticação
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-lg">Verificando autenticação...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Verificar se o vendedor está autenticado
+  if (!salesRep) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-lg">Vendedor não autenticado</div>
+            <div className="text-sm mt-2">Faça login para ver os clientes</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
@@ -280,7 +333,7 @@ const ClientsList = () => {
           ) : clients.length > 0 ? (
             <div className="space-y-3">
               <div className="text-sm text-gray-600 mb-3">
-                {clients.length} cliente{clients.length !== 1 ? 's' : ''} encontrado{clients.length !== 1 ? 's' : ''} para {day}
+                {clients.length} cliente{clients.length !== 1 ? 's' : ''} encontrado{clients.length !== 1 ? 's' : ''} para {day} - {salesRep.name}
               </div>
               
               {clients.map(client => {
@@ -324,7 +377,7 @@ const ClientsList = () => {
           ) : (
             <div className="text-center text-gray-500 py-8">
               <div className="text-lg mb-2">Nenhum cliente registrado</div>
-              <div className="text-sm">Não há clientes cadastrados para {day}</div>
+              <div className="text-sm">Não há clientes cadastrados para {day} - {salesRep.name}</div>
             </div>
           )}
         </ScrollArea>

@@ -875,29 +875,29 @@ export type Database = {
       }
       product_units: {
         Row: {
-          conversion_rate: number
           created_at: string
           id: string
           is_default: boolean
           label: string
+          package_quantity: number
           updated_at: string
           value: string
         }
         Insert: {
-          conversion_rate?: number
           created_at?: string
           id?: string
           is_default?: boolean
           label: string
+          package_quantity?: number
           updated_at?: string
           value: string
         }
         Update: {
-          conversion_rate?: number
           created_at?: string
           id?: string
           is_default?: boolean
           label?: string
+          package_quantity?: number
           updated_at?: string
           value?: string
         }
