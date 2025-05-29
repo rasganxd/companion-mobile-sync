@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, Plus, ShoppingCart, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Plus, ShoppingCart, Users, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,9 +24,10 @@ interface Client {
 interface Product {
   id: string;
   name: string;
-  code: string;
+  code: number;
   price: number;
   unit: string;
+  stock?: number;
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
@@ -36,7 +37,7 @@ interface OrderItem {
   id: number;
   productId: string;
   productName: string;
-  code: string;
+  code: number;
   quantity: number;
   price: number;
   unit: string;
@@ -57,7 +58,9 @@ const PlaceOrder = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showClientSelection, setShowClientSelection] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
   const locationState = location.state as any;
   const currentProduct = products[currentProductIndex];
@@ -70,7 +73,6 @@ const PlaceOrder = () => {
     }
   }, [salesRep?.id]);
 
-  // Cliente pré-selecionado
   useEffect(() => {
     if (locationState?.clientId && clients.length > 0) {
       const preSelectedClient = clients.find(c => c.id === locationState.clientId);
@@ -80,7 +82,6 @@ const PlaceOrder = () => {
     }
   }, [locationState?.clientId, clients]);
 
-  // Itens existentes
   useEffect(() => {
     if (locationState?.existingOrderItems) {
       setOrderItems(locationState.existingOrderItems);
@@ -145,6 +146,28 @@ const PlaceOrder = () => {
     setQuantity('');
     setCustomPrice('');
     setSelectedUnit('main');
+  };
+
+  const handleProductSearch = () => {
+    setShowProductSearch(!showProductSearch);
+    setProductSearchTerm('');
+  };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
+  );
+
+  const selectProduct = (product: Product) => {
+    const productIndex = products.findIndex(p => p.id === product.id);
+    if (productIndex !== -1) {
+      setCurrentProductIndex(productIndex);
+      setShowProductSearch(false);
+      setProductSearchTerm('');
+      // Reset form
+      setQuantity('');
+      setCustomPrice('');
+      setSelectedUnit('main');
+    }
   };
 
   const calculateItemTotal = () => {
@@ -228,7 +251,7 @@ const PlaceOrder = () => {
   };
 
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
+    client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
   );
 
   if (isLoading) {
@@ -251,28 +274,29 @@ const PlaceOrder = () => {
       
       <div className="p-4 flex-1 space-y-4">
         {/* Seção do Cliente */}
-        <Card>
+        <Card className="bg-white shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-sm font-medium text-gray-600">Cliente Selecionado:</Label>
+              <div className="flex-1">
+                <Label className="text-sm font-medium text-gray-600 block mb-1">Cliente:</Label>
                 {selectedClient ? (
                   <div>
-                    <p className="font-medium text-lg">{selectedClient.name}</p>
+                    <p className="font-semibold text-lg text-gray-900">{selectedClient.name}</p>
                     {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
                       <p className="text-sm text-gray-600">{selectedClient.company_name}</p>
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500">Nenhum cliente selecionado</p>
+                  <p className="text-gray-500 italic">Nenhum cliente selecionado</p>
                 )}
               </div>
               <Button 
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowClientSelection(true)}
+                className="ml-4"
               >
-                <Users size={16} className="mr-2" />
+                <Users size={16} className="mr-1" />
                 {selectedClient ? 'Alterar' : 'Selecionar'}
               </Button>
             </div>
@@ -281,112 +305,159 @@ const PlaceOrder = () => {
 
         {/* Seção do Produto */}
         {products.length > 0 && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium text-gray-600">Produto:</Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigateProduct('prev')}
-                      disabled={currentProductIndex === 0}
-                    >
-                      <ArrowLeft size={16} />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigateProduct('next')}
-                      disabled={currentProductIndex === products.length - 1}
-                    >
-                      <ArrowRight size={16} />
-                    </Button>
-                  </div>
+          <Card className="bg-white shadow-sm">
+            <CardContent className="p-4 space-y-4">
+              {/* Navegação e Busca de Produto */}
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-600">Produto:</Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleProductSearch}
+                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  >
+                    <Search size={16} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigateProduct('prev')}
+                    disabled={currentProductIndex === 0}
+                  >
+                    <ArrowLeft size={16} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigateProduct('next')}
+                    disabled={currentProductIndex === products.length - 1}
+                  >
+                    <ArrowRight size={16} />
+                  </Button>
                 </div>
-                
-                {currentProduct && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
-                        {currentProduct.code}
-                      </span>
-                      <h3 className="font-medium">{currentProduct.name}</h3>
-                    </div>
-                    
-                    {/* Unidades */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <Label className="text-sm">Unidade de Venda:</Label>
-                        <p className="text-sm font-medium">{displayUnit}</p>
-                      </div>
-                      <div>
-                        <Label className="text-sm">Preço Unitário:</Label>
-                        <p className="text-sm font-medium">R$ {unitPrice.toFixed(2)}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Seletor de Unidade (se houver subunidade) */}
-                    {currentProduct.has_subunit && subUnit && (
-                      <div className="mb-4">
-                        <Label className="text-sm">Unidade:</Label>
-                        <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => setSelectedUnit(value)}>
-                          <SelectTrigger className="mt-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sub">{subUnit}</SelectItem>
-                            <SelectItem value="main">{mainUnit}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-gray-500 mt-1">
-                          1 {mainUnit} = {ratio} {subUnit}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Quantidade e Preço */}
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <Label className="text-sm">Quantidade:</Label>
-                        <Input
-                          type="number"
-                          value={quantity}
-                          onChange={(e) => setQuantity(e.target.value)}
-                          placeholder="0"
-                          min="0"
-                          step="0.01"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm">Preço (opcional):</Label>
-                        <Input
-                          type="number"
-                          value={customPrice}
-                          onChange={(e) => setCustomPrice(e.target.value)}
-                          placeholder={unitPrice.toFixed(2)}
-                          min="0"
-                          step="0.01"
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                    
-                    {quantity && (
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Total do Item:</span>
-                          <span className="text-lg font-bold text-blue-600">
-                            R$ {calculateItemTotal()}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
+
+              {/* Busca de Produto */}
+              {showProductSearch && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <Input
+                    placeholder="Digite o nome do produto..."
+                    value={productSearchTerm}
+                    onChange={(e) => setProductSearchTerm(e.target.value)}
+                    className="mb-3"
+                    autoFocus
+                  />
+                  {productSearchTerm && (
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {filteredProducts.slice(0, 8).map((product) => (
+                        <div
+                          key={product.id}
+                          className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer"
+                          onClick={() => selectProduct(product)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-medium text-sm">{product.name}</p>
+                              <p className="text-xs text-gray-600">Código: {product.code}</p>
+                            </div>
+                            <p className="text-sm font-semibold text-blue-600">
+                              R$ {product.price.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <p className="text-center text-gray-500 py-2">Nenhum produto encontrado</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Informações do Produto Atual */}
+              {currentProduct && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="bg-gray-200 px-3 py-1 rounded text-sm font-mono">
+                      {currentProduct.code}
+                    </span>
+                    <h3 className="font-semibold text-lg text-gray-900">{currentProduct.name}</h3>
+                  </div>
+                  
+                  {/* Informações de Unidade e Preço */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <Label className="text-sm text-gray-600">Unidade:</Label>
+                      <p className="font-medium">{displayUnit}</p>
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-600">Preço:</Label>
+                      <p className="font-medium text-blue-600">R$ {unitPrice.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Seletor de Unidade (se houver subunidade) */}
+                  {currentProduct.has_subunit && subUnit && (
+                    <div className="mb-4">
+                      <Label className="text-sm text-gray-600 block mb-2">Tipo de Unidade:</Label>
+                      <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => setSelectedUnit(value)}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sub">{subUnit}</SelectItem>
+                          <SelectItem value="main">{mainUnit}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        1 {mainUnit} = {ratio} {subUnit}
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Campos de Quantidade e Preço */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <Label className="text-sm text-gray-600 block mb-1">Quantidade:</Label>
+                      <Input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        step="0.01"
+                        className="text-center font-medium"
+                        autoFocus
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm text-gray-600 block mb-1">Preço (opcional):</Label>
+                      <Input
+                        type="number"
+                        value={customPrice}
+                        onChange={(e) => setCustomPrice(e.target.value)}
+                        placeholder={unitPrice.toFixed(2)}
+                        min="0"
+                        step="0.01"
+                        className="text-center font-medium"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Total do Item */}
+                  {quantity && (
+                    <div className="bg-blue-100 p-3 rounded-lg border border-blue-200">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Total do Item:</span>
+                        <span className="text-xl font-bold text-blue-700">
+                          R$ {calculateItemTotal()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -394,31 +465,31 @@ const PlaceOrder = () => {
         {/* Botão Gravar Item */}
         <Button 
           onClick={addItem}
-          className="w-full"
+          className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg font-semibold"
           disabled={!selectedClient || !currentProduct || !quantity}
         >
-          <Plus size={16} className="mr-2" />
+          <Plus size={20} className="mr-2" />
           Gravar Item
         </Button>
 
         {/* Lista de Itens */}
         {orderItems.length > 0 && (
-          <Card>
+          <Card className="bg-white shadow-sm">
             <CardContent className="p-4">
               <Label className="text-sm font-medium text-gray-600 block mb-3">
                 Itens do Pedido ({orderItems.length}):
               </Label>
-              <div className="space-y-2">
+              <div className="space-y-2 mb-4">
                 {orderItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded">
+                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{item.productName}</p>
-                      <p className="text-xs text-gray-600">
+                      <p className="font-medium">{item.productName}</p>
+                      <p className="text-sm text-gray-600">
                         {item.quantity} {item.unit} × R$ {item.price.toFixed(2)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">R$ {(item.quantity * item.price).toFixed(2)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-green-600">R$ {(item.quantity * item.price).toFixed(2)}</span>
                       <Button 
                         variant="destructive" 
                         size="sm"
@@ -429,14 +500,14 @@ const PlaceOrder = () => {
                     </div>
                   </div>
                 ))}
-                
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">Total do Pedido:</span>
-                    <span className="text-xl font-bold text-blue-600">
-                      R$ {getTotalValue().toFixed(2)}
-                    </span>
-                  </div>
+              </div>
+              
+              <div className="border-t pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-lg font-semibold">Total do Pedido:</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    R$ {getTotalValue().toFixed(2)}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -447,10 +518,10 @@ const PlaceOrder = () => {
         {orderItems.length > 0 && (
           <Button 
             onClick={finishOrder}
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full bg-blue-600 hover:bg-blue-700 h-12 text-lg font-semibold"
             size="lg"
           >
-            <ShoppingCart size={16} className="mr-2" />
+            <ShoppingCart size={20} className="mr-2" />
             Finalizar Pedido
           </Button>
         )}
@@ -475,8 +546,8 @@ const PlaceOrder = () => {
               </div>
               <Input
                 placeholder="Buscar cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={clientSearchTerm}
+                onChange={(e) => setClientSearchTerm(e.target.value)}
               />
             </div>
             <div className="overflow-y-auto max-h-96">
@@ -487,7 +558,7 @@ const PlaceOrder = () => {
                   onClick={() => {
                     setSelectedClient(client);
                     setShowClientSelection(false);
-                    setSearchTerm('');
+                    setClientSearchTerm('');
                   }}
                 >
                   <p className="font-medium">{client.name}</p>
