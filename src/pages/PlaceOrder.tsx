@@ -66,6 +66,7 @@ const PlaceOrder = () => {
   const [selectedPaymentTable, setSelectedPaymentTable] = useState<PaymentTable | null>(null);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
+  const [customPrice, setCustomPrice] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('main');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -163,6 +164,13 @@ const PlaceOrder = () => {
     }
   };
 
+  // Update custom price when product or unit changes
+  useEffect(() => {
+    if (currentProduct && unitPrice > 0) {
+      setCustomPrice(unitPrice.toString());
+    }
+  }, [currentProduct, unitPrice]);
+
   const navigateProduct = (direction: 'prev' | 'next') => {
     if (direction === 'prev' && currentProductIndex > 0) {
       setCurrentProductIndex(currentProductIndex - 1);
@@ -214,9 +222,29 @@ const PlaceOrder = () => {
     return true;
   };
 
+  const handlePriceChange = (value: string) => {
+    setCustomPrice(value);
+    const price = parseFloat(value);
+    
+    if (price && !validatePrice(price)) {
+      if (currentProduct?.min_price && price < currentProduct.min_price) {
+        toast.error(`Preço não pode ser menor que R$ ${currentProduct.min_price.toFixed(2)}`);
+      }
+      if (currentProduct?.max_price && price > currentProduct.max_price) {
+        toast.error(`Preço não pode ser maior que R$ ${currentProduct.max_price.toFixed(2)}`);
+      }
+    }
+  };
+
+  const getCurrentPrice = (): number => {
+    const price = parseFloat(customPrice);
+    return price > 0 ? price : unitPrice;
+  };
+
   const calculateItemTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    return (qty * unitPrice).toFixed(2);
+    const price = getCurrentPrice();
+    return (qty * price).toFixed(2);
   };
 
   const addItem = () => {
@@ -236,13 +264,19 @@ const PlaceOrder = () => {
       return;
     }
 
+    const price = getCurrentPrice();
+    if (!validatePrice(price)) {
+      toast.error('Preço inválido');
+      return;
+    }
+
     const newItem: OrderItem = {
       id: Date.now(),
       productId: currentProduct.id,
       productName: currentProduct.name,
       code: currentProduct.code,
       quantity: qty,
-      price: unitPrice,
+      price: price,
       unit: displayUnit
     };
 
@@ -251,6 +285,7 @@ const PlaceOrder = () => {
     // Reset form
     setQuantity('');
     setSelectedUnit('sub');
+    setCustomPrice(unitPrice.toString());
     
     toast.success('Item adicionado ao pedido');
   };
@@ -291,6 +326,11 @@ const PlaceOrder = () => {
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
   );
+
+  const isPriceValid = () => {
+    const price = parseFloat(customPrice);
+    return price > 0 && validatePrice(price);
+  };
 
   if (isLoading) {
     return (
@@ -462,10 +502,22 @@ const PlaceOrder = () => {
                     <div>
                       <Label className="text-xs text-gray-600">Preço:</Label>
                       <div className="flex flex-col">
-                        <p className="font-medium text-blue-600 text-sm">R$ {unitPrice.toFixed(2)}</p>
+                        <Input
+                          type="number"
+                          value={customPrice}
+                          onChange={(e) => handlePriceChange(e.target.value)}
+                          className={`h-7 text-sm font-medium ${!isPriceValid() ? 'border-red-300 bg-red-50' : 'border-blue-300 bg-blue-50'}`}
+                          step="0.01"
+                          min="0"
+                        />
                         {currentProduct.min_price && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 mt-1">
                             Mín: R$ {currentProduct.min_price.toFixed(2)}
+                          </p>
+                        )}
+                        {currentProduct.max_price && (
+                          <p className="text-xs text-gray-500">
+                            Máx: R$ {currentProduct.max_price.toFixed(2)}
                           </p>
                         )}
                       </div>
@@ -500,7 +552,7 @@ const PlaceOrder = () => {
                       onChange={(e) => setQuantity(e.target.value)}
                       placeholder="0"
                       min="0"
-                      step="0.01"
+                      step="1"
                       className="text-center font-medium h-8"
                       autoFocus
                     />
@@ -527,7 +579,7 @@ const PlaceOrder = () => {
         <Button 
           onClick={addItem}
           className="w-full bg-green-600 hover:bg-green-700 h-12 text-lg font-semibold"
-          disabled={!selectedClient || !currentProduct || !quantity}
+          disabled={!selectedClient || !currentProduct || !quantity || !isPriceValid()}
         >
           <Plus size={20} className="mr-2" />
           Gravar Item
