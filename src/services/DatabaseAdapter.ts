@@ -1,4 +1,3 @@
-
 import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
@@ -27,6 +26,11 @@ interface DatabaseAdapter {
   getAllOrders(): Promise<any[]>;
   // New method for mobile orders
   saveMobileOrder(order: any): Promise<void>;
+  // ✅ NOVO: Métodos para salvar dados em batch
+  saveClients(clientsArray: any[]): Promise<void>;
+  saveProducts(productsArray: any[]): Promise<void>;
+  saveClient(client: any): Promise<void>;
+  saveProduct(product: any): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
