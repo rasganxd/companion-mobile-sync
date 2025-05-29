@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -338,17 +337,21 @@ const PlaceOrder = () => {
           <CardContent className="p-4">
             <Label className="text-sm font-medium text-gray-600 block mb-3">Forma de Pagamento:</Label>
             <Select 
-              value={selectedPaymentTable?.id || ''} 
+              value={selectedPaymentTable?.id || 'none'} 
               onValueChange={(value) => {
-                const table = paymentTables.find(t => t.id === value);
-                setSelectedPaymentTable(table || null);
+                if (value === 'none') {
+                  setSelectedPaymentTable(null);
+                } else {
+                  const table = paymentTables.find(t => t.id === value);
+                  setSelectedPaymentTable(table || null);
+                }
               }}
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">A definir</SelectItem>
+                <SelectItem value="none">A definir</SelectItem>
                 {paymentTables.map((table) => (
                   <SelectItem key={table.id} value={table.id}>
                     <div>
