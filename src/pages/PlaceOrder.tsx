@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -387,10 +388,10 @@ const PlaceOrder = () => {
           </CardContent>
         </Card>
 
-        {/* Seção do Produto */}
+        {/* Seção do Produto - Compacta */}
         {products.length > 0 && (
           <Card className="bg-white shadow-sm">
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="p-3 space-y-3">
               {/* Navegação e Busca de Produto */}
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-gray-600">Produto:</Label>
@@ -459,26 +460,26 @@ const PlaceOrder = () => {
                 </div>
               )}
               
-              {/* Informações do Produto Atual */}
+              {/* Informações do Produto Atual - Compacta */}
               {currentProduct && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="bg-gray-200 px-3 py-1 rounded text-sm font-mono">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="bg-gray-200 px-2 py-1 rounded text-xs font-mono">
                       {currentProduct.code}
                     </span>
-                    <h3 className="font-semibold text-lg text-gray-900">{currentProduct.name}</h3>
+                    <h3 className="font-semibold text-sm text-gray-900">{currentProduct.name}</h3>
                   </div>
                   
-                  {/* Informações de Unidade e Preço */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Informações de Unidade e Preço - Compacta */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                      <Label className="text-sm text-gray-600">Unidade:</Label>
-                      <p className="font-medium">{displayUnit}</p>
+                      <Label className="text-xs text-gray-600">Unidade:</Label>
+                      <p className="font-medium text-sm">{displayUnit}</p>
                     </div>
                     <div>
-                      <Label className="text-sm text-gray-600">Preço:</Label>
+                      <Label className="text-xs text-gray-600">Preço:</Label>
                       <div className="flex flex-col">
-                        <p className="font-medium text-blue-600">R$ {unitPrice.toFixed(2)}</p>
+                        <p className="font-medium text-blue-600 text-sm">R$ {unitPrice.toFixed(2)}</p>
                         {currentProduct.min_price && (
                           <p className="text-xs text-gray-500">
                             Mín: R$ {currentProduct.min_price.toFixed(2)}
@@ -488,12 +489,12 @@ const PlaceOrder = () => {
                     </div>
                   </div>
                   
-                  {/* Seletor de Unidade (se houver subunidade) */}
+                  {/* Seletor de Unidade (se houver subunidade) - Compacto */}
                   {currentProduct.has_subunit && subUnit && (
-                    <div className="mb-4">
-                      <Label className="text-sm text-gray-600 block mb-2">Tipo de Unidade:</Label>
+                    <div className="mb-3">
+                      <Label className="text-xs text-gray-600 block mb-1">Tipo de Unidade:</Label>
                       <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => setSelectedUnit(value)}>
-                        <SelectTrigger className="bg-white">
+                        <SelectTrigger className="bg-white h-8">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -507,10 +508,10 @@ const PlaceOrder = () => {
                     </div>
                   )}
                   
-                  {/* Campos de Quantidade e Preço */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* Campos de Quantidade e Preço - Compactos */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
-                      <Label className="text-sm text-gray-600 block mb-1">Quantidade:</Label>
+                      <Label className="text-xs text-gray-600 block mb-1">Quantidade:</Label>
                       <Input
                         type="number"
                         value={quantity}
@@ -518,12 +519,12 @@ const PlaceOrder = () => {
                         placeholder="0"
                         min="0"
                         step="0.01"
-                        className="text-center font-medium"
+                        className="text-center font-medium h-8"
                         autoFocus
                       />
                     </div>
                     <div>
-                      <Label className="text-sm text-gray-600 block mb-1">Preço (opcional):</Label>
+                      <Label className="text-xs text-gray-600 block mb-1">Preço (opcional):</Label>
                       <Input
                         type="number"
                         value={customPrice}
@@ -548,7 +549,7 @@ const PlaceOrder = () => {
                         placeholder={unitPrice.toFixed(2)}
                         min="0"
                         step="0.01"
-                        className="text-center font-medium"
+                        className="text-center font-medium h-8"
                       />
                       {currentProduct.min_price && customPrice && parseFloat(customPrice) < currentProduct.min_price && (
                         <p className="text-xs text-red-500 mt-1">
@@ -558,12 +559,12 @@ const PlaceOrder = () => {
                     </div>
                   </div>
                   
-                  {/* Total do Item */}
+                  {/* Total do Item - Compacto */}
                   {quantity && (
-                    <div className="bg-blue-100 p-3 rounded-lg border border-blue-200">
+                    <div className="bg-blue-100 p-2 rounded-lg border border-blue-200">
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Total do Item:</span>
-                        <span className="text-xl font-bold text-blue-700">
+                        <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
+                        <span className="text-lg font-bold text-blue-700">
                           R$ {calculateItemTotal()}
                         </span>
                       </div>
