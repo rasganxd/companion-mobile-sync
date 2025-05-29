@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -67,7 +66,6 @@ const PlaceOrder = () => {
   const [selectedPaymentTable, setSelectedPaymentTable] = useState<PaymentTable | null>(null);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
-  const [customPrice, setCustomPrice] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('main');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -174,7 +172,6 @@ const PlaceOrder = () => {
     
     // Reset form and set default unit
     setQuantity('');
-    setCustomPrice('');
     setSelectedUnit('sub'); // Default to smaller unit for products with subunit
   };
 
@@ -195,7 +192,6 @@ const PlaceOrder = () => {
       setProductSearchTerm('');
       // Reset form and set default unit
       setQuantity('');
-      setCustomPrice('');
       setSelectedUnit('sub'); // Default to smaller unit for products with subunit
     }
   };
@@ -220,8 +216,7 @@ const PlaceOrder = () => {
 
   const calculateItemTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    const price = customPrice ? parseFloat(customPrice) : unitPrice;
-    return (qty * price).toFixed(2);
+    return (qty * unitPrice).toFixed(2);
   };
 
   const addItem = () => {
@@ -240,17 +235,6 @@ const PlaceOrder = () => {
       toast.error('Informe uma quantidade válida');
       return;
     }
-    
-    const price = customPrice ? parseFloat(customPrice) : unitPrice;
-    if (price <= 0) {
-      toast.error('Preço deve ser maior que zero');
-      return;
-    }
-
-    // Validate price against min/max limits
-    if (!validatePrice(price)) {
-      return;
-    }
 
     const newItem: OrderItem = {
       id: Date.now(),
@@ -258,7 +242,7 @@ const PlaceOrder = () => {
       productName: currentProduct.name,
       code: currentProduct.code,
       quantity: qty,
-      price: price,
+      price: unitPrice,
       unit: displayUnit
     };
 
@@ -266,7 +250,6 @@ const PlaceOrder = () => {
     
     // Reset form
     setQuantity('');
-    setCustomPrice('');
     setSelectedUnit('sub');
     
     toast.success('Item adicionado ao pedido');
@@ -471,7 +454,7 @@ const PlaceOrder = () => {
                   </div>
                   
                   {/* Informações de Unidade e Preço - Compacta */}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="grid grid-cols-2 gap-3 mb-2">
                     <div>
                       <Label className="text-xs text-gray-600">Unidade:</Label>
                       <p className="font-medium text-sm">{displayUnit}</p>
@@ -508,55 +491,19 @@ const PlaceOrder = () => {
                     </div>
                   )}
                   
-                  {/* Campos de Quantidade e Preço - Compactos */}
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <Label className="text-xs text-gray-600 block mb-1">Quantidade:</Label>
-                      <Input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="0"
-                        min="0"
-                        step="0.01"
-                        className="text-center font-medium h-8"
-                        autoFocus
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600 block mb-1">Preço (opcional):</Label>
-                      <Input
-                        type="number"
-                        value={customPrice}
-                        onChange={(e) => {
-                          const newPrice = e.target.value;
-                          setCustomPrice(newPrice);
-                          
-                          // Real-time validation feedback
-                          if (newPrice && parseFloat(newPrice) > 0) {
-                            const price = parseFloat(newPrice);
-                            if (currentProduct.min_price && price < currentProduct.min_price) {
-                              e.target.style.borderColor = '#ef4444';
-                            } else if (currentProduct.max_price && price > currentProduct.max_price) {
-                              e.target.style.borderColor = '#ef4444';
-                            } else {
-                              e.target.style.borderColor = '';
-                            }
-                          } else {
-                            e.target.style.borderColor = '';
-                          }
-                        }}
-                        placeholder={unitPrice.toFixed(2)}
-                        min="0"
-                        step="0.01"
-                        className="text-center font-medium h-8"
-                      />
-                      {currentProduct.min_price && customPrice && parseFloat(customPrice) < currentProduct.min_price && (
-                        <p className="text-xs text-red-500 mt-1">
-                          Preço mínimo: R$ {currentProduct.min_price.toFixed(2)}
-                        </p>
-                      )}
-                    </div>
+                  {/* Campo de Quantidade - Compacto */}
+                  <div className="mb-3">
+                    <Label className="text-xs text-gray-600 block mb-1">Quantidade:</Label>
+                    <Input
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      step="0.01"
+                      className="text-center font-medium h-8"
+                      autoFocus
+                    />
                   </div>
                   
                   {/* Total do Item - Compacto */}
