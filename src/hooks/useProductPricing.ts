@@ -12,9 +12,11 @@ interface Product {
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
+  min_price?: number;
+  max_price?: number;
 }
 
-export const useProductPricing = (product: Product) => {
+export const useProductPricing = (product: Product, selectedUnit?: 'main' | 'sub') => {
   const pricing = useMemo(() => {
     if (!product) {
       return {
@@ -27,18 +29,31 @@ export const useProductPricing = (product: Product) => {
       };
     }
 
-    // Se o produto tem subunidade (ex: Caixa com 23 UN)
+    // Se o produto tem subunidade
     if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
-      const unitPrice = product.price / product.subunit_ratio;
+      const pricePerSubUnit = product.price / product.subunit_ratio;
       
-      return {
-        unitPrice, // Preço por unidade menor (R$ 3,00)
-        displayUnit: product.subunit || 'UN', // Unidade menor (UN)
-        mainUnit: product.unit || 'CX', // Unidade principal (CX)
-        subUnit: product.subunit || 'UN', // Unidade menor (UN)
-        ratio: product.subunit_ratio, // Quantas unidades menores cabem na principal (23)
-        pricePerMainUnit: product.price // Preço da unidade principal (R$ 69,00)
-      };
+      // Se a unidade selecionada é a principal (main)
+      if (selectedUnit === 'main') {
+        return {
+          unitPrice: product.price, // Preço da unidade principal
+          displayUnit: product.unit || 'CX', // Unidade principal
+          mainUnit: product.unit || 'CX', // Unidade principal
+          subUnit: product.subunit || 'UN', // Unidade menor
+          ratio: product.subunit_ratio, // Ratio
+          pricePerMainUnit: product.price // Preço da unidade principal
+        };
+      } else {
+        // Default para subunidade (sub)
+        return {
+          unitPrice: pricePerSubUnit, // Preço por unidade menor
+          displayUnit: product.subunit || 'UN', // Unidade menor
+          mainUnit: product.unit || 'CX', // Unidade principal
+          subUnit: product.subunit || 'UN', // Unidade menor
+          ratio: product.subunit_ratio, // Ratio
+          pricePerMainUnit: product.price // Preço da unidade principal
+        };
+      }
     }
 
     // Se o produto não tem subunidade
@@ -50,7 +65,7 @@ export const useProductPricing = (product: Product) => {
       ratio: 1,
       pricePerMainUnit: product.price
     };
-  }, [product]);
+  }, [product, selectedUnit]);
 
   return pricing;
 };

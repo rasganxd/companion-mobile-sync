@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -31,6 +30,8 @@ interface Product {
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
+  min_price?: number;
+  max_price?: number;
 }
 
 interface PaymentTable {
@@ -76,7 +77,7 @@ const PlaceOrder = () => {
 
   const locationState = location.state as any;
   const currentProduct = products[currentProductIndex];
-  const { unitPrice, displayUnit, mainUnit, subUnit, ratio } = useProductPricing(currentProduct);
+  const { unitPrice, displayUnit, mainUnit, subUnit, ratio } = useProductPricing(currentProduct, selectedUnit);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -170,10 +171,10 @@ const PlaceOrder = () => {
       setCurrentProductIndex(currentProductIndex + 1);
     }
     
-    // Reset form
+    // Reset form and set default unit
     setQuantity('');
     setCustomPrice('');
-    setSelectedUnit('main');
+    setSelectedUnit('sub'); // Default to smaller unit for products with subunit
   };
 
   const handleProductSearch = () => {
@@ -191,11 +192,29 @@ const PlaceOrder = () => {
       setCurrentProductIndex(productIndex);
       setShowProductSearch(false);
       setProductSearchTerm('');
-      // Reset form
+      // Reset form and set default unit
       setQuantity('');
       setCustomPrice('');
-      setSelectedUnit('main');
+      setSelectedUnit('sub'); // Default to smaller unit for products with subunit
     }
+  };
+
+  const validatePrice = (price: number): boolean => {
+    if (!currentProduct) return false;
+    
+    // Check minimum price
+    if (currentProduct.min_price && price < currentProduct.min_price) {
+      toast.error(`Preço não pode ser menor que R$ ${currentProduct.min_price.toFixed(2)}`);
+      return false;
+    }
+    
+    // Check maximum price  
+    if (currentProduct.max_price && price > currentProduct.max_price) {
+      toast.error(`Preço não pode ser maior que R$ ${currentProduct.max_price.toFixed(2)}`);
+      return false;
+    }
+    
+    return true;
   };
 
   const calculateItemTotal = () => {
@@ -227,6 +246,11 @@ const PlaceOrder = () => {
       return;
     }
 
+    // Validate price against min/max limits
+    if (!validatePrice(price)) {
+      return;
+    }
+
     const newItem: OrderItem = {
       id: Date.now(),
       productId: currentProduct.id,
@@ -242,7 +266,7 @@ const PlaceOrder = () => {
     // Reset form
     setQuantity('');
     setCustomPrice('');
-    setSelectedUnit('main');
+    setSelectedUnit('sub');
     
     toast.success('Item adicionado ao pedido');
   };
@@ -453,7 +477,14 @@ const PlaceOrder = () => {
                     </div>
                     <div>
                       <Label className="text-sm text-gray-600">Preço:</Label>
-                      <p className="font-medium text-blue-600">R$ {unitPrice.toFixed(2)}</p>
+                      <div className="flex flex-col">
+                        <p className="font-medium text-blue-600">R$ {unitPrice.toFixed(2)}</p>
+                        {currentProduct.min_price && (
+                          <p className="text-xs text-gray-500">
+                            Mín: R$ {currentProduct.min_price.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -496,12 +527,34 @@ const PlaceOrder = () => {
                       <Input
                         type="number"
                         value={customPrice}
-                        onChange={(e) => setCustomPrice(e.target.value)}
+                        onChange={(e) => {
+                          const newPrice = e.target.value;
+                          setCustomPrice(newPrice);
+                          
+                          // Real-time validation feedback
+                          if (newPrice && parseFloat(newPrice) > 0) {
+                            const price = parseFloat(newPrice);
+                            if (currentProduct.min_price && price < currentProduct.min_price) {
+                              e.target.style.borderColor = '#ef4444';
+                            } else if (currentProduct.max_price && price > currentProduct.max_price) {
+                              e.target.style.borderColor = '#ef4444';
+                            } else {
+                              e.target.style.borderColor = '';
+                            }
+                          } else {
+                            e.target.style.borderColor = '';
+                          }
+                        }}
                         placeholder={unitPrice.toFixed(2)}
                         min="0"
                         step="0.01"
                         className="text-center font-medium"
                       />
+                      {currentProduct.min_price && customPrice && parseFloat(customPrice) < currentProduct.min_price && (
+                        <p className="text-xs text-red-500 mt-1">
+                          Preço mínimo: R$ {currentProduct.min_price.toFixed(2)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
