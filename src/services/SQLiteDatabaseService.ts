@@ -143,6 +143,80 @@ class SQLiteDatabaseService {
     }
   }
 
+  async saveClient(client: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const now = new Date().toISOString();
+      await this.db!.run(
+        'INSERT OR REPLACE INTO clients (id, name, phone, address, email, lastVisit, sync_status, updated_at, sales_rep_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          client.id,
+          client.name,
+          client.phone || '',
+          client.address || '',
+          client.email || '',
+          client.lastVisit || null,
+          client.sync_status || 'synced',
+          now,
+          client.sales_rep_id
+        ]
+      );
+      console.log(`📝 SQLite: Saved client ${client.name} (${client.id}) for sales_rep: ${client.sales_rep_id}`);
+    } catch (error) {
+      console.error('❌ Error saving client to SQLite:', error);
+    }
+  }
+
+  async saveClients(clientsArray: any[]): Promise<void> {
+    console.log(`💾 SQLite: Saving ${clientsArray.length} clients`);
+    
+    for (const client of clientsArray) {
+      await this.saveClient(client);
+    }
+    
+    console.log(`✅ SQLite: Successfully saved ${clientsArray.length} clients`);
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const now = new Date().toISOString();
+      await this.db!.run(
+        'INSERT OR REPLACE INTO products (id, name, description, price, stock, image_url, sync_status, updated_at, code, unit, has_subunit, subunit, subunit_ratio, min_price, max_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [
+          product.id,
+          product.name,
+          product.description || '',
+          product.price,
+          product.stock || 0,
+          product.image_url || '',
+          product.sync_status || 'synced',
+          now,
+          product.code || null,
+          product.unit || 'UN',
+          product.has_subunit || false,
+          product.subunit || null,
+          product.subunit_ratio || 1,
+          product.min_price || null,
+          product.max_price || null
+        ]
+      );
+      console.log(`📝 SQLite: Saved product ${product.name} (${product.id})`);
+    } catch (error) {
+      console.error('❌ Error saving product to SQLite:', error);
+    }
+  }
+
+  async saveProducts(productsArray: any[]): Promise<void> {
+    console.log(`💾 SQLite: Saving ${productsArray.length} products`);
+    
+    for (const product of productsArray) {
+      await this.saveProduct(product);
+    }
+    
+    console.log(`✅ SQLite: Successfully saved ${productsArray.length} products`);
+  }
+
   async getVisitRoutes(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {

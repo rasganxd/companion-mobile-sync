@@ -67,25 +67,77 @@ const PlaceOrder = () => {
 
   const locationState = location.state as any;
 
-  // ✅ NOVO: Função para buscar clientes do Supabase com fallback
+  // ✅ NOVO: Função para limpar cache local inconsistente
+  const clearInconsistentCache = async () => {
+    console.log('🧹 Limpando cache inconsistente...');
+    try {
+      const db = getDatabaseAdapter();
+      
+      // Para WebDatabase, limpar localStorage
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem('clients');
+        localStorage.removeItem('products');
+        console.log('🧹 Cache localStorage limpo');
+      }
+      
+      // Para SQLite, não fazemos nada aqui pois vamos recriar os dados
+      console.log('🧹 Limpeza de cache concluída');
+    } catch (error) {
+      console.error('❌ Erro ao limpar cache:', error);
+    }
+  };
+
+  // ✅ ATUALIZADO: Função melhorada para buscar clientes com filtros rigorosos
   const loadClientsWithFallback = async () => {
     if (!salesRep?.id) {
       console.warn('⚠️ Não há vendedor autenticado');
       return [];
     }
 
+    console.log('🔍 Vendedor logado:', {
+      id: salesRep.id,
+      name: salesRep.name,
+      code: salesRep.code
+    });
+
     try {
       const db = getDatabaseAdapter();
       let localClients = await db.getClients();
       
-      console.log('🔍 Clientes no localStorage:', localClients.length);
+      console.log('🔍 Clientes no cache local (ANTES do filtro):', {
+        total: localClients.length,
+        clientes: localClients.map(c => ({
+          id: c.id,
+          name: c.name,
+          sales_rep_id: c.sales_rep_id
+        }))
+      });
       
-      // Filtrar clientes do vendedor logado
-      const salesRepClients = localClients.filter(client => client.sales_rep_id === salesRep.id);
+      // ✅ FILTRO RIGOROSO: Aplicar filtro logo após buscar do cache local
+      const salesRepClients = localClients.filter(client => {
+        const belongs = client.sales_rep_id === salesRep.id;
+        if (!belongs) {
+          console.warn(`❌ Cliente ${client.name} (${client.id}) pertence ao vendedor ${client.sales_rep_id}, mas vendedor logado é ${salesRep.id}`);
+        }
+        return belongs;
+      });
       
-      // ✅ FALLBACK: Se não há clientes locais ou poucos clientes, buscar do Supabase
+      console.log('🔍 Clientes após filtro por vendedor:', {
+        vendedorLogado: salesRep.id,
+        clientesFiltrados: salesRepClients.length,
+        clientesDetalhes: salesRepClients.map(c => ({
+          id: c.id,
+          name: c.name,
+          sales_rep_id: c.sales_rep_id
+        }))
+      });
+      
+      // ✅ FALLBACK: Se não há clientes locais do vendedor, buscar do Supabase
       if (salesRepClients.length === 0) {
-        console.log('🌐 localStorage vazio ou sem clientes do vendedor, buscando do Supabase...');
+        console.log('🌐 Nenhum cliente local encontrado para o vendedor, buscando do Supabase...');
+        
+        // Limpar cache inconsistente antes de buscar novos dados
+        await clearInconsistentCache();
         
         const { data: supabaseClients, error } = await supabase
           .from('customers')
@@ -96,19 +148,29 @@ const PlaceOrder = () => {
         if (error) {
           console.error('❌ Erro ao buscar clientes do Supabase:', error);
           toast.error('Erro ao carregar clientes do servidor');
-          return salesRepClients;
+          return [];
         }
         
         if (supabaseClients && supabaseClients.length > 0) {
-          console.log(`✅ Encontrados ${supabaseClients.length} clientes no Supabase`);
+          console.log(`✅ Encontrados ${supabaseClients.length} clientes no Supabase para vendedor ${salesRep.id}`);
+          console.log('📋 Clientes do Supabase:', supabaseClients.map(c => ({
+            id: c.id,
+            name: c.name,
+            sales_rep_id: c.sales_rep_id
+          })));
           
-          // Sincronizar com localStorage
-          if (db.saveClients) {
-            await db.saveClients(supabaseClients);
-            console.log('💾 Clientes sincronizados com localStorage');
+          // ✅ VERIFICAÇÃO DUPLA: Garantir que todos os clientes pertencem ao vendedor
+          const verifiedClients = supabaseClients.filter(client => client.sales_rep_id === salesRep.id);
+          
+          if (verifiedClients.length !== supabaseClients.length) {
+            console.error('❌ ALERTA: Alguns clientes do Supabase não pertencem ao vendedor logado!');
           }
           
-          return supabaseClients;
+          // Sincronizar com cache local
+          await db.saveClients(verifiedClients);
+          console.log('💾 Clientes sincronizados com cache local');
+          
+          return verifiedClients;
         } else {
           console.log('⚠️ Nenhum cliente encontrado no Supabase para este vendedor');
           toast.warning('Você não possui clientes atribuídos. Entre em contato com o administrador.');
@@ -116,7 +178,7 @@ const PlaceOrder = () => {
         }
       }
       
-      console.log(`✅ Usando ${salesRepClients.length} clientes do localStorage`);
+      console.log(`✅ Usando ${salesRepClients.length} clientes do cache local`);
       return salesRepClients;
       
     } catch (error) {
@@ -126,17 +188,17 @@ const PlaceOrder = () => {
     }
   };
 
-  // ✅ NOVO: Função para buscar produtos do Supabase com fallback
+  // ✅ ATUALIZADO: Função melhorada para buscar produtos
   const loadProductsWithFallback = async () => {
     try {
       const db = getDatabaseAdapter();
       let localProducts = await db.getProducts();
       
-      console.log('🔍 Produtos no localStorage:', localProducts.length);
+      console.log('🔍 Produtos no cache local:', localProducts.length);
       
       // ✅ FALLBACK: Se não há produtos locais, buscar do Supabase
       if (localProducts.length === 0) {
-        console.log('🌐 localStorage vazio, buscando produtos do Supabase...');
+        console.log('🌐 Cache de produtos vazio, buscando do Supabase...');
         
         const { data: supabaseProducts, error } = await supabase
           .from('products')
@@ -152,11 +214,9 @@ const PlaceOrder = () => {
         if (supabaseProducts && supabaseProducts.length > 0) {
           console.log(`✅ Encontrados ${supabaseProducts.length} produtos no Supabase`);
           
-          // Sincronizar com localStorage
-          if (db.saveProducts) {
-            await db.saveProducts(supabaseProducts);
-            console.log('💾 Produtos sincronizados com localStorage');
-          }
+          // Sincronizar com cache local
+          await db.saveProducts(supabaseProducts);
+          console.log('💾 Produtos sincronizados com cache local');
           
           return supabaseProducts;
         } else {
@@ -165,7 +225,7 @@ const PlaceOrder = () => {
         }
       }
       
-      console.log(`✅ Usando ${localProducts.length} produtos do localStorage`);
+      console.log(`✅ Usando ${localProducts.length} produtos do cache local`);
       return localProducts;
       
     } catch (error) {
@@ -311,9 +371,13 @@ const PlaceOrder = () => {
     return orderItems.reduce((total, item) => total + (item.quantity * item.price), 0);
   };
 
-  // ✅ CORRIGIDO: Validação com logs mais detalhados
+  // ✅ ATUALIZADO: Validação mais rigorosa
   const validateOrder = (): boolean => {
     console.log('🔍 Validando pedido...');
+    console.log('🔍 Vendedor logado atual:', {
+      id: salesRep?.id,
+      name: salesRep?.name
+    });
     
     if (!selectedClient) {
       console.error('❌ Validação falhou: Nenhum cliente selecionado');
@@ -321,28 +385,31 @@ const PlaceOrder = () => {
       return false;
     }
 
-    console.log('🔍 Dados do cliente selecionado:', {
+    console.log('🔍 Cliente selecionado:', {
       id: selectedClient.id,
       name: selectedClient.name,
-      sales_rep_id: selectedClient.sales_rep_id,
-      currentSalesRepId: salesRep?.id
+      sales_rep_id: selectedClient.sales_rep_id
     });
 
-    // ✅ VALIDAÇÃO MAIS ROBUSTA: Verificar se o cliente pertence ao vendedor
+    // ✅ VALIDAÇÃO CRÍTICA: Verificar se o cliente pertence ao vendedor
     if (!selectedClient.sales_rep_id) {
-      console.error('❌ Validação falhou: Cliente sem sales_rep_id definido');
+      console.error('❌ CRÍTICO: Cliente sem sales_rep_id definido');
       toast.error('Cliente com dados incompletos. Tente sincronizar os dados.');
       return false;
     }
 
     if (selectedClient.sales_rep_id !== salesRep?.id) {
-      console.error('❌ Validação falhou: Cliente não pertence ao vendedor atual');
-      console.error('🔍 Detalhes:', {
-        clientSalesRepId: selectedClient.sales_rep_id,
-        currentSalesRepId: salesRep?.id,
-        clientName: selectedClient.name
+      console.error('❌ CRÍTICO: Cliente não pertence ao vendedor atual');
+      console.error('🚨 DETALHES DO ERRO:', {
+        clienteSalesRepId: selectedClient.sales_rep_id,
+        vendedorLogadoId: salesRep?.id,
+        clienteNome: selectedClient.name,
+        vendedorNome: salesRep?.name
       });
-      toast.error('Cliente selecionado não pertence ao seu portfólio');
+      toast.error(`ERRO: Cliente "${selectedClient.name}" não pertence ao seu portfólio. Este cliente pertence ao vendedor ${selectedClient.sales_rep_id}.`);
+      
+      // ✅ CORREÇÃO AUTOMÁTICA: Remover cliente inválido da seleção
+      setSelectedClient(null);
       return false;
     }
 
