@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -6,6 +5,7 @@ import AppButton from '@/components/AppButton';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
 interface RouteData {
@@ -30,6 +30,7 @@ interface SalesData {
 
 const VisitRoutes = () => {
   const navigate = useNavigate();
+  const { salesRep } = useAuth();
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [salesData, setSalesData] = useState<SalesData>({
     totalSales: 0,
@@ -56,13 +57,20 @@ const VisitRoutes = () => {
       try {
         setLoading(true);
         
-        console.log('🔍 Fetching customers from Supabase and local orders...');
+        // Verificar se há vendedor logado
+        if (!salesRep?.id) {
+          console.log('❌ No sales rep logged in');
+          return;
+        }
         
-        // Buscar clientes ativos com dias de visita definidos do Supabase
+        console.log('🔍 Fetching customers from Supabase and local orders for sales rep:', salesRep.id);
+        
+        // Buscar clientes ativos com dias de visita definidos do Supabase FILTRADOS pelo vendedor logado
         const { data: customers, error: customersError } = await supabase
           .from('customers')
           .select('id, name, visit_days')
           .eq('active', true)
+          .eq('sales_rep_id', salesRep.id) // ✅ FILTRAR pelo vendedor logado
           .not('visit_days', 'is', null);
         
         if (customersError) {
@@ -85,7 +93,7 @@ const VisitRoutes = () => {
           return isValidOrder && orderDate === today;
         });
         
-        console.log('👥 Loaded customers:', customers);
+        console.log('👥 Loaded customers for sales rep:', customers);
         console.log('📋 Valid local orders for today (including transmitted):', todayValidOrders);
         
         // PRIMEIRO: Calcular totais únicos por cliente (incluindo pedidos transmitidos)
@@ -266,7 +274,7 @@ const VisitRoutes = () => {
     };
     
     loadRoutesData();
-  }, []);
+  }, [salesRep?.id]); // ✅ Adicionar salesRep.id como dependência
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
