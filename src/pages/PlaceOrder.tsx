@@ -493,7 +493,7 @@ const PlaceOrder = () => {
               <div className="border-t pt-3">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-base">Total do Pedido:</span>
-                  <span className="font-bold text-blue-600 text-lg">
+                  <span className="font-bold text-blue-600 text-base">
                     R$ {getTotalValue().toFixed(2)}
                   </span>
                 </div>
