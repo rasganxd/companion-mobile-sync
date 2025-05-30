@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -11,6 +10,7 @@ import PaymentSection from '@/components/order/PaymentSection';
 import ProductSection from '@/components/order/ProductSection';
 import OrderItemsSection from '@/components/order/OrderItemsSection';
 import ClientSelectionModal from '@/components/order/ClientSelectionModal';
+import ExistingOrderModal from '@/components/order/ExistingOrderModal';
 
 interface Client {
   id: string;
@@ -72,6 +72,12 @@ const PlaceOrder = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showClientSelection, setShowClientSelection] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
+  
+  // New states for existing order management
+  const [showExistingOrderModal, setShowExistingOrderModal] = useState(false);
+  const [existingOrder, setExistingOrder] = useState<any>(null);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   
   const locationState = location.state as any;
 
@@ -161,10 +167,113 @@ const PlaceOrder = () => {
     }
   }, [locationState]);
 
-  const handleSelectClient = (client: Client) => {
+  // Check for existing orders when client is selected
+  const checkForExistingOrders = async (client: Client) => {
+    try {
+      const db = getDatabaseAdapter();
+      const clientOrders = await db.getClientOrders(client.id);
+      
+      // Filter for non-transmitted orders (pending_sync status)
+      const pendingOrders = clientOrders.filter(order => 
+        order.sync_status === 'pending_sync' && order.status !== 'cancelled'
+      );
+      
+      if (pendingOrders.length > 0) {
+        // Get the most recent order
+        const mostRecentOrder = pendingOrders.sort((a, b) => 
+          new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
+        )[0];
+        
+        console.log('📋 Found existing order for client:', mostRecentOrder);
+        setExistingOrder(mostRecentOrder);
+        setShowExistingOrderModal(true);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error checking for existing orders:', error);
+      return false;
+    }
+  };
+
+  const loadExistingOrder = async (order: any) => {
+    try {
+      console.log('📝 Loading existing order for editing:', order);
+      
+      // Set basic order info
+      setIsEditingOrder(true);
+      setEditingOrderId(order.id);
+      
+      // Load order items if they exist
+      if (order.items && Array.isArray(order.items)) {
+        const formattedItems = order.items.map((item: any, index: number) => ({
+          id: item.id || Date.now() + index,
+          productId: item.product_id || item.productId,
+          productName: item.product_name || item.productName,
+          code: item.product_code || item.code,
+          quantity: item.quantity,
+          price: item.unit_price || item.price,
+          unit: item.unit || 'UN'
+        }));
+        
+        setOrderItems(formattedItems);
+        console.log('✅ Loaded order items:', formattedItems);
+      }
+      
+      // Set payment method if exists
+      if (order.payment_table_id) {
+        const paymentTable = paymentTables.find(table => table.id === order.payment_table_id);
+        if (paymentTable) {
+          setSelectedPaymentTable(paymentTable);
+        }
+      }
+      
+      toast.success('Pedido carregado para edição');
+    } catch (error) {
+      console.error('Error loading existing order:', error);
+      toast.error('Erro ao carregar pedido existente');
+    }
+  };
+
+  const handleSelectClient = async (client: Client) => {
     setSelectedClient(client);
     setShowClientSelection(false);
     setClientSearchTerm('');
+    
+    // Check if client has existing orders
+    const hasExistingOrders = await checkForExistingOrders(client);
+    
+    if (!hasExistingOrders) {
+      // No existing orders, proceed normally
+      console.log('👤 No existing orders found for client:', client.name);
+    }
+  };
+
+  const handleEditExistingOrder = () => {
+    if (existingOrder) {
+      loadExistingOrder(existingOrder);
+    }
+    setShowExistingOrderModal(false);
+  };
+
+  const handleCreateNewOrder = () => {
+    // Reset everything for new order
+    setOrderItems([]);
+    setSelectedPaymentTable(null);
+    setIsEditingOrder(false);
+    setEditingOrderId(null);
+    setQuantity('1');
+    setShowExistingOrderModal(false);
+    
+    toast.success('Novo pedido iniciado');
+  };
+
+  const handleCancelExistingOrder = () => {
+    // Reset client selection
+    setSelectedClient(null);
+    setExistingOrder(null);
+    setShowExistingOrderModal(false);
   };
 
   const handlePaymentTableChange = (value: string) => {
@@ -184,7 +293,7 @@ const PlaceOrder = () => {
     setOrderItems(orderItems.filter(item => item.id !== itemId));
   };
 
-  const handleFinishOrder = () => {
+  const handleFinishOrder = async () => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
       return;
@@ -195,17 +304,67 @@ const PlaceOrder = () => {
       return;
     }
 
-    navigate('/order-review', {
-      state: {
-        orderItems,
-        client: selectedClient,
-        paymentMethod: selectedPaymentTable?.name || 'A definir',
-        paymentTable: selectedPaymentTable?.name || 'A definir',
-        paymentTableId: selectedPaymentTable?.id || null,
-        clientId: selectedClient.id,
-        clientName: selectedClient.name
+    // If editing, save changes to existing order
+    if (isEditingOrder && editingOrderId) {
+      try {
+        const db = getDatabaseAdapter();
+        const updatedOrder = {
+          id: editingOrderId,
+          customer_id: selectedClient.id,
+          customer_name: selectedClient.name,
+          items: orderItems.map(item => ({
+            id: item.id,
+            product_id: item.productId,
+            product_name: item.productName,
+            product_code: item.code,
+            quantity: item.quantity,
+            unit_price: item.price,
+            price: item.price,
+            unit: item.unit,
+            total: item.quantity * item.price
+          })),
+          total: orderItems.reduce((sum, item) => sum + (item.quantity * item.price), 0),
+          payment_table_id: selectedPaymentTable?.id || null,
+          payment_table: selectedPaymentTable?.name || 'A definir',
+          updated_at: new Date().toISOString(),
+          sync_status: 'pending_sync'
+        };
+
+        await db.saveOrder(updatedOrder);
+        toast.success('Pedido atualizado com sucesso');
+        
+        navigate('/order-review', {
+          state: {
+            orderItems,
+            client: selectedClient,
+            paymentMethod: selectedPaymentTable?.name || 'A definir',
+            paymentTable: selectedPaymentTable?.name || 'A definir',
+            paymentTableId: selectedPaymentTable?.id || null,
+            clientId: selectedClient.id,
+            clientName: selectedClient.name,
+            isEditing: true,
+            orderId: editingOrderId
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating order:', error);
+        toast.error('Erro ao atualizar pedido');
       }
-    });
+    } else {
+      // Create new order (existing logic)
+      navigate('/order-review', {
+        state: {
+          orderItems,
+          client: selectedClient,
+          paymentMethod: selectedPaymentTable?.name || 'A definir',
+          paymentTable: selectedPaymentTable?.name || 'A definir',
+          paymentTableId: selectedPaymentTable?.id || null,
+          clientId: selectedClient.id,
+          clientName: selectedClient.name
+        }
+      });
+    }
   };
 
   const currentProduct = products[currentProductIndex] || null;
@@ -270,10 +429,12 @@ const PlaceOrder = () => {
     client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
   );
 
+  const pageTitle = isEditingOrder ? "Editar Pedido" : "Novo Pedido";
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
+        <Header title={pageTitle} showBackButton={true} backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -286,9 +447,17 @@ const PlaceOrder = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
+      <Header title={pageTitle} showBackButton={true} backgroundColor="blue" />
       
       <div className="p-2 flex-1 space-y-4">
+        {isEditingOrder && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-yellow-800 text-sm font-medium">
+              ✏️ Editando pedido existente - ID: {editingOrderId?.slice(0, 8)}...
+            </p>
+          </div>
+        )}
+
         <ClientSection
           selectedClient={selectedClient}
           onShowClientSelection={() => setShowClientSelection(true)}
@@ -330,6 +499,14 @@ const PlaceOrder = () => {
           onClose={() => setShowClientSelection(false)}
           onSearchChange={setClientSearchTerm}
           onSelectClient={handleSelectClient}
+        />
+
+        <ExistingOrderModal
+          isOpen={showExistingOrderModal}
+          onClose={handleCancelExistingOrder}
+          order={existingOrder}
+          onEditOrder={handleEditExistingOrder}
+          onCreateNew={handleCreateNewOrder}
         />
       </div>
     </div>
