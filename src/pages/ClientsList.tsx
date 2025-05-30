@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -114,25 +115,39 @@ const ClientsList = () => {
         const db = getDatabaseAdapter();
         const allLocalOrders = await db.getAllOrders();
         
-        // CORREÇÃO: Incluir TODOS os pedidos locais (pending_sync, transmitted, synced)
-        // Apenas excluir os que foram deletados ou têm sync_status === 'error'
+        // CORREÇÃO: Incluir TODOS os pedidos locais (pending_sync, transmitted, synced, pending_import)
         const localOrders = allLocalOrders.filter(order => 
           order.sales_rep_id === salesRep.id && 
           clientIds.includes(order.customer_id) &&
-          order.sync_status !== 'error' // Incluir pending_sync, transmitted e synced
+          order.sync_status !== 'error' // Incluir pending_sync, transmitted, synced E pending_import
         );
         
         console.log('👥 Day clients for salesperson:', dayClients);
         console.log('📋 Online orders for today:', orders);
-        console.log('📱 ALL Local orders for salesperson (including transmitted):', localOrders);
+        console.log('📱 ALL Local orders for salesperson (including transmitted and pending_import):', localOrders);
         
         const clientsWithStatus = dayClients.map(client => {
           const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
           
-          // CORREÇÃO: Considerar TODOS os pedidos locais, não apenas os pendentes
+          // CORREÇÃO: Considerar TODOS os pedidos locais, incluindo pending_import
           const clientLocalOrders = localOrders.filter(order => 
             order.customer_id === client.id
           );
+          
+          // DEBUG específico para mymymy
+          if (client.name.toLowerCase().includes('mymymy') || client.company_name?.toLowerCase().includes('mymymy')) {
+            console.log(`🔍 DEBUG mymymy - Cliente:`, client);
+            console.log(`🔍 DEBUG mymymy - Online orders:`, clientOnlineOrders);
+            console.log(`🔍 DEBUG mymymy - Local orders:`, clientLocalOrders);
+            console.log(`🔍 DEBUG mymymy - All local orders with sync_status:`, 
+              clientLocalOrders.map(order => ({ 
+                id: order.id, 
+                sync_status: order.sync_status, 
+                status: order.status, 
+                total: order.total 
+              }))
+            );
+          }
           
           const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
           const transmittedLocalOrders = clientLocalOrders.filter(order => 
@@ -169,7 +184,7 @@ const ClientsList = () => {
             }
           }
           
-          // CORREÇÃO: Verificar TODOS os pedidos locais (pendentes + transmitidos)
+          // CORREÇÃO: Verificar TODOS os pedidos locais (pendentes + transmitidos + pending_import)
           if (status === 'pendente' && clientLocalOrders.length > 0) {
             const hasPositiveLocal = clientLocalOrders.some(order => 
               order.status === 'pending' || 
@@ -202,6 +217,21 @@ const ClientsList = () => {
                 order.status === 'delivered'
               )
               .reduce((sum, order) => sum + (order.total || 0), 0);
+          }
+          
+          // DEBUG específico para mymymy - mostrar resultado final
+          if (client.name.toLowerCase().includes('mymymy') || client.company_name?.toLowerCase().includes('mymymy')) {
+            console.log(`🔍 DEBUG mymymy - Status final:`, status);
+            console.log(`🔍 DEBUG mymymy - Total final:`, orderTotal);
+            console.log(`🔍 DEBUG mymymy - Condições:`, {
+              hasOnlineOrders: clientOnlineOrders.length > 0,
+              hasLocalOrders: clientLocalOrders.length > 0,
+              localOrdersWithValidStatus: clientLocalOrders.filter(order => 
+                order.status === 'pending' || 
+                order.status === 'processed' || 
+                order.status === 'delivered'
+              ).length
+            });
           }
           
           console.log(`🔍 Client ${client.name}:`, {
