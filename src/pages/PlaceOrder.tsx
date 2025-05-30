@@ -178,8 +178,8 @@ const PlaceOrder = () => {
     setOrderItems(orderItems.filter(item => item.id !== itemId));
   };
 
-  // Fixed: This function should not take any parameters
-  const handleFinishOrder = () => {
+  // Fixed: Ensure this function has the correct signature () => void
+  const handleFinishOrder = (): void => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
       return;
