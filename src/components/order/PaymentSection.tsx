@@ -1,8 +1,8 @@
+
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard } from 'lucide-react';
 
 interface PaymentTable {
   id: string;
@@ -26,32 +26,20 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
   onPaymentTableChange
 }) => {
   return (
-    <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-all duration-300 animate-scale-in">
-      <CardContent className="p-4">
-        <Label className="text-sm font-semibold text-gray-700 block mb-3 flex items-center gap-2">
-          <CreditCard size={16} className="text-blue-600" />
-          Forma de Pagamento:
-        </Label>
+    <Card className="bg-white shadow-sm">
+      <CardContent className="p-3">
+        <Label className="text-sm font-medium text-gray-600 block mb-2">Forma de Pagamento:</Label>
         <Select 
           value={selectedPaymentTable?.id || 'none'} 
           onValueChange={onPaymentTableChange}
         >
-          <SelectTrigger className="w-full h-12 bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200 hover:border-blue-300 transition-all duration-200 hover:shadow-md focus:shadow-lg focus:border-blue-500">
+          <SelectTrigger className="w-full h-9">
             <SelectValue placeholder="Selecione a forma de pagamento" />
           </SelectTrigger>
-          <SelectContent className="bg-white shadow-xl border-0 animate-scale-in">
-            <SelectItem 
-              value="none" 
-              className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 cursor-pointer"
-            >
-              A definir
-            </SelectItem>
+          <SelectContent>
+            <SelectItem value="none">A definir</SelectItem>
             {paymentTables.map(table => (
-              <SelectItem 
-                key={table.id} 
-                value={table.id}
-                className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 cursor-pointer"
-              >
+              <SelectItem key={table.id} value={table.id}>
                 {table.name}
               </SelectItem>
             ))}
