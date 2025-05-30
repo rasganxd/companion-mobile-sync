@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -16,6 +17,7 @@ import LastPurchases from '@/pages/LastPurchases';
 import VisitRoutes from '@/pages/VisitRoutes';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
+import CapturePosition from '@/pages/CapturePosition';
 import SyncSettings from '@/pages/SyncSettings';
 import QRScanPage from '@/pages/QRScanPage';
 import NotFound from '@/pages/NotFound';
@@ -54,14 +56,17 @@ function App() {
               <Route path="/visit-routes" element={<VisitRoutes />} />
               <Route path="/rotas" element={<VisitRoutes />} />
               <Route path="/negativar-venda" element={<NegativeSale />} />
-              <Route path="/negative-sale" element={<NegativeSale />} />
               <Route path="/mensagem" element={<MessagePage />} />
-              <Route path="/message" element={<MessagePage />} />
-              <Route path="/capturar-posicao" element={<MessagePage />} />
+              <Route path="/capturar-posicao" element={<CapturePosition />} />
               <Route path="/sync-settings" element={<SyncSettings />} />
               <Route path="/api-settings" element={<ApiSettings />} />
               <Route path="/qr-scanner" element={<QRScanPage />} />
               <Route path="/transmit-orders" element={<TransmitOrders />} />
+              
+              {/* Redirecionamentos para rotas antigas em inglês */}
+              <Route path="/message" element={<Navigate to="/mensagem" replace />} />
+              <Route path="/negative-sale" element={<Navigate to="/negativar-venda" replace />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
             <Toaster />

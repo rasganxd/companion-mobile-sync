@@ -32,6 +32,7 @@ export const useAppNavigation = () => {
   const navigateToNegativeSale = () => navigateTo('/negativar-venda');
   const navigateToLastPurchases = () => navigateTo('/ultimas-compras');
   const navigateToMessage = () => navigateTo('/mensagem');
+  const navigateToCapturePosition = () => navigateTo('/capturar-posicao');
   const navigateToSettings = () => navigateTo('/sync-settings');
   const navigateToTransmitOrders = () => navigateTo('/transmit-orders');
   const navigateToClientActivities = (clientName: string, clientId: string, day?: string) => {
@@ -53,6 +54,7 @@ export const useAppNavigation = () => {
     navigateToNegativeSale,
     navigateToLastPurchases,
     navigateToMessage,
+    navigateToCapturePosition,
     navigateToSettings,
     navigateToTransmitOrders,
     navigateToClientActivities,
