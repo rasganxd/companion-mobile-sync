@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -115,22 +114,24 @@ const ClientsList = () => {
         const db = getDatabaseAdapter();
         const allLocalOrders = await db.getAllOrders();
         
+        // CORREÇÃO: Incluir TODOS os pedidos locais (pending_sync, transmitted, synced)
+        // Apenas excluir os que foram deletados ou têm sync_status === 'error'
         const localOrders = allLocalOrders.filter(order => 
-          order.sales_rep_id === salesRep.id && clientIds.includes(order.customer_id)
+          order.sales_rep_id === salesRep.id && 
+          clientIds.includes(order.customer_id) &&
+          order.sync_status !== 'error' // Incluir pending_sync, transmitted e synced
         );
         
         console.log('👥 Day clients for salesperson:', dayClients);
         console.log('📋 Online orders for today:', orders);
-        console.log('📱 Local orders for salesperson:', localOrders);
+        console.log('📱 ALL Local orders for salesperson (including transmitted):', localOrders);
         
         const clientsWithStatus = dayClients.map(client => {
           const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
           
+          // CORREÇÃO: Considerar TODOS os pedidos locais, não apenas os pendentes
           const clientLocalOrders = localOrders.filter(order => 
-            order.customer_id === client.id && 
-            (order.sync_status === 'pending_sync' || 
-             order.sync_status === 'transmitted' || 
-             order.sync_status === 'synced')
+            order.customer_id === client.id
           );
           
           const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
@@ -145,6 +146,7 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
+          // Verificar pedidos online primeiro
           if (clientOnlineOrders.length > 0) {
             const hasPositive = clientOnlineOrders.some(order => 
               order.status === 'pending' || 
@@ -167,6 +169,7 @@ const ClientsList = () => {
             }
           }
           
+          // CORREÇÃO: Verificar TODOS os pedidos locais (pendentes + transmitidos)
           if (status === 'pendente' && clientLocalOrders.length > 0) {
             const hasPositiveLocal = clientLocalOrders.some(order => 
               order.status === 'pending' || 
@@ -179,7 +182,8 @@ const ClientsList = () => {
             
             if (hasPositiveLocal) {
               status = 'positivado';
-              orderTotal = clientLocalOrders
+              // CORREÇÃO: Somar TODOS os pedidos locais positivos
+              orderTotal += clientLocalOrders
                 .filter(order => 
                   order.status === 'pending' || 
                   order.status === 'processed' || 
@@ -189,15 +193,24 @@ const ClientsList = () => {
             } else if (hasNegativeLocal) {
               status = 'negativado';
             }
+          } else if (status === 'positivado') {
+            // Se já foi positivado por pedidos online, adicionar também os locais
+            orderTotal += clientLocalOrders
+              .filter(order => 
+                order.status === 'pending' || 
+                order.status === 'processed' || 
+                order.status === 'delivered'
+              )
+              .reduce((sum, order) => sum + (order.total || 0), 0);
           }
           
           console.log(`🔍 Client ${client.name}:`, {
             onlineOrders: clientOnlineOrders.length,
-            localOrders: clientLocalOrders.length,
+            allLocalOrders: clientLocalOrders.length,
             pendingLocal: pendingLocalOrders.length,
             transmittedLocal: transmittedLocalOrders.length,
             status,
-            orderTotal
+            orderTotal: orderTotal.toFixed(2)
           });
           
           return {
@@ -211,7 +224,7 @@ const ClientsList = () => {
           };
         });
         
-        console.log(`✅ Clients with status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
+        console.log(`✅ Clients with corrected status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
         setClients(clientsWithStatus);
         
       } catch (error) {
