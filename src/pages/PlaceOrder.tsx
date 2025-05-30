@@ -12,7 +12,7 @@ import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductPricing } from '@/hooks/useProductPricing';
-import QuantityInput from '@/components/QuantityInput';
+import QuantityInput from '@/components/order/QuantityInput';
 
 interface Client {
   id: string;
@@ -64,7 +64,7 @@ const PlaceOrder = () => {
   const [selectedPaymentTable, setSelectedPaymentTable] = useState<PaymentTable | null>(null);
   const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [quantity, setQuantity] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('main');
+  const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('sub');
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showClientSelection, setShowClientSelection] = useState(false);
