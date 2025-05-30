@@ -17,14 +17,18 @@ interface OrderItem {
 interface OrderItemsSectionProps {
   orderItems: OrderItem[];
   onRemoveItem: (itemId: number) => void;
-  getTotalValue: () => number;
+  onFinishOrder: () => void;
 }
 
 const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
   orderItems,
   onRemoveItem,
-  getTotalValue
+  onFinishOrder
 }) => {
+  const getTotalValue = () => {
+    return orderItems.reduce((total, item) => total + (item.quantity * item.price), 0);
+  };
+
   if (orderItems.length === 0) return null;
 
   return (
@@ -60,12 +64,20 @@ const OrderItemsSection: React.FC<OrderItemsSectionProps> = ({
         </div>
         
         <div className="border-t pt-3">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-4">
             <span className="font-semibold text-base">Total do Pedido:</span>
             <span className="font-bold text-blue-600 text-base">
               R$ {getTotalValue().toFixed(2)}
             </span>
           </div>
+          
+          <Button 
+            onClick={onFinishOrder}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={orderItems.length === 0}
+          >
+            Finalizar Pedido
+          </Button>
         </div>
       </CardContent>
     </Card>
