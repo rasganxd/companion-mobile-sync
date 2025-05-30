@@ -178,7 +178,8 @@ const PlaceOrder = () => {
     setOrderItems(orderItems.filter(item => item.id !== itemId));
   };
 
-  const finishOrder = () => {
+  // Fixed: This function should not take any parameters
+  const handleFinishOrder = () => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
       return;
@@ -245,7 +246,7 @@ const PlaceOrder = () => {
         <OrderItemsSection
           orderItems={orderItems}
           onRemoveItem={handleRemoveItem}
-          onFinishOrder={finishOrder}
+          onFinishOrder={handleFinishOrder}
         />
 
         <ClientSelectionModal
