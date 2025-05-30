@@ -57,7 +57,12 @@ export const useAuth = () => {
             }
 
             console.log('✅ useAuth - Sales rep found via email fallback:', fallbackSalesRep);
-            setSalesRep(fallbackSalesRep);
+            // Converter code para string
+            const salesRepWithStringCode = {
+              ...fallbackSalesRep,
+              code: fallbackSalesRep.code.toString()
+            };
+            setSalesRep(salesRepWithStringCode);
             
             // Atualizar auth_user_id para futuros logins
             await supabase
@@ -67,12 +72,21 @@ export const useAuth = () => {
           }
         } else {
           console.log('✅ useAuth - Sales rep found:', salesRepData);
-          setSalesRep(salesRepData);
+          // Converter code para string
+          const salesRepWithStringCode = {
+            ...salesRepData,
+            code: salesRepData.code.toString()
+          };
+          setSalesRep(salesRepWithStringCode);
         }
 
         // Manter compatibilidade com localStorage para outras partes do sistema
         if (salesRepData) {
-          localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRepData));
+          const salesRepForStorage = {
+            ...salesRepData,
+            code: salesRepData.code.toString()
+          };
+          localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRepForStorage));
         }
         
       } catch (error) {
