@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, ArrowRight, Plus, ShoppingCart, Users, Search } from 'lucide-react';
+import { Plus, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductPricing } from '@/hooks/useProductPricing';
-import QuantityInput from '@/components/order/QuantityInput';
+import ClientSection from '@/components/order/ClientSection';
+import PaymentSection from '@/components/order/PaymentSection';
+import ProductSection from '@/components/order/ProductSection';
+import OrderItemsSection from '@/components/order/OrderItemsSection';
+import ClientSelectionModal from '@/components/order/ClientSelectionModal';
 
 interface Client {
   id: string;
@@ -77,7 +77,7 @@ const PlaceOrder = () => {
   
   const locationState = location.state as any;
   const currentProduct = products[currentProductIndex];
-  const { unitPrice, displayUnit, mainUnit, subUnit, ratio } = useProductPricing(currentProduct, selectedUnit);
+  const { unitPrice, displayUnit } = useProductPricing(currentProduct, selectedUnit);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -169,16 +169,15 @@ const PlaceOrder = () => {
     // Reset form mas manter unidade se o produto tem subunidade
     setQuantity('');
     if (products[currentProductIndex]?.has_subunit) {
-      setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+      setSelectedUnit('sub');
     } else {
-      setSelectedUnit('main'); // Default to main unit for products without subunit
+      setSelectedUnit('main');
     }
   };
   const handleProductSearch = () => {
     setShowProductSearch(!showProductSearch);
     setProductSearchTerm('');
   };
-  const filteredProducts = products.filter(product => product.name.toLowerCase().includes(productSearchTerm.toLowerCase()));
   const selectProduct = (product: Product) => {
     const productIndex = products.findIndex(p => p.id === product.id);
     if (productIndex !== -1) {
@@ -188,20 +187,26 @@ const PlaceOrder = () => {
       // Reset form and set appropriate default unit
       setQuantity('');
       if (product.has_subunit) {
-        setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+        setSelectedUnit('sub');
       } else {
-        setSelectedUnit('main'); // Default to main unit for products without subunit
+        setSelectedUnit('main');
       }
     }
   };
   const handleQuantityChange = (value: string) => {
-    // Allow empty string and valid numbers
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setQuantity(value);
     }
   };
+  const handlePaymentTableChange = (value: string) => {
+    if (value === 'none') {
+      setSelectedPaymentTable(null);
+    } else {
+      const table = paymentTables.find(t => t.id === value);
+      setSelectedPaymentTable(table || null);
+    }
+  };
   const handlePriceChange = (value: string) => {
-    // Allow empty string and valid numbers with up to 2 decimal places
     if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
       setCustomPrice(value);
     }
@@ -328,162 +333,33 @@ const PlaceOrder = () => {
       <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
       <div className="p-2 flex-1 space-y-4">
-        {/* Seção do Cliente - Compacta */}
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <Label className="text-sm font-medium text-gray-600 block">Cliente:</Label>
-                {selectedClient ? (
-                  <div>
-                    <p className="font-semibold text-base text-gray-900">{selectedClient.name}</p>
-                    {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
-                      <p className="text-sm text-gray-600">{selectedClient.company_name}</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 italic text-sm">Nenhum cliente selecionado</p>
-                )}
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowClientSelection(true)} 
-                className="ml-4 h-8 px-3"
-              >
-                <Users size={14} className="mr-1" />
-                {selectedClient ? 'Alterar' : 'Selecionar'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <ClientSection 
+          selectedClient={selectedClient}
+          onShowClientSelection={() => setShowClientSelection(true)}
+        />
 
-        {/* Seção da Forma de Pagamento - Compacta */}
-        <Card className="bg-white shadow-sm">
-          <CardContent className="p-3">
-            <Label className="text-sm font-medium text-gray-600 block mb-2">Forma de Pagamento:</Label>
-            <Select 
-              value={selectedPaymentTable?.id || 'none'} 
-              onValueChange={(value) => {
-                if (value === 'none') {
-                  setSelectedPaymentTable(null);
-                } else {
-                  const table = paymentTables.find(t => t.id === value);
-                  setSelectedPaymentTable(table || null);
-                }
-              }}
-            >
-              <SelectTrigger className="w-full h-9">
-                <SelectValue placeholder="Selecione a forma de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">A definir</SelectItem>
-                {paymentTables.map(table => (
-                  <SelectItem key={table.id} value={table.id}>
-                    {table.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <PaymentSection 
+          paymentTables={paymentTables}
+          selectedPaymentTable={selectedPaymentTable}
+          onPaymentTableChange={handlePaymentTableChange}
+        />
 
-        {/* Seção do Produto - Atualizada */}
-        {products.length > 0 && (
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-3 space-y-3">
-              {/* Navegação e Busca de Produto */}
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-gray-600">Produto:</Label>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleProductSearch} 
-                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-                  >
-                    <Search size={16} />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigateProduct('prev')} 
-                    disabled={currentProductIndex === 0}
-                  >
-                    <ArrowLeft size={16} />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => navigateProduct('next')} 
-                    disabled={currentProductIndex === products.length - 1}
-                  >
-                    <ArrowRight size={16} />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Busca de Produto */}
-              {showProductSearch && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <Input 
-                    placeholder="Digite o nome do produto..." 
-                    value={productSearchTerm} 
-                    onChange={(e) => setProductSearchTerm(e.target.value)} 
-                    className="mb-3" 
-                    autoFocus 
-                  />
-                  {productSearchTerm && (
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {filteredProducts.slice(0, 8).map(product => (
-                        <div 
-                          key={product.id} 
-                          className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer" 
-                          onClick={() => selectProduct(product)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium text-sm">{product.name}</p>
-                              <p className="text-xs text-gray-600">Código: {product.code}</p>
-                            </div>
-                            <p className="text-sm font-semibold text-blue-600">
-                              R$ {product.price.toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      {filteredProducts.length === 0 && (
-                        <p className="text-center text-gray-500 py-2">Nenhum produto encontrado</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {/* Informações do Produto Atual - Simplificada */}
-              {currentProduct && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="bg-gray-200 px-2 py-1 rounded text-xs font-mono">
-                      {currentProduct.code}
-                    </span>
-                    <h3 className="font-semibold text-sm text-gray-900">{currentProduct.name}</h3>
-                  </div>
-                  
-                  {/* Usar QuantityInput melhorado */}
-                  <QuantityInput 
-                    quantity={quantity} 
-                    onQuantityChange={handleQuantityChange} 
-                    onAddItem={addItem} 
-                    product={currentProduct}
-                    selectedUnit={selectedUnit}
-                    onUnitChange={setSelectedUnit}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        <ProductSection 
+          products={products}
+          currentProductIndex={currentProductIndex}
+          currentProduct={currentProduct}
+          quantity={quantity}
+          selectedUnit={selectedUnit}
+          showProductSearch={showProductSearch}
+          productSearchTerm={productSearchTerm}
+          onNavigateProduct={navigateProduct}
+          onProductSearch={handleProductSearch}
+          onProductSearchChange={setProductSearchTerm}
+          onSelectProduct={selectProduct}
+          onQuantityChange={handleQuantityChange}
+          onUnitChange={setSelectedUnit}
+          onAddItem={addItem}
+        />
 
         {/* Botão Gravar Item */}
         <Button 
@@ -495,50 +371,11 @@ const PlaceOrder = () => {
           Gravar Item
         </Button>
 
-        {/* Lista de Itens */}
-        {orderItems.length > 0 && (
-          <Card className="bg-white shadow-sm">
-            <CardContent className="p-4">
-              <Label className="text-sm font-medium text-gray-600 block mb-3">
-                Itens do Pedido ({orderItems.length}):
-              </Label>
-              <div className="space-y-2 mb-4">
-                {orderItems.map(item => (
-                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{item.productName}</p>
-                      <p className="text-gray-600 text-xs">
-                        {item.quantity} {item.unit} × R$ {item.price.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-green-600 text-sm">
-                        R$ {(item.quantity * item.price).toFixed(2)}
-                      </span>
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={() => removeItem(item.id)} 
-                        className="text-sm"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="border-t pt-3">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-base">Total do Pedido:</span>
-                  <span className="font-bold text-blue-600 text-base">
-                    R$ {getTotalValue().toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        <OrderItemsSection 
+          orderItems={orderItems}
+          onRemoveItem={removeItem}
+          getTotalValue={getTotalValue}
+        />
 
         {/* Botão Finalizar */}
         {orderItems.length > 0 && (
@@ -555,48 +392,14 @@ const PlaceOrder = () => {
         <div className="h-20"></div>
       </div>
 
-      {/* Dialog de Seleção de Cliente */}
-      {showClientSelection && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowClientSelection(false)}
-                >
-                  ✕
-                </Button>
-              </div>
-              <Input 
-                placeholder="Buscar cliente..." 
-                value={clientSearchTerm} 
-                onChange={(e) => setClientSearchTerm(e.target.value)} 
-              />
-            </div>
-            <div className="overflow-y-auto max-h-96">
-              {filteredClients.map(client => (
-                <div 
-                  key={client.id} 
-                  className="p-3 border-b hover:bg-gray-50 cursor-pointer" 
-                  onClick={() => {
-                    setSelectedClient(client);
-                    setShowClientSelection(false);
-                    setClientSearchTerm('');
-                  }}
-                >
-                  <p className="font-medium">{client.name}</p>
-                  {client.company_name && client.company_name !== client.name && (
-                    <p className="text-sm text-gray-600">{client.company_name}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <ClientSelectionModal 
+        showClientSelection={showClientSelection}
+        clientSearchTerm={clientSearchTerm}
+        filteredClients={filteredClients}
+        onClose={() => setShowClientSelection(false)}
+        onSearchChange={setClientSearchTerm}
+        onSelectClient={handleSelectClient}
+      />
     </div>
   );
 };
