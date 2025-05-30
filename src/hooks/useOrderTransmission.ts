@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -14,6 +13,7 @@ export const useOrderTransmission = () => {
   const [errorOrders, setErrorOrders] = useState<LocalOrder[]>([]);
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [transmissionError, setTransmissionError] = useState<string | null>(null);
 
   const loadOrders = async () => {
     try {
@@ -46,6 +46,15 @@ export const useOrderTransmission = () => {
     }
   };
 
+  const validateSalesRep = () => {
+    if (!salesRep || !salesRep.id) {
+      const errorMsg = 'Vendedor não identificado. Faça login novamente.';
+      setTransmissionError(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return true;
+  };
+
   const transmitAllOrders = async () => {
     if (pendingOrders.length === 0) {
       toast.warning('Não há pedidos pendentes para transmitir');
@@ -56,9 +65,17 @@ export const useOrderTransmission = () => {
       return;
     }
 
+    try {
+      validateSalesRep();
+      setTransmissionError(null);
+    } catch (error) {
+      return; // Erro já foi definido no estado
+    }
+
     setIsTransmitting(true);
     let successCount = 0;
     let errorCount = 0;
+    let lastError = '';
 
     try {
       const apiService = ApiService.getInstance();
@@ -98,6 +115,7 @@ export const useOrderTransmission = () => {
           
         } catch (error) {
           console.error('❌ Error transmitting order:', order.id, error);
+          lastError = error instanceof Error ? error.message : 'Erro desconhecido';
           await db.updateSyncStatus('orders', order.id, 'error');
           
           // Log do erro
@@ -108,7 +126,7 @@ export const useOrderTransmission = () => {
             salesRepName: salesRep?.name,
             customerName: order.customer_name,
             syncStatus: 'error',
-            details: { error: error.toString() }
+            details: { error: lastError }
           });
           
           errorCount++;
@@ -121,16 +139,24 @@ export const useOrderTransmission = () => {
       
       if (errorCount > 0) {
         toast.error(`${errorCount} pedido(s) falharam na transmissão`);
+        setTransmissionError(lastError);
       }
 
       await loadOrders();
 
     } catch (error) {
       console.error('Error in transmission process:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de transmissão';
+      setTransmissionError(errorMsg);
       toast.error('Erro no processo de transmissão');
     } finally {
       setIsTransmitting(false);
     }
+  };
+
+  const retryTransmission = async () => {
+    setTransmissionError(null);
+    await transmitAllOrders();
   };
 
   const retryOrder = async (orderId: string) => {
@@ -234,10 +260,13 @@ export const useOrderTransmission = () => {
     errorOrders,
     isTransmitting,
     isLoading,
+    transmissionError,
     loadOrders,
     transmitAllOrders,
     retryOrder,
     retryAllErrorOrders,
-    deleteTransmittedOrder
+    deleteTransmittedOrder,
+    retryTransmission,
+    clearTransmissionError: () => setTransmissionError(null)
   };
 };

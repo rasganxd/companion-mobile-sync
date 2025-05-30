@@ -6,6 +6,7 @@ import OrderSummaryCard from '@/components/transmit/OrderSummaryCard';
 import OrderTabs from '@/components/transmit/OrderTabs';
 import OrderActionButtons from '@/components/transmit/OrderActionButtons';
 import OrdersList from '@/components/transmit/OrdersList';
+import TransmissionErrorDialog from '@/components/transmit/TransmissionErrorDialog';
 
 const TransmitOrders = () => {
   const [activeTab, setActiveTab] = useState<'pending' | 'transmitted' | 'error'>('pending');
@@ -16,11 +17,14 @@ const TransmitOrders = () => {
     errorOrders,
     isTransmitting,
     isLoading,
+    transmissionError,
     loadOrders,
     transmitAllOrders,
     retryOrder,
     retryAllErrorOrders,
-    deleteTransmittedOrder
+    deleteTransmittedOrder,
+    retryTransmission,
+    clearTransmissionError
   } = useOrderTransmission();
 
   const getCurrentOrders = () => {
@@ -79,6 +83,14 @@ const TransmitOrders = () => {
           emptyStateType={activeTab}
         />
       </div>
+
+      <TransmissionErrorDialog
+        isOpen={!!transmissionError}
+        onClose={clearTransmissionError}
+        error={transmissionError || ''}
+        onRetry={retryTransmission}
+        isRetrying={isTransmitting}
+      />
     </div>
   );
 };
