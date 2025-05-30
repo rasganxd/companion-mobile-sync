@@ -20,6 +20,7 @@ interface Client {
   company_name?: string;
   sales_rep_id?: string;
 }
+
 interface Product {
   id: string;
   name: string;
@@ -33,6 +34,7 @@ interface Product {
   min_price?: number;
   max_price?: number;
 }
+
 interface PaymentTable {
   id: string;
   name: string;
@@ -42,6 +44,7 @@ interface PaymentTable {
   payment_location?: string;
   active: boolean;
 }
+
 interface OrderItem {
   id: number;
   productId: string;
@@ -51,10 +54,9 @@ interface OrderItem {
   price: number;
   unit: string;
 }
+
 const PlaceOrder = () => {
-  const {
-    salesRep
-  } = useAuth();
+  const { salesRep } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [clients, setClients] = useState<Client[]>([]);
@@ -72,15 +74,10 @@ const PlaceOrder = () => {
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [customPrice, setCustomPrice] = useState('');
+  
   const locationState = location.state as any;
   const currentProduct = products[currentProductIndex];
-  const {
-    unitPrice,
-    displayUnit,
-    mainUnit,
-    subUnit,
-    ratio
-  } = useProductPricing(currentProduct, selectedUnit);
+  const { unitPrice, displayUnit, mainUnit, subUnit, ratio } = useProductPricing(currentProduct, selectedUnit);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -308,9 +305,13 @@ const PlaceOrder = () => {
       }
     });
   };
-  const filteredClients = clients.filter(client => client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()));
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
+  );
+
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-50 flex flex-col">
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -318,9 +319,12 @@ const PlaceOrder = () => {
             <p className="text-gray-600">Carregando...</p>
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-slate-50 flex flex-col">
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
       <div className="p-2 flex-1 space-y-4">
@@ -330,12 +334,23 @@ const PlaceOrder = () => {
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <Label className="text-sm font-medium text-gray-600 block">Cliente:</Label>
-                {selectedClient ? <div>
+                {selectedClient ? (
+                  <div>
                     <p className="font-semibold text-base text-gray-900">{selectedClient.name}</p>
-                    {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && <p className="text-sm text-gray-600">{selectedClient.company_name}</p>}
-                  </div> : <p className="text-gray-500 italic text-sm">Nenhum cliente selecionado</p>}
+                    {selectedClient.company_name && selectedClient.company_name !== selectedClient.name && (
+                      <p className="text-sm text-gray-600">{selectedClient.company_name}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 italic text-sm">Nenhum cliente selecionado</p>
+                )}
               </div>
-              <Button variant="outline" size="sm" onClick={() => setShowClientSelection(true)} className="ml-4 h-8 px-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowClientSelection(true)} 
+                className="ml-4 h-8 px-3"
+              >
                 <Users size={14} className="mr-1" />
                 {selectedClient ? 'Alterar' : 'Selecionar'}
               </Button>
@@ -347,22 +362,27 @@ const PlaceOrder = () => {
         <Card className="bg-white shadow-sm">
           <CardContent className="p-3">
             <Label className="text-sm font-medium text-gray-600 block mb-2">Forma de Pagamento:</Label>
-            <Select value={selectedPaymentTable?.id || 'none'} onValueChange={value => {
-            if (value === 'none') {
-              setSelectedPaymentTable(null);
-            } else {
-              const table = paymentTables.find(t => t.id === value);
-              setSelectedPaymentTable(table || null);
-            }
-          }}>
+            <Select 
+              value={selectedPaymentTable?.id || 'none'} 
+              onValueChange={(value) => {
+                if (value === 'none') {
+                  setSelectedPaymentTable(null);
+                } else {
+                  const table = paymentTables.find(t => t.id === value);
+                  setSelectedPaymentTable(table || null);
+                }
+              }}
+            >
               <SelectTrigger className="w-full h-9">
                 <SelectValue placeholder="Selecione a forma de pagamento" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">A definir</SelectItem>
-                {paymentTables.map(table => <SelectItem key={table.id} value={table.id}>
+                {paymentTables.map(table => (
+                  <SelectItem key={table.id} value={table.id}>
                     {table.name}
-                  </SelectItem>)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardContent>
@@ -376,23 +396,51 @@ const PlaceOrder = () => {
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-gray-600">Produto:</Label>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={handleProductSearch} className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleProductSearch} 
+                    className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  >
                     <Search size={16} />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigateProduct('prev')} disabled={currentProductIndex === 0}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigateProduct('prev')} 
+                    disabled={currentProductIndex === 0}
+                  >
                     <ArrowLeft size={16} />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigateProduct('next')} disabled={currentProductIndex === products.length - 1}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => navigateProduct('next')} 
+                    disabled={currentProductIndex === products.length - 1}
+                  >
                     <ArrowRight size={16} />
                   </Button>
                 </div>
               </div>
 
               {/* Busca de Produto */}
-              {showProductSearch && <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <Input placeholder="Digite o nome do produto..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="mb-3" autoFocus />
-                  {productSearchTerm && <div className="max-h-40 overflow-y-auto space-y-1">
-                      {filteredProducts.slice(0, 8).map(product => <div key={product.id} className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer" onClick={() => selectProduct(product)}>
+              {showProductSearch && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <Input 
+                    placeholder="Digite o nome do produto..." 
+                    value={productSearchTerm} 
+                    onChange={(e) => setProductSearchTerm(e.target.value)} 
+                    className="mb-3" 
+                    autoFocus 
+                  />
+                  {productSearchTerm && (
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {filteredProducts.slice(0, 8).map(product => (
+                        <div 
+                          key={product.id} 
+                          className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer" 
+                          onClick={() => selectProduct(product)}
+                        >
                           <div className="flex justify-between items-center">
                             <div>
                               <p className="font-medium text-sm">{product.name}</p>
@@ -402,10 +450,15 @@ const PlaceOrder = () => {
                               R$ {product.price.toFixed(2)}
                             </p>
                           </div>
-                        </div>)}
-                      {filteredProducts.length === 0 && <p className="text-center text-gray-500 py-2">Nenhum produto encontrado</p>}
-                    </div>}
-                </div>}
+                        </div>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <p className="text-center text-gray-500 py-2">Nenhum produto encontrado</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Informações do Produto Atual - Simplificada */}
               {currentProduct && (
@@ -429,22 +482,29 @@ const PlaceOrder = () => {
                 </div>
               )}
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {/* Botão Gravar Item */}
-        <Button onClick={addItem} className="w-full bg-green-600 hover:bg-green-700 h-9 text-base font-semibold" disabled={!selectedClient || !currentProduct || !quantity || parseFloat(quantity) <= 0 || !customPrice || parseFloat(customPrice) <= 0 || !getPriceValidation().isValid}>
+        <Button 
+          onClick={addItem} 
+          className="w-full bg-green-600 hover:bg-green-700 h-9 text-base font-semibold" 
+          disabled={!selectedClient || !currentProduct || !quantity || parseFloat(quantity) <= 0 || !customPrice || parseFloat(customPrice) <= 0 || !getPriceValidation().isValid}
+        >
           <Plus size={18} className="mr-2" />
           Gravar Item
         </Button>
 
         {/* Lista de Itens */}
-        {orderItems.length > 0 && <Card className="bg-white shadow-sm">
+        {orderItems.length > 0 && (
+          <Card className="bg-white shadow-sm">
             <CardContent className="p-4">
               <Label className="text-sm font-medium text-gray-600 block mb-3">
                 Itens do Pedido ({orderItems.length}):
               </Label>
               <div className="space-y-2 mb-4">
-                {orderItems.map(item => <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
+                {orderItems.map(item => (
+                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
                     <div className="flex-1">
                       <p className="font-medium text-sm">{item.productName}</p>
                       <p className="text-gray-600 text-xs">
@@ -452,12 +512,20 @@ const PlaceOrder = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-semibold text-green-600 text-sm">R$ {(item.quantity * item.price).toFixed(2)}</span>
-                      <Button variant="destructive" size="sm" onClick={() => removeItem(item.id)} className="text-sm">
+                      <span className="font-semibold text-green-600 text-sm">
+                        R$ {(item.quantity * item.price).toFixed(2)}
+                      </span>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={() => removeItem(item.id)} 
+                        className="text-sm"
+                      >
                         ×
                       </Button>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
               
               <div className="border-t pt-3">
@@ -469,41 +537,68 @@ const PlaceOrder = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {/* Botão Finalizar */}
-        {orderItems.length > 0 && <Button onClick={finishOrder} className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-base font-semibold" size="lg">
+        {orderItems.length > 0 && (
+          <Button 
+            onClick={finishOrder} 
+            className="w-full bg-blue-600 hover:bg-blue-700 h-9 text-base font-semibold" 
+            size="lg"
+          >
             <ShoppingCart size={18} className="mr-2" />
             Finalizar Pedido
-          </Button>}
+          </Button>
+        )}
 
         <div className="h-20"></div>
       </div>
 
       {/* Dialog de Seleção de Cliente */}
-      {showClientSelection && <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      {showClientSelection && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] overflow-hidden">
             <div className="p-4 border-b">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">Selecionar Cliente</h3>
-                <Button variant="outline" size="sm" onClick={() => setShowClientSelection(false)}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowClientSelection(false)}
+                >
                   ✕
                 </Button>
               </div>
-              <Input placeholder="Buscar cliente..." value={clientSearchTerm} onChange={e => setClientSearchTerm(e.target.value)} />
+              <Input 
+                placeholder="Buscar cliente..." 
+                value={clientSearchTerm} 
+                onChange={(e) => setClientSearchTerm(e.target.value)} 
+              />
             </div>
             <div className="overflow-y-auto max-h-96">
-              {filteredClients.map(client => <div key={client.id} className="p-3 border-b hover:bg-gray-50 cursor-pointer" onClick={() => {
-            setSelectedClient(client);
-            setShowClientSelection(false);
-            setClientSearchTerm('');
-          }}>
+              {filteredClients.map(client => (
+                <div 
+                  key={client.id} 
+                  className="p-3 border-b hover:bg-gray-50 cursor-pointer" 
+                  onClick={() => {
+                    setSelectedClient(client);
+                    setShowClientSelection(false);
+                    setClientSearchTerm('');
+                  }}
+                >
                   <p className="font-medium">{client.name}</p>
-                  {client.company_name && client.company_name !== client.name && <p className="text-sm text-gray-600">{client.company_name}</p>}
-                </div>)}
+                  {client.company_name && client.company_name !== client.name && (
+                    <p className="text-sm text-gray-600">{client.company_name}</p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
-        </div>}
-    </div>;
+        </div>
+      )}
+    </div>
+  );
 };
+
 export default PlaceOrder;
