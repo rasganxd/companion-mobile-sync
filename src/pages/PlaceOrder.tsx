@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -63,6 +64,11 @@ const PlaceOrder = () => {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [selectedPaymentTable, setSelectedPaymentTable] = useState<PaymentTable | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
+  const [quantity, setQuantity] = useState('1');
+  const [selectedUnit, setSelectedUnit] = useState<'main' | 'sub'>('main');
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showClientSelection, setShowClientSelection] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
@@ -178,8 +184,7 @@ const PlaceOrder = () => {
     setOrderItems(orderItems.filter(item => item.id !== itemId));
   };
 
-  // Fixed: Ensure this function has the correct signature () => void
-  const handleFinishOrder = (): void => {
+  const handleFinishOrder = () => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
       return;
@@ -201,6 +206,64 @@ const PlaceOrder = () => {
         clientName: selectedClient.name
       }
     });
+  };
+
+  const currentProduct = products[currentProductIndex] || null;
+
+  const handleNavigateProduct = (direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentProductIndex > 0) {
+      setCurrentProductIndex(currentProductIndex - 1);
+    } else if (direction === 'next' && currentProductIndex < products.length - 1) {
+      setCurrentProductIndex(currentProductIndex + 1);
+    }
+    setShowProductSearch(false);
+    setProductSearchTerm('');
+  };
+
+  const handleSelectProduct = (product: Product) => {
+    const index = products.findIndex(p => p.id === product.id);
+    if (index !== -1) {
+      setCurrentProductIndex(index);
+    }
+    setShowProductSearch(false);
+    setProductSearchTerm('');
+  };
+
+  const handleAddOrderItem = () => {
+    if (!currentProduct || !selectedClient) {
+      toast.error('Selecione um cliente e produto');
+      return;
+    }
+
+    const qty = parseFloat(quantity);
+    if (qty <= 0) {
+      toast.error('Quantidade deve ser maior que zero');
+      return;
+    }
+
+    let finalQuantity = qty;
+    let unitText = currentProduct.unit || 'UN';
+    let unitPrice = currentProduct.price;
+
+    // Handle subunit calculations
+    if (selectedUnit === 'sub' && currentProduct.has_subunit && currentProduct.subunit_ratio) {
+      finalQuantity = qty / currentProduct.subunit_ratio;
+      unitText = currentProduct.subunit || 'UN';
+    }
+
+    const newItem: OrderItem = {
+      id: Date.now(),
+      productId: currentProduct.id,
+      productName: currentProduct.name,
+      code: currentProduct.code,
+      quantity: finalQuantity,
+      price: unitPrice,
+      unit: unitText
+    };
+
+    handleAddItem(newItem);
+    setQuantity('1');
+    toast.success('Item adicionado ao pedido');
   };
 
   const filteredClients = clients.filter(client => 
@@ -239,8 +302,19 @@ const PlaceOrder = () => {
 
         <ProductSection
           products={products}
-          selectedClient={selectedClient}
-          onAddItem={handleAddItem}
+          currentProductIndex={currentProductIndex}
+          currentProduct={currentProduct}
+          quantity={quantity}
+          selectedUnit={selectedUnit}
+          showProductSearch={showProductSearch}
+          productSearchTerm={productSearchTerm}
+          onNavigateProduct={handleNavigateProduct}
+          onProductSearch={() => setShowProductSearch(!showProductSearch)}
+          onProductSearchChange={setProductSearchTerm}
+          onSelectProduct={handleSelectProduct}
+          onQuantityChange={setQuantity}
+          onUnitChange={setSelectedUnit}
+          onAddItem={handleAddOrderItem}
         />
 
         <OrderItemsSection
