@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -211,9 +212,12 @@ const PlaceOrder = () => {
       <div className="min-h-screen bg-slate-50 flex flex-col">
         <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando...</p>
+          <div className="text-center animate-fade-in">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4 shadow-lg"></div>
+            <p className="text-gray-600 font-medium">Carregando dados...</p>
+            <div className="mt-2 h-1 w-32 bg-gray-200 rounded-full mx-auto overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full animate-pulse"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -221,32 +225,40 @@ const PlaceOrder = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col transition-all duration-300">
       <Header title="Novo Pedido" showBackButton={true} backgroundColor="blue" />
       
-      <div className="p-2 flex-1 space-y-4">
-        <ClientSection
-          selectedClient={selectedClient}
-          onShowClientSelection={() => setShowClientSelection(true)}
-        />
+      <div className="p-2 flex-1 space-y-4 animate-fade-in">
+        <div className="transform transition-all duration-200 hover:scale-[1.01]">
+          <ClientSection
+            selectedClient={selectedClient}
+            onShowClientSelection={() => setShowClientSelection(true)}
+          />
+        </div>
 
-        <PaymentSection
-          paymentTables={paymentTables}
-          selectedPaymentTable={selectedPaymentTable}
-          onPaymentTableChange={handlePaymentTableChange}
-        />
+        <div className="transform transition-all duration-200 hover:scale-[1.01]">
+          <PaymentSection
+            paymentTables={paymentTables}
+            selectedPaymentTable={selectedPaymentTable}
+            onPaymentTableChange={handlePaymentTableChange}
+          />
+        </div>
 
-        <ProductSection
-          products={products}
-          selectedClient={selectedClient}
-          onAddItem={handleAddItem}
-        />
+        <div className="transform transition-all duration-200 hover:scale-[1.01]">
+          <ProductSection
+            products={products}
+            selectedClient={selectedClient}
+            onAddItem={handleAddItem}
+          />
+        </div>
 
-        <OrderItemsSection
-          orderItems={orderItems}
-          onRemoveItem={handleRemoveItem}
-          onFinishOrder={finishOrder}
-        />
+        <div className="transform transition-all duration-200 hover:scale-[1.01]">
+          <OrderItemsSection
+            orderItems={orderItems}
+            onRemoveItem={handleRemoveItem}
+            onFinishOrder={finishOrder}
+          />
+        </div>
 
         <ClientSelectionModal
           showClientSelection={showClientSelection}
