@@ -12,6 +12,8 @@ import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useProductPricing } from '@/hooks/useProductPricing';
+import QuantityInput from '@/components/QuantityInput';
+
 interface Client {
   id: string;
   name: string;
@@ -167,9 +169,13 @@ const PlaceOrder = () => {
       setCurrentProductIndex(currentProductIndex + 1);
     }
 
-    // Reset form and set default unit
+    // Reset form mas manter unidade se o produto tem subunidade
     setQuantity('');
-    setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+    if (products[currentProductIndex]?.has_subunit) {
+      setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+    } else {
+      setSelectedUnit('main'); // Default to main unit for products without subunit
+    }
   };
   const handleProductSearch = () => {
     setShowProductSearch(!showProductSearch);
@@ -182,9 +188,13 @@ const PlaceOrder = () => {
       setCurrentProductIndex(productIndex);
       setShowProductSearch(false);
       setProductSearchTerm('');
-      // Reset form and set default unit
+      // Reset form and set appropriate default unit
       setQuantity('');
-      setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+      if (product.has_subunit) {
+        setSelectedUnit('sub'); // Default to smaller unit for products with subunit
+      } else {
+        setSelectedUnit('main'); // Default to main unit for products without subunit
+      }
     }
   };
   const handleQuantityChange = (value: string) => {
@@ -266,9 +276,8 @@ const PlaceOrder = () => {
     };
     setOrderItems([...orderItems, newItem]);
 
-    // Reset form
+    // Reset form mas manter unidade selecionada
     setQuantity('');
-    setSelectedUnit('sub');
     toast.success('Item adicionado ao pedido');
   };
   const removeItem = (itemId: number) => {
@@ -359,8 +368,9 @@ const PlaceOrder = () => {
           </CardContent>
         </Card>
 
-        {/* Seção do Produto - Compacta */}
-        {products.length > 0 && <Card className="bg-white shadow-sm">
+        {/* Seção do Produto - Atualizada */}
+        {products.length > 0 && (
+          <Card className="bg-white shadow-sm">
             <CardContent className="p-3 space-y-3">
               {/* Navegação e Busca de Produto */}
               <div className="flex items-center justify-between">
@@ -397,8 +407,9 @@ const PlaceOrder = () => {
                     </div>}
                 </div>}
               
-              {/* Informações do Produto Atual - Compacta */}
-              {currentProduct && <div className="bg-gray-50 p-3 rounded-lg">
+              {/* Informações do Produto Atual - Simplificada */}
+              {currentProduct && (
+                <div className="bg-gray-50 p-3 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="bg-gray-200 px-2 py-1 rounded text-xs font-mono">
                       {currentProduct.code}
@@ -406,58 +417,17 @@ const PlaceOrder = () => {
                     <h3 className="font-semibold text-sm text-gray-900">{currentProduct.name}</h3>
                   </div>
                   
-                  {/* Informações de Unidade e Preço - Compacta */}
-                  <div className="grid grid-cols-2 gap-3 mb-2">
-                    <div>
-                      <Label className="text-xs text-gray-600">Unidade:</Label>
-                      <p className="font-medium text-xs">{displayUnit}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-gray-600">Preço:</Label>
-                      <div className="relative">
-                        <Input type="text" value={customPrice} onChange={e => handlePriceChange(e.target.value)} placeholder="0.00" className={`text-center font-medium h-8 ${!getPriceValidation().isValid ? 'border-red-500 bg-red-50' : 'bg-blue-50 border-blue-200'}`} />
-                        <span className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">R$</span>
-                      </div>
-                      {!getPriceValidation().isValid && <p className="text-xs text-red-600 mt-1">{getPriceValidation().message}</p>}
-                      {currentProduct.min_price && <p className="text-xs text-gray-500 mt-1">
-                          Mín: R$ {currentProduct.min_price.toFixed(2)}
-                        </p>}
-                    </div>
-                  </div>
-                  
-                  {/* Seletor de Unidade (se houver subunidade) - Compacto */}
-                  {currentProduct.has_subunit && subUnit && <div className="mb-3">
-                      <Label className="text-xs text-gray-600 block mb-1">Tipo de Unidade:</Label>
-                      <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => setSelectedUnit(value)}>
-                        <SelectTrigger className="bg-white h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="sub">{subUnit}</SelectItem>
-                          <SelectItem value="main">{mainUnit}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        1 {mainUnit} = {ratio} {subUnit}
-                      </p>
-                    </div>}
-                  
-                  {/* Campo de Quantidade - Compacto */}
-                  <div className="mb-3">
-                    <Label className="text-xs text-gray-600 block mb-1">Quantidade:</Label>
-                    <Input type="text" value={quantity} onChange={e => handleQuantityChange(e.target.value)} placeholder="0" className="text-center font-medium h-8" autoFocus />
-                  </div>
-                  
-                  {/* Total do Item - Compacto */}
-                  {quantity && customPrice && <div className="bg-blue-100 p-2 rounded-lg border border-blue-200">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
-                        <span className="text-lg font-bold text-blue-700">
-                          R$ {calculateItemTotal()}
-                        </span>
-                      </div>
-                    </div>}
-                </div>}
+                  {/* Usar QuantityInput melhorado */}
+                  <QuantityInput 
+                    quantity={quantity} 
+                    onQuantityChange={handleQuantityChange} 
+                    onAddItem={addItem} 
+                    product={currentProduct}
+                    selectedUnit={selectedUnit}
+                    onUnitChange={setSelectedUnit}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>}
 

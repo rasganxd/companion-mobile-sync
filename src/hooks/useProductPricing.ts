@@ -30,7 +30,7 @@ export const useProductPricing = (product: Product, selectedUnit?: 'main' | 'sub
     }
 
     // Se o produto tem subunidade
-    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1 && product.subunit) {
       const pricePerSubUnit = product.price / product.subunit_ratio;
       
       // Se a unidade selecionada é a principal (main)
@@ -39,7 +39,7 @@ export const useProductPricing = (product: Product, selectedUnit?: 'main' | 'sub
           unitPrice: product.price, // Preço da unidade principal
           displayUnit: product.unit || 'CX', // Unidade principal
           mainUnit: product.unit || 'CX', // Unidade principal
-          subUnit: product.subunit || 'UN', // Unidade menor
+          subUnit: product.subunit, // Unidade menor
           ratio: product.subunit_ratio, // Ratio
           pricePerMainUnit: product.price // Preço da unidade principal
         };
@@ -47,9 +47,9 @@ export const useProductPricing = (product: Product, selectedUnit?: 'main' | 'sub
         // Default para subunidade (sub)
         return {
           unitPrice: pricePerSubUnit, // Preço por unidade menor
-          displayUnit: product.subunit || 'UN', // Unidade menor
+          displayUnit: product.subunit, // Unidade menor
           mainUnit: product.unit || 'CX', // Unidade principal
-          subUnit: product.subunit || 'UN', // Unidade menor
+          subUnit: product.subunit, // Unidade menor
           ratio: product.subunit_ratio, // Ratio
           pricePerMainUnit: product.price // Preço da unidade principal
         };
