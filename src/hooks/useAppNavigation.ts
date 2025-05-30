@@ -1,4 +1,3 @@
-
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -40,6 +39,10 @@ export const useAppNavigation = () => {
     navigateTo('/client-activities');
   };
 
+  const navigateToClientFullScreen = (clients: any[], initialIndex: number = 0, day?: string) => {
+    navigateTo('/client-fullscreen', { clients, initialIndex, day });
+  };
+
   return {
     navigateTo,
     goBack,
@@ -58,5 +61,6 @@ export const useAppNavigation = () => {
     navigateToSettings,
     navigateToTransmitOrders,
     navigateToClientActivities,
+    navigateToClientFullScreen,
   };
 };

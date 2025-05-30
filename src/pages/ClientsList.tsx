@@ -282,6 +282,17 @@ const ClientsList = () => {
     });
   };
   
+  const handleFullScreenView = () => {
+    console.log('👁️ Switching to full-screen view');
+    navigate('/client-fullscreen', {
+      state: {
+        clients: clients,
+        initialIndex: 0,
+        day: day
+      }
+    });
+  };
+  
   const handleGoBack = () => {
     console.log('🔙 Going back to visit routes');
     goBack();
@@ -326,6 +337,7 @@ const ClientsList = () => {
             day={day}
             salesRep={salesRep}
             onClientSelect={handleClientSelect}
+            onFullScreenView={handleFullScreenView}
           />
         </ScrollArea>
       </div>

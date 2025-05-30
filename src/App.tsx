@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -25,6 +24,7 @@ import ApiSettings from '@/pages/ApiSettings';
 import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
 import TransmitOrders from '@/pages/TransmitOrders';
+import ClientFullScreenView from '@/pages/ClientFullScreenView';
 
 const queryClient = new QueryClient();
 
@@ -44,6 +44,9 @@ function App() {
               
               {/* Lista de Atividades - acessível apenas com estado de cliente */}
               <Route path="/client-activities" element={<Index />} />
+              
+              {/* Nova rota para visualização full-screen de clientes */}
+              <Route path="/client-fullscreen" element={<ClientFullScreenView />} />
               
               <Route path="/clients" element={<ClientsList />} />
               <Route path="/clientes-lista" element={<ClientsList />} />

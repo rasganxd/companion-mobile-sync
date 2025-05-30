@@ -1,7 +1,8 @@
-
 import React from 'react';
+import { Eye, List } from 'lucide-react';
 import ClientCard from './ClientCard';
 import ClientsListHeader from './ClientsListHeader';
+import AppButton from '@/components/AppButton';
 
 interface Client {
   id: string;
@@ -33,6 +34,7 @@ interface ClientsListContentProps {
   day: string;
   salesRep: SalesRep | null;
   onClientSelect: (client: Client) => void;
+  onFullScreenView?: () => void;
 }
 
 const ClientsListContent: React.FC<ClientsListContentProps> = ({
@@ -40,7 +42,8 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
   clients,
   day,
   salesRep,
-  onClientSelect
+  onClientSelect,
+  onFullScreenView
 }) => {
   if (loading) {
     return (
@@ -59,6 +62,21 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
           day={day}
           salesRep={salesRep}
         />
+        
+        {/* Botão para alternar visualização */}
+        {onFullScreenView && (
+          <div className="mb-4">
+            <AppButton 
+              variant="blue"
+              fullWidth
+              onClick={onFullScreenView}
+              className="flex items-center justify-center gap-2"
+            >
+              <Eye size={18} />
+              Visualização Detalhada
+            </AppButton>
+          </div>
+        )}
         
         {clients.map(client => (
           <ClientCard

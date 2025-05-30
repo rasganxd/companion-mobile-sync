@@ -21,6 +21,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 const navigationFlows: { [key: string]: string } = {
   '/home': '/home', // Home é a tela raiz - não volta para lugar nenhum
   '/client-activities': '/clientes-lista', // Lista de atividades volta para clientes
+  '/client-fullscreen': '/clientes-lista', // Visualização full-screen volta para clientes
   '/clientes-lista': '/rotas',
   '/rotas': '/home',
   '/my-orders': '/home',
