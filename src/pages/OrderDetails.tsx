@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -48,6 +47,7 @@ const OrderDetails = () => {
   const orderItems = orderState.orderItems || [];
   const client = orderState.client || defaultState.client;
   const paymentMethod = orderState.paymentMethod || defaultState.paymentMethod;
+  const day = orderState.day || 'Segunda'; // Preservar o dia selecionado
   
   // If there's no state, redirect to the order creation page
   useEffect(() => {
@@ -107,7 +107,15 @@ const OrderDetails = () => {
       await db.updateClientStatus(client.id, "Ativo");
       
       toast.success("Pedido salvo com sucesso!");
-      navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
+      
+      // Navigate back to ClientFullScreenView with the correct day and client info
+      navigate('/client-fullscreen', { 
+        state: { 
+          clients: [client], 
+          initialIndex: 0, 
+          day: day 
+        } 
+      });
     } catch (error) {
       console.error("Error saving order:", error);
       toast.error("Erro ao salvar pedido");
