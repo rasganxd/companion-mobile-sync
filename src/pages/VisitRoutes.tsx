@@ -28,6 +28,25 @@ interface SalesData {
   positivadosValue: number;
 }
 
+interface Client {
+  id: string;
+  name: string;
+  company_name?: string;
+  code?: number;
+  active: boolean;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  visit_days?: string[];
+  status?: 'positivado' | 'negativado' | 'pendente';
+  orderTotal?: number;
+  hasLocalOrders?: boolean;
+  localOrdersCount?: number;
+  hasTransmittedOrders?: boolean;
+  transmittedOrdersCount?: number;
+}
+
 const VisitRoutes = () => {
   const navigate = useNavigate();
   const { salesRep } = useAuth();
@@ -40,6 +59,7 @@ const VisitRoutes = () => {
     positivadosValue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [clientsData, setClientsData] = useState<{ [key: string]: Client[] }>({});
   
   // Mapeamento dos dias da semana
   const dayMapping: { [key: string]: string } = {
@@ -68,7 +88,7 @@ const VisitRoutes = () => {
         // Buscar clientes ativos com dias de visita definidos do Supabase FILTRADOS pelo vendedor logado
         const { data: customers, error: customersError } = await supabase
           .from('customers')
-          .select('id, name, visit_days')
+          .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
           .eq('active', true)
           .eq('sales_rep_id', salesRep.id) // ✅ FILTRAR pelo vendedor logado
           .not('visit_days', 'is', null);
@@ -161,12 +181,14 @@ const VisitRoutes = () => {
         
         // SEGUNDO: Processar dados das rotas por dia (para exibição na tabela)
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+        const dayClientsData: { [key: string]: Client[] } = {};
         
         const processedRoutes: RouteData[] = weekDays.map(day => {
           // Encontrar a chave em inglês correspondente ao dia em português
           const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
           
           if (!englishDay) {
+            dayClientsData[day] = [];
             return {
               day,
               visited: 0,
@@ -186,6 +208,50 @@ const VisitRoutes = () => {
             Array.isArray(customer.visit_days) && 
             customer.visit_days.includes(englishDay)
           ) || [];
+          
+          // Processar clientes com status para o dia
+          const clientsWithStatus = dayClients.map(client => {
+            const clientStats = uniqueClientStats.get(client.id);
+            
+            let status: 'positivado' | 'negativado' | 'pendente' = 'pendente';
+            let orderTotal = 0;
+            let hasLocalOrders = false;
+            let localOrdersCount = 0;
+            let hasTransmittedOrders = false;
+            let transmittedOrdersCount = 0;
+            
+            const clientLocalOrders = todayValidOrders.filter(order => order.customer_id === client.id);
+            const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
+            const transmittedLocalOrders = clientLocalOrders.filter(order => 
+              order.sync_status === 'transmitted' || order.sync_status === 'synced'
+            );
+            
+            hasLocalOrders = pendingLocalOrders.length > 0;
+            localOrdersCount = pendingLocalOrders.length;
+            hasTransmittedOrders = transmittedLocalOrders.length > 0;
+            transmittedOrdersCount = transmittedLocalOrders.length;
+            
+            if (clientStats) {
+              if (clientStats.hasPositive) {
+                status = 'positivado';
+                orderTotal = clientStats.totalSales;
+              } else if (clientStats.hasNegative) {
+                status = 'negativado';
+              }
+            }
+            
+            return {
+              ...client,
+              status,
+              orderTotal,
+              hasLocalOrders,
+              localOrdersCount,
+              hasTransmittedOrders,
+              transmittedOrdersCount
+            };
+          });
+          
+          dayClientsData[day] = clientsWithStatus;
           
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
@@ -235,6 +301,7 @@ const VisitRoutes = () => {
         });
         
         setRoutes(processedRoutes);
+        setClientsData(dayClientsData);
         setSalesData({
           totalSales,
           totalPositivados,
@@ -285,7 +352,22 @@ const VisitRoutes = () => {
 
   const handleDaySelect = (day: string) => {
     console.log(`🗓️ Selected day: ${day}`);
-    navigate('/clientes-lista', { state: { day } });
+    
+    const dayClients = clientsData[day] || [];
+    
+    if (dayClients.length === 0) {
+      toast.error(`Nenhum cliente encontrado para ${day}`);
+      return;
+    }
+    
+    // Navegar diretamente para a visualização full-screen
+    navigate('/client-fullscreen', {
+      state: {
+        clients: dayClients,
+        initialIndex: 0,
+        day: day
+      }
+    });
   };
 
   if (loading) {
