@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronLeft, User, Building, Phone, MapPin, Hash } from 'lucide-react';
@@ -6,7 +5,6 @@ import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
-
 interface Client {
   id: string;
   name: string;
@@ -25,35 +23,37 @@ interface Client {
   hasTransmittedOrders?: boolean;
   transmittedOrdersCount?: number;
 }
-
 const ClientFullScreenView = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { goBack } = useAppNavigation();
-  
-  const { clients, initialIndex = 0, day } = location.state || { clients: [], initialIndex: 0, day: 'Segunda' };
+  const {
+    goBack
+  } = useAppNavigation();
+  const {
+    clients,
+    initialIndex = 0,
+    day
+  } = location.state || {
+    clients: [],
+    initialIndex: 0,
+    day: 'Segunda'
+  };
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  
   useEffect(() => {
     if (!clients || clients.length === 0) {
       goBack();
     }
   }, [clients, goBack]);
-
   if (!clients || clients.length === 0) {
     return null;
   }
-
   const currentClient = clients[currentIndex];
-  
   const handlePrevious = () => {
     setCurrentIndex(prev => prev > 0 ? prev - 1 : clients.length - 1);
   };
-  
   const handleNext = () => {
     setCurrentIndex(prev => prev < clients.length - 1 ? prev + 1 : 0);
   };
-  
   const handleStartActivity = () => {
     navigate('/client-activities', {
       state: {
@@ -63,11 +63,9 @@ const ClientFullScreenView = () => {
       }
     });
   };
-
   const getStatusInfo = (client: Client) => {
     const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
     const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
-    
     switch (client.status) {
       case 'positivado':
         return {
@@ -82,28 +80,20 @@ const ClientFullScreenView = () => {
       case 'pendente':
       default:
         return {
-          color: (client.hasLocalOrders || client.hasTransmittedOrders) ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-800 border-gray-200',
+          color: client.hasLocalOrders || client.hasTransmittedOrders ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-800 border-gray-200',
           text: `Pendente${localInfo}${transmittedInfo}`
         };
     }
   };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
-
   const statusInfo = getStatusInfo(currentClient);
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        title={`Cliente ${currentIndex + 1} de ${clients.length}`}
-        showBackButton 
-        backgroundColor="blue" 
-      />
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title={`Cliente ${currentIndex + 1} de ${clients.length}`} showBackButton backgroundColor="blue" />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
         <span className="font-semibold">{day}</span> - Visualização Detalhada
@@ -116,88 +106,65 @@ const ClientFullScreenView = () => {
             {/* Header do Cliente - Compactado */}
             <div className="text-center mb-4">
               <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                {currentClient.company_name ? (
-                  <Building className="h-8 w-8 text-app-blue" />
-                ) : (
-                  <User className="h-8 w-8 text-app-blue" />
-                )}
+                {currentClient.company_name ? <Building className="h-8 w-8 text-app-blue" /> : <User className="h-8 w-8 text-app-blue" />}
               </div>
               
-              <h2 className="text-xl font-bold text-gray-900 mb-1">
+              <h2 className="mb-1 text-sm font-medium text-zinc-700">
                 {currentClient.company_name || currentClient.name}
               </h2>
               
-              {currentClient.company_name && currentClient.name && (
-                <p className="text-sm text-gray-600 mb-2">
+              {currentClient.company_name && currentClient.name && <p className="mb-2 text-sm font-bold text-zinc-950">
                   Razão Social: {currentClient.name}
-                </p>
-              )}
+                </p>}
               
               <div className={`inline-block px-3 py-1 rounded-lg border text-sm ${statusInfo.color}`}>
                 <span className="font-medium">{statusInfo.text}</span>
               </div>
               
-              {currentClient.status === 'positivado' && currentClient.orderTotal && currentClient.orderTotal > 0 && (
-                <div className="mt-2 text-xl font-bold text-green-600">
+              {currentClient.status === 'positivado' && currentClient.orderTotal && currentClient.orderTotal > 0 && <div className="mt-2 text-xl font-bold text-green-600">
                   {formatCurrency(currentClient.orderTotal)}
-                </div>
-              )}
+                </div>}
             </div>
             
             {/* Informações Detalhadas - Compactadas */}
             <div className="space-y-3">
-              {currentClient.code && (
-                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+              {currentClient.code && <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                   <Hash className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-xs text-gray-600">Código</p>
                     <p className="text-sm font-medium">{currentClient.code}</p>
                   </div>
-                </div>
-              )}
+                </div>}
               
-              {currentClient.phone && (
-                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+              {currentClient.phone && <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                   <Phone className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-xs text-gray-600">Telefone</p>
                     <p className="text-sm font-medium">{currentClient.phone}</p>
                   </div>
-                </div>
-              )}
+                </div>}
               
-              {(currentClient.address || currentClient.city || currentClient.state) && (
-                <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
+              {(currentClient.address || currentClient.city || currentClient.state) && <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
                   <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
                   <div>
                     <p className="text-xs text-gray-600">Endereço</p>
                     <div className="text-sm font-medium">
-                      {currentClient.address && (
-                        <p>{currentClient.address}</p>
-                      )}
-                      {(currentClient.city || currentClient.state) && (
-                        <p>
+                      {currentClient.address && <p>{currentClient.address}</p>}
+                      {(currentClient.city || currentClient.state) && <p>
                           {currentClient.city}
                           {currentClient.city && currentClient.state && ', '}
                           {currentClient.state}
-                        </p>
-                      )}
+                        </p>}
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
             </div>
           </CardContent>
         </Card>
         
         {/* Botão de Ação Principal - Separado do card */}
         <div className="mt-4">
-          <AppButton 
-            variant="blue"
-            fullWidth
-            onClick={handleStartActivity}
-            className="text-base py-3"
-          >
+          <AppButton variant="blue" fullWidth onClick={handleStartActivity} className="text-base py-3">
             Iniciar Atividades
           </AppButton>
         </div>
@@ -207,12 +174,7 @@ const ClientFullScreenView = () => {
       <div className="p-4 bg-white border-t space-y-3">
         {/* Navegação Entre Clientes */}
         <div className="flex items-center justify-between">
-          <AppButton 
-            variant="gray"
-            onClick={handlePrevious}
-            disabled={clients.length <= 1}
-            className="flex items-center gap-1 px-4 py-2"
-          >
+          <AppButton variant="gray" onClick={handlePrevious} disabled={clients.length <= 1} className="flex items-center gap-1 px-4 py-2">
             <ArrowLeft size={16} />
             <span className="text-sm">Anterior</span>
           </AppButton>
@@ -226,30 +188,18 @@ const ClientFullScreenView = () => {
             </p>
           </div>
           
-          <AppButton 
-            variant="gray"
-            onClick={handleNext}
-            disabled={clients.length <= 1}
-            className="flex items-center gap-1 px-4 py-2"
-          >
+          <AppButton variant="gray" onClick={handleNext} disabled={clients.length <= 1} className="flex items-center gap-1 px-4 py-2">
             <span className="text-sm">Próximo</span>
             <ArrowRight size={16} />
           </AppButton>
         </div>
         
         {/* Botão Voltar */}
-        <AppButton 
-          variant="gray"
-          fullWidth
-          onClick={goBack}
-          className="flex items-center justify-center gap-2 py-2"
-        >
+        <AppButton variant="gray" fullWidth onClick={goBack} className="flex items-center justify-center gap-2 py-2">
           <ChevronLeft size={16} />
           <span className="text-sm">Voltar</span>
         </AppButton>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default ClientFullScreenView;
