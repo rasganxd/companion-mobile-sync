@@ -109,69 +109,69 @@ const ClientFullScreenView = () => {
         <span className="font-semibold">{day}</span> - Visualização Detalhada
       </div>
       
-      <div className="flex-1 p-4 flex flex-col">
-        {/* Card Principal do Cliente */}
-        <Card className="flex-1 mb-4">
-          <CardContent className="p-6 h-full flex flex-col">
-            {/* Header do Cliente */}
-            <div className="text-center mb-6">
-              <div className="bg-blue-100 p-4 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+      <div className="flex-1 p-4 flex flex-col overflow-y-auto">
+        {/* Card Principal do Cliente - Redimensionado */}
+        <Card className="max-h-[calc(100vh-280px)] overflow-y-auto">
+          <CardContent className="p-4">
+            {/* Header do Cliente - Compactado */}
+            <div className="text-center mb-4">
+              <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
                 {currentClient.company_name ? (
-                  <Building className="h-10 w-10 text-app-blue" />
+                  <Building className="h-8 w-8 text-app-blue" />
                 ) : (
-                  <User className="h-10 w-10 text-app-blue" />
+                  <User className="h-8 w-8 text-app-blue" />
                 )}
               </div>
               
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              <h2 className="text-xl font-bold text-gray-900 mb-1">
                 {currentClient.company_name || currentClient.name}
               </h2>
               
               {currentClient.company_name && currentClient.name && (
-                <p className="text-lg text-gray-600 mb-3">
+                <p className="text-sm text-gray-600 mb-2">
                   Razão Social: {currentClient.name}
                 </p>
               )}
               
-              <div className={`inline-block px-4 py-2 rounded-lg border ${statusInfo.color}`}>
+              <div className={`inline-block px-3 py-1 rounded-lg border text-sm ${statusInfo.color}`}>
                 <span className="font-medium">{statusInfo.text}</span>
               </div>
               
               {currentClient.status === 'positivado' && currentClient.orderTotal && currentClient.orderTotal > 0 && (
-                <div className="mt-3 text-2xl font-bold text-green-600">
+                <div className="mt-2 text-xl font-bold text-green-600">
                   {formatCurrency(currentClient.orderTotal)}
                 </div>
               )}
             </div>
             
-            {/* Informações Detalhadas */}
-            <div className="space-y-4 flex-1">
+            {/* Informações Detalhadas - Compactadas */}
+            <div className="space-y-3">
               {currentClient.code && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Hash className="h-5 w-5 text-gray-600" />
+                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                  <Hash className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Código</p>
-                    <p className="font-medium">{currentClient.code}</p>
+                    <p className="text-xs text-gray-600">Código</p>
+                    <p className="text-sm font-medium">{currentClient.code}</p>
                   </div>
                 </div>
               )}
               
               {currentClient.phone && (
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Phone className="h-5 w-5 text-gray-600" />
+                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+                  <Phone className="h-4 w-4 text-gray-600" />
                   <div>
-                    <p className="text-sm text-gray-600">Telefone</p>
-                    <p className="font-medium">{currentClient.phone}</p>
+                    <p className="text-xs text-gray-600">Telefone</p>
+                    <p className="text-sm font-medium">{currentClient.phone}</p>
                   </div>
                 </div>
               )}
               
               {(currentClient.address || currentClient.city || currentClient.state) && (
-                <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                  <MapPin className="h-5 w-5 text-gray-600 mt-0.5" />
+                <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
+                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-gray-600">Endereço</p>
-                    <div className="font-medium">
+                    <p className="text-xs text-gray-600">Endereço</p>
+                    <div className="text-sm font-medium">
                       {currentClient.address && (
                         <p>{currentClient.address}</p>
                       )}
@@ -187,70 +187,66 @@ const ClientFullScreenView = () => {
                 </div>
               )}
             </div>
-            
-            {/* Botão de Ação Principal */}
-            <div className="mt-6">
-              <AppButton 
-                variant="blue"
-                fullWidth
-                onClick={handleStartActivity}
-                className="text-lg py-4"
-              >
-                Iniciar Atividades
-              </AppButton>
-            </div>
           </CardContent>
         </Card>
+        
+        {/* Botão de Ação Principal - Separado do card */}
+        <div className="mt-4">
+          <AppButton 
+            variant="blue"
+            fullWidth
+            onClick={handleStartActivity}
+            className="text-base py-3"
+          >
+            Iniciar Atividades
+          </AppButton>
+        </div>
       </div>
       
-      {/* Navegação Inferior */}
-      <div className="p-4 bg-white border-t">
+      {/* Navegação Inferior - Reorganizada */}
+      <div className="p-4 bg-white border-t space-y-3">
+        {/* Navegação Entre Clientes */}
         <div className="flex items-center justify-between">
-          {/* Botão Anterior */}
           <AppButton 
             variant="gray"
             onClick={handlePrevious}
             disabled={clients.length <= 1}
-            className="flex items-center gap-2 px-6"
+            className="flex items-center gap-1 px-4 py-2"
           >
-            <ArrowLeft size={18} />
-            Anterior
+            <ArrowLeft size={16} />
+            <span className="text-sm">Anterior</span>
           </AppButton>
           
-          {/* Indicador Central */}
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm font-medium text-gray-900">
               {currentIndex + 1} de {clients.length}
             </p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-500 truncate max-w-32">
               {currentClient.company_name || currentClient.name}
             </p>
           </div>
           
-          {/* Botão Próximo */}
           <AppButton 
             variant="gray"
             onClick={handleNext}
             disabled={clients.length <= 1}
-            className="flex items-center gap-2 px-6"
+            className="flex items-center gap-1 px-4 py-2"
           >
-            Próximo
-            <ArrowRight size={18} />
+            <span className="text-sm">Próximo</span>
+            <ArrowRight size={16} />
           </AppButton>
         </div>
         
         {/* Botão Voltar */}
-        <div className="mt-3">
-          <AppButton 
-            variant="gray"
-            fullWidth
-            onClick={goBack}
-            className="flex items-center justify-center gap-2"
-          >
-            <ChevronLeft size={18} />
-            Voltar para Lista
-          </AppButton>
-        </div>
+        <AppButton 
+          variant="gray"
+          fullWidth
+          onClick={goBack}
+          className="flex items-center justify-center gap-2 py-2"
+        >
+          <ChevronLeft size={16} />
+          <span className="text-sm">Voltar</span>
+        </AppButton>
       </div>
     </div>
   );
