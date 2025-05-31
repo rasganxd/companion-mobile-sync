@@ -105,9 +105,7 @@ const ClientFullScreenView = () => {
           <CardContent className="p-4">
             {/* Header do Cliente - Compactado */}
             <div className="text-center mb-4">
-              <div className="bg-blue-100 p-3 rounded-full w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                {currentClient.company_name ? <Building className="h-8 w-8 text-app-blue" /> : <User className="h-8 w-8 text-app-blue" />}
-              </div>
+              
               
               <h2 className="mb-1 text-sm font-medium text-zinc-700">
                 {currentClient.company_name || currentClient.name}
