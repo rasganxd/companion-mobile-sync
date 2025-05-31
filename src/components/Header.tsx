@@ -1,22 +1,25 @@
-
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigation } from '@/contexts/NavigationContext';
-
 interface HeaderProps {
   title: string;
   showBackButton?: boolean;
   backgroundColor?: 'orange' | 'gray' | 'blue' | 'green' | 'purple';
 }
-
-const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: HeaderProps) => {
-  const { goBack, canGoBack } = useNavigation();
-  
+const Header = ({
+  title,
+  showBackButton = false,
+  backgroundColor = 'blue'
+}: HeaderProps) => {
+  const {
+    goBack,
+    canGoBack
+  } = useNavigation();
   const getBgColor = () => {
     switch (backgroundColor) {
-      case 'orange': 
+      case 'orange':
         return 'bg-app-orange';
-      case 'gray': 
+      case 'gray':
         return 'bg-slate-200';
       case 'green':
         return 'bg-green-600';
@@ -27,27 +30,17 @@ const Header = ({ title, showBackButton = false, backgroundColor = 'blue' }: Hea
         return 'bg-gradient-to-r from-app-blue to-app-blue-dark';
     }
   };
-  
   const handleBackClick = () => {
     console.log('🔙 Header back button clicked');
     goBack();
   };
-  
-  return (
-    <div className={`w-full ${getBgColor()} py-4 px-4 flex items-center shadow-md`}>
-      {showBackButton && canGoBack && (
-        <button 
-          className="mr-2 bg-white bg-opacity-20 rounded-full p-1 transition-all hover:bg-opacity-30"
-          onClick={handleBackClick}
-        >
+  return <div className={`w-full ${getBgColor()} py-4 px-4 flex items-center shadow-md`}>
+      {showBackButton && canGoBack && <button className="mr-2 bg-white bg-opacity-20 rounded-full p-1 transition-all hover:bg-opacity-30" onClick={handleBackClick}>
           <ArrowLeft size={24} color="white" />
-        </button>
-      )}
-      <h1 className="text-white text-xl font-semibold flex-1 text-center">
+        </button>}
+      <h1 className="text-white flex-1 text-center text-lg font-medium">
         {title}
       </h1>
-    </div>
-  );
+    </div>;
 };
-
 export default Header;
