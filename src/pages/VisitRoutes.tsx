@@ -360,7 +360,9 @@ const VisitRoutes = () => {
       return;
     }
     
-    // Navegar diretamente para a visualização full-screen
+    console.log(`📊 Navigating to client-fullscreen with ${dayClients.length} clients for ${day}`);
+    
+    // Navegar diretamente para a visualização full-screen com o dia correto
     navigate('/client-fullscreen', {
       state: {
         clients: dayClients,

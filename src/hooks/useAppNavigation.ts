@@ -1,3 +1,4 @@
+
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,8 +19,8 @@ export const useAppNavigation = () => {
   const navigateToHome = () => navigateTo('/home');
   const navigateToClients = (day?: string) => {
     if (day) {
-      // Simular state passando pela URL ou context se necessário
-      navigateTo('/clientes-lista');
+      // Passar o dia como estado para a tela de clientes
+      navigateTo('/clientes-lista', { day });
     } else {
       navigateTo('/clientes-lista');
     }
@@ -35,8 +36,8 @@ export const useAppNavigation = () => {
   const navigateToSettings = () => navigateTo('/sync-settings');
   const navigateToTransmitOrders = () => navigateTo('/transmit-orders');
   const navigateToClientActivities = (clientName: string, clientId: string, day?: string) => {
-    // Navegar para a nova rota de atividades do cliente
-    navigateTo('/client-activities');
+    // Navegar para a nova rota de atividades do cliente com estado
+    navigateTo('/client-activities', { clientName, clientId, day });
   };
 
   const navigateToClientFullScreen = (clients: any[], initialIndex: number = 0, day?: string) => {

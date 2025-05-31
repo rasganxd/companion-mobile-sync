@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -35,7 +34,24 @@ const ClientsList = () => {
   const { goBack } = useAppNavigation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { day } = location.state || { day: 'Segunda' };
+  
+  // Melhorar a lógica para obter o dia da semana
+  const getDayFromState = () => {
+    // Primeiro, tentar pegar do state da navegação
+    if (location.state?.day) {
+      return location.state.day;
+    }
+    
+    // Se não houver, usar o dia atual da semana
+    const today = new Date();
+    const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const currentDay = dayNames[today.getDay()];
+    
+    console.log('⚠️ Nenhum dia especificado no state, usando dia atual:', currentDay);
+    return currentDay;
+  };
+  
+  const [day] = useState(getDayFromState());
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   
