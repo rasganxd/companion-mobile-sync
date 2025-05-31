@@ -27,7 +27,7 @@ const navigationFlows: { [key: string]: string } = {
   '/my-orders': '/home',
   '/sync-settings': '/home',
   '/transmit-orders': '/home',
-  '/place-order': '/client-activities',
+  '/place-order': '/client-fullscreen', // Fazer pedido volta para fullscreen do cliente
   '/negativar-venda': '/client-activities',
   '/ultimas-compras': '/client-activities',
   '/mensagem': '/client-activities',

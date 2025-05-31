@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { X } from 'lucide-react';
 import Header from '@/components/Header';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -429,12 +430,52 @@ const PlaceOrder = () => {
     client.name.toLowerCase().includes(clientSearchTerm.toLowerCase())
   );
 
+  // Custom close handler that navigates back to client-fullscreen
+  const handleClose = () => {
+    console.log('🔄 Closing PlaceOrder, navigating back to client-fullscreen');
+    
+    // Get client info from current state or selected client
+    const clientInfo = selectedClient || {
+      id: locationState?.clientId,
+      name: locationState?.clientName
+    };
+    
+    if (clientInfo?.id) {
+      // Navigate back to client-fullscreen with proper state
+      navigate('/client-fullscreen', {
+        state: {
+          clients: [clientInfo], // Pass current client as array
+          initialIndex: 0,
+          day: locationState?.day || 'Segunda'
+        }
+      });
+    } else {
+      // Fallback to routes if no client info
+      navigate('/rotas');
+    }
+  };
+
+  // Custom header component with close button
+  const CustomHeader = () => (
+    <div className="w-full bg-gradient-to-r from-app-blue to-app-blue-dark py-4 px-4 flex items-center shadow-md">
+      <button 
+        className="mr-2 bg-white bg-opacity-20 rounded-full p-1 transition-all hover:bg-opacity-30"
+        onClick={handleClose}
+      >
+        <X size={24} color="white" />
+      </button>
+      <h1 className="text-white text-xl font-semibold flex-1 text-center">
+        {isEditingOrder ? "Editar Pedido" : "Novo Pedido"}
+      </h1>
+    </div>
+  );
+
   const pageTitle = isEditingOrder ? "Editar Pedido" : "Novo Pedido";
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Header title={pageTitle} showBackButton={true} backgroundColor="blue" />
+        <CustomHeader />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -447,7 +488,7 @@ const PlaceOrder = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title={pageTitle} showBackButton={true} backgroundColor="blue" />
+      <CustomHeader />
       
       <div className="p-2 flex-1 space-y-4">
         {isEditingOrder && (
