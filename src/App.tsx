@@ -25,6 +25,7 @@ import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
 import TransmitOrders from '@/pages/TransmitOrders';
 import ClientFullScreenView from '@/pages/ClientFullScreenView';
+import Reports from '@/pages/Reports';
 
 const queryClient = new QueryClient();
 
@@ -65,6 +66,7 @@ function App() {
               <Route path="/api-settings" element={<ApiSettings />} />
               <Route path="/qr-scanner" element={<QRScanPage />} />
               <Route path="/transmit-orders" element={<TransmitOrders />} />
+              <Route path="/reports" element={<Reports />} />
               
               {/* Redirecionamentos para rotas antigas em inglês */}
               <Route path="/message" element={<Navigate to="/mensagem" replace />} />
