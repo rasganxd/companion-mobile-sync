@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -11,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
+import { toast } from '@/hooks/use-toast';
 
 const NegativeSale = () => {
   const navigate = useNavigate();
@@ -22,7 +24,7 @@ const NegativeSale = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [clientAlreadyNegated, setClientAlreadyNegated] = useState<boolean>(false);
   
-  const { isOpen, options, confirm, handleConfirm, handleCancel } = useConfirm();
+  const { isOpen, options, confirm, handleConfirm: confirmHandleConfirm, handleCancel: confirmHandleCancel } = useConfirm();
   
   useEffect(() => {
     if (!clientId) {
@@ -46,13 +48,17 @@ const NegativeSale = () => {
     }
   };
 
-  const handleCancel = () => {
+  const handleCancelAction = () => {
     navigate(-1);
   };
 
-  const handleConfirm = async () => {
+  const handleConfirmAction = async () => {
     if (!reason) {
-      toast.error('Selecione o motivo da negativação');
+      toast({
+        title: "Erro",
+        description: "Selecione o motivo da negativação",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -98,15 +104,25 @@ const NegativeSale = () => {
       console.log('📱 Negative sale saved locally:', order);
       
       if (clientAlreadyNegated) {
-        toast.success(`Nova negativação registrada para ${clientName}`);
+        toast({
+          title: "Sucesso",
+          description: `Nova negativação registrada para ${clientName}`
+        });
       } else {
-        toast.success(`Cliente ${clientName} negativado com sucesso`);
+        toast({
+          title: "Sucesso",
+          description: `Cliente ${clientName} negativado com sucesso`
+        });
       }
       
       navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
     } catch (error) {
       console.error("Error saving negative sale:", error);
-      toast.error('Erro ao negativar cliente');
+      toast({
+        title: "Erro",
+        description: "Erro ao negativar cliente",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +216,7 @@ const NegativeSale = () => {
       <div className="p-4 bg-white border-t grid grid-cols-2 gap-4">
         <AppButton 
           variant="gray" 
-          onClick={handleCancel}
+          onClick={handleCancelAction}
           disabled={isLoading}
           className="flex items-center justify-center"
         >
@@ -210,7 +226,7 @@ const NegativeSale = () => {
         
         <AppButton 
           variant="orange" 
-          onClick={handleConfirm}
+          onClick={handleConfirmAction}
           disabled={isLoading || !reason}
           className="flex items-center justify-center"
         >
@@ -225,8 +241,8 @@ const NegativeSale = () => {
         description={options.description}
         confirmText={options.confirmText || 'Confirmar'}
         cancelText={options.cancelText || 'Cancelar'}
-        onConfirm={handleConfirm}
-        onCancel={handleCancel}
+        onConfirm={confirmHandleConfirm}
+        onCancel={confirmHandleCancel}
       />
     </div>
   );
