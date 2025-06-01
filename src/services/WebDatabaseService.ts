@@ -25,8 +25,14 @@ interface SalesAppDBSchema extends DBSchema {
   };
 }
 
-// Valid table names for the schema
-type ValidTableName = keyof SalesAppDBSchema;
+// Valid table names for the schema - explicitly define to avoid issues with indexes
+type ValidTableName = 'clients' | 'visit_routes' | 'orders' | 'products' | 'sync_log';
+
+// Type guard to check if a string is a valid table name
+function isValidTableName(tableName: string): tableName is ValidTableName {
+  const validTables: ValidTableName[] = ['clients', 'visit_routes', 'orders', 'products', 'sync_log'];
+  return validTables.includes(tableName as ValidTableName);
+}
 
 class WebDatabaseService implements DatabaseAdapter {
   private static instance: WebDatabaseService;
@@ -126,13 +132,12 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.ensureInitialized();
     
     // Verificar se a tabela existe na lista de tabelas válidas
-    const validTables: ValidTableName[] = ['clients', 'visit_routes', 'orders', 'products', 'sync_log'];
-    if (!validTables.includes(tableName as ValidTableName)) {
+    if (!isValidTableName(tableName)) {
       console.warn(`⚠️ Table ${tableName} does not exist`);
       return [];
     }
     
-    const items = await this.db!.getAll(tableName as ValidTableName);
+    const items = await this.db!.getAll(tableName);
     return items.filter(item => item.sync_status === 'pending_sync');
   }
 
@@ -140,17 +145,15 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.ensureInitialized();
     
     // Verificar se a tabela existe na lista de tabelas válidas
-    const validTables: ValidTableName[] = ['clients', 'visit_routes', 'orders', 'products', 'sync_log'];
-    if (!validTables.includes(tableName as ValidTableName)) {
+    if (!isValidTableName(tableName)) {
       console.warn(`⚠️ Table ${tableName} does not exist`);
       return;
     }
     
-    const tableKey = tableName as ValidTableName;
-    const item = await this.db!.get(tableKey, id);
+    const item = await this.db!.get(tableName, id);
     if (item) {
       item.sync_status = status;
-      await this.db!.put(tableKey, item);
+      await this.db!.put(tableName, item);
       console.log(`✅ Sync status updated for ${tableName} with id ${id} to ${status}`);
     } else {
       console.warn(`⚠️ Item not found in ${tableName} with id ${id}`);
