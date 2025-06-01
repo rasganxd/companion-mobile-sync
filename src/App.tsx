@@ -1,6 +1,6 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider } from '@/contexts/NavigationContext';
 import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
@@ -72,7 +72,6 @@ function App() {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
-            <Toaster />
           </NavigationProvider>
         </BrowserRouter>
       </div>

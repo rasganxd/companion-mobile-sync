@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { useConfirm } from '@/hooks/useConfirm';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface LocalOrder {
   id: string;
@@ -28,6 +30,7 @@ interface GroupedOrders {
 
 const MyOrders = () => {
   const { navigateTo } = useAppNavigation();
+  const { isOpen, options, confirm, handleConfirm, handleCancel } = useConfirm();
   
   const [orders, setOrders] = useState<LocalOrder[]>([]);
   const [groupedOrders, setGroupedOrders] = useState<GroupedOrders>({});
@@ -112,12 +115,23 @@ const MyOrders = () => {
   }, [activeFilter, orders]);
 
   const deleteOrder = async (orderId: string, syncStatus: string) => {
-    // Confirmar exclusão com mensagem apropriada baseada no status
+    // Usar confirmação customizada ao invés de confirm() nativo
     const confirmMessage = syncStatus === 'transmitted' 
       ? 'Tem certeza que deseja deletar este pedido transmitido? Esta ação não pode ser desfeita.'
       : 'Tem certeza que deseja deletar este pedido?';
 
-    if (!confirm(confirmMessage)) {
+    const title = syncStatus === 'transmitted' 
+      ? 'Deletar Pedido Transmitido' 
+      : 'Deletar Pedido';
+
+    const confirmed = await confirm({
+      title,
+      description: confirmMessage,
+      confirmText: 'Deletar',
+      cancelText: 'Cancelar'
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -125,15 +139,14 @@ const MyOrders = () => {
       const db = getDatabaseAdapter();
       await db.deleteOrder(orderId);
       
-      const successMessage = syncStatus === 'transmitted' 
+      console.log(syncStatus === 'transmitted' 
         ? 'Pedido transmitido deletado com sucesso'
-        : 'Pedido deletado com sucesso';
+        : 'Pedido deletado com sucesso');
       
-      toast.success(successMessage);
       loadAllOrders(); // Recarregar lista
     } catch (error) {
       console.error('Error deleting order:', error);
-      toast.error(`Erro ao deletar pedido: ${error}`);
+      console.error(`Erro ao deletar pedido: ${error}`);
     }
   };
 
@@ -408,6 +421,17 @@ const MyOrders = () => {
           </div>
         )}
       </div>
+      
+      {/* Adicionar o ConfirmDialog */}
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        description={options.description}
+        confirmText={options.confirmText || 'Confirmar'}
+        cancelText={options.cancelText || 'Cancelar'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

@@ -8,7 +8,6 @@ import AppButton from '@/components/AppButton';
 import { ArrowLeft, Check, X, MessageSquare } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface OrderItem {
@@ -53,7 +52,7 @@ const OrderDetails = () => {
   useEffect(() => {
     if (!location.state && !redirecting) {
       setRedirecting(true);
-      toast.error("Informações do pedido não encontradas");
+      console.error("Informações do pedido não encontradas");
       navigate('/fazer-pedidos');
     }
   }, [location.state, navigate, redirecting]);
@@ -106,7 +105,7 @@ const OrderDetails = () => {
       // Update client status to "positivado"
       await db.updateClientStatus(client.id, "Ativo");
       
-      toast.success("Pedido salvo com sucesso!");
+      console.log("Pedido salvo com sucesso!");
       
       // Navigate back to ClientFullScreenView with the correct day and client info
       navigate('/client-fullscreen', { 
@@ -118,7 +117,7 @@ const OrderDetails = () => {
       });
     } catch (error) {
       console.error("Error saving order:", error);
-      toast.error("Erro ao salvar pedido");
+      console.error("Erro ao salvar pedido");
     } finally {
       setIsLoading(false);
     }
