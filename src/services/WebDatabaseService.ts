@@ -1,3 +1,4 @@
+
 import DatabaseAdapter from './DatabaseAdapter';
 import { openDB, IDBPDatabase, DBSchema } from 'idb';
 
@@ -29,7 +30,7 @@ class WebDatabaseService implements DatabaseAdapter {
   private static instance: WebDatabaseService;
   private dbName = 'SalesAppDB';
   private version = 1;
-  private db: IDBDatabase<SalesAppDBSchema> | null = null;
+  private db: IDBPDatabase<SalesAppDBSchema> | null = null;
 
   private constructor() {}
 

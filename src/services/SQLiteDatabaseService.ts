@@ -551,21 +551,37 @@ class SQLiteDatabaseService {
     }
 
     // Verificar se há pedidos pendentes
-    const clientOrders = await this.getClientOrders(clientId);
-    const pendingOrder = clientOrders.find(order => 
-      order.sync_status === 'pending_sync' && 
-      order.status !== 'cancelled'
-    );
-
-    if (pendingOrder) {
+    const activePendingOrder = await this.getActivePendingOrder(clientId);
+    if (activePendingOrder) {
       return {
         canCreate: false,
         reason: 'Cliente já possui um pedido pendente.',
-        existingOrder: pendingOrder
+        existingOrder: activePendingOrder
       };
     }
 
     return { canCreate: true };
+  }
+
+  async getActivePendingOrder(clientId: string): Promise<any | null> {
+    try {
+      const orders = await this.getClientOrders(clientId);
+      const pendingOrders = orders.filter(order => 
+        order.sync_status === 'pending_sync' && order.status !== 'cancelled'
+      );
+      
+      if (pendingOrders.length > 0) {
+        // Return the most recent pending order
+        return pendingOrders.sort((a, b) => 
+          new Date(b.created_at || b.date || b.order_date).getTime() - new Date(a.created_at || a.date || a.order_date).getTime()
+        )[0];
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting active pending order:', error);
+      return null;
+    }
   }
 
   async closeDatabase(): Promise<void> {
