@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ChevronLeft, User, Building, Phone, MapPin, Hash } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { useClientValidation } from '@/hooks/useClientValidation';
 import ClientNegationConfirmModal from '@/components/clients/ClientNegationConfirmModal';
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { toast } from '@/hooks/use-toast';
+import OrderChoiceModal from '@/components/order/OrderChoiceModal';
 
 interface Client {
   id: string;
@@ -30,8 +30,9 @@ interface Client {
 
 const ClientFullScreenView = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { goBack } = useAppNavigation();
+  const { handleClientAction, unnegateClient, isValidating } = useClientValidation();
+  
   const {
     clients,
     initialIndex = 0,
@@ -41,9 +42,11 @@ const ClientFullScreenView = () => {
     initialIndex: 0,
     day: 'Segunda'
   };
+  
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [showNegationModal, setShowNegationModal] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [existingOrder, setExistingOrder] = useState(null);
   const [currentClients, setCurrentClients] = useState(clients);
   
   useEffect(() => {
@@ -67,72 +70,22 @@ const ClientFullScreenView = () => {
   };
   
   const handleStartActivity = async () => {
-    try {
-      const db = getDatabaseAdapter();
-      
-      // 1. Verificar se cliente está negativado
-      const isNegated = await db.isClientNegated(currentClient.id);
-      if (isNegated) {
-        console.log('🚫 Cliente negativado, mostrando modal de confirmação');
-        setShowNegationModal(true);
-        return;
+    await handleClientAction(
+      currentClient.id,
+      currentClient.company_name || currentClient.name,
+      day,
+      () => setShowNegationModal(true),
+      (order) => {
+        setExistingOrder(order);
+        setShowOrderModal(true);
       }
-      
-      // 2. Verificar se cliente já tem pedido pendente
-      const hasActivePendingOrder = await db.hasClientPendingOrders(currentClient.id);
-      if (hasActivePendingOrder) {
-        console.log('📝 Cliente tem pedido pendente, abrindo para edição');
-        
-        // Buscar o pedido existente
-        const clientOrders = await db.getClientOrders(currentClient.id);
-        const pendingOrder = clientOrders.find(order => 
-          order.sync_status === 'pending_sync' && order.status !== 'cancelled'
-        );
-        
-        if (pendingOrder) {
-          // Navegar direto para edição do pedido existente
-          navigate('/place-order', {
-            state: {
-              clientId: currentClient.id,
-              clientName: currentClient.company_name || currentClient.name,
-              day: day,
-              existingOrderItems: pendingOrder.items || [],
-              isEditingOrder: true,
-              editingOrderId: pendingOrder.id
-            }
-          });
-          return;
-        }
-      }
-      
-      // 3. Cliente normal - ir para atividades
-      console.log('✅ Cliente normal, indo para atividades');
-      navigate('/client-activities', {
-        state: {
-          clientName: currentClient.company_name || currentClient.name,
-          clientId: currentClient.id,
-          day: day
-        }
-      });
-      
-    } catch (error) {
-      console.error('Erro ao verificar status do cliente:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao verificar status do cliente",
-        variant: "destructive"
-      });
-    }
+    );
   };
   
   const handleConfirmUnnegate = async () => {
-    try {
-      setIsProcessing(true);
-      const db = getDatabaseAdapter();
-      
-      // Desnegativar cliente
-      await db.unnegateClient(currentClient.id, 'Removido para criação de novo pedido');
-      
+    const success = await unnegateClient(currentClient.id, 'Removido para criação de novo pedido');
+    
+    if (success) {
       // Atualizar cliente na lista local
       const updatedClients = [...currentClients];
       updatedClients[currentIndex] = {
@@ -140,34 +93,12 @@ const ClientFullScreenView = () => {
         status: 'pendente'
       };
       setCurrentClients(updatedClients);
-      
-      toast({
-        title: "Sucesso",
-        description: `Cliente ${currentClient.name} foi reativado com sucesso!`
-      });
-      
       setShowNegationModal(false);
       
-      // Agora proceder com criação de pedido
+      // Proceder com criação de pedido após um delay
       setTimeout(() => {
-        navigate('/client-activities', {
-          state: {
-            clientName: currentClient.company_name || currentClient.name,
-            clientId: currentClient.id,
-            day: day
-          }
-        });
+        handleStartActivity();
       }, 500);
-      
-    } catch (error) {
-      console.error('Erro ao reativar cliente:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao reativar cliente",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
     }
   };
   
@@ -290,9 +221,10 @@ const ClientFullScreenView = () => {
             variant="blue"
             fullWidth 
             onClick={handleStartActivity} 
+            disabled={isValidating}
             className="text-base py-3"
           >
-            Iniciar Atividades
+            {isValidating ? 'Validando...' : 'Iniciar Atividades'}
           </AppButton>
         </div>
       </div>
@@ -333,8 +265,30 @@ const ClientFullScreenView = () => {
         onClose={() => setShowNegationModal(false)}
         onConfirm={handleConfirmUnnegate}
         clientName={currentClient?.company_name || currentClient?.name || ''}
-        isLoading={isProcessing}
+        isLoading={isValidating}
       />
+      
+      {existingOrder && (
+        <OrderChoiceModal
+          isOpen={showOrderModal}
+          onClose={() => setShowOrderModal(false)}
+          onEditOrder={() => {
+            // TODO: Implementar navegação para edição
+            setShowOrderModal(false);
+          }}
+          onCreateNew={() => {
+            // TODO: Implementar criação de novo pedido
+            setShowOrderModal(false);
+          }}
+          onDeleteOrder={() => {
+            // TODO: Implementar exclusão de pedido
+            setShowOrderModal(false);
+          }}
+          clientName={currentClient?.company_name || currentClient?.name || ''}
+          orderTotal={existingOrder?.total || 0}
+          orderItemsCount={existingOrder?.items?.length || 0}
+        />
+      )}
     </div>
   );
 };

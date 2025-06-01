@@ -1,4 +1,3 @@
-
 import DatabaseAdapter from './DatabaseAdapter';
 import { openDB, IDBPDatabase, DBSchema } from 'idb';
 
@@ -24,6 +23,12 @@ interface SalesAppDBSchema extends DBSchema {
     key: string;
     value: any;
   };
+  // Adicionar todas as tabelas que podem ser usadas dinamicamente
+  [tableName: string]: {
+    key: string;
+    value: any;
+    indexes?: { [indexName: string]: string };
+  };
 }
 
 class WebDatabaseService implements DatabaseAdapter {
@@ -31,6 +36,7 @@ class WebDatabaseService implements DatabaseAdapter {
   private dbName = 'SalesAppDB';
   private version = 1;
   private db: IDBPDatabase<SalesAppDBSchema> | null = null;
+  private isInitializing = false;
 
   private constructor() {}
 
@@ -41,8 +47,29 @@ class WebDatabaseService implements DatabaseAdapter {
     return WebDatabaseService.instance;
   }
 
+  private async ensureInitialized(): Promise<void> {
+    if (this.db) {
+      return;
+    }
+    
+    if (this.isInitializing) {
+      // Aguardar a inicialização em curso
+      while (this.isInitializing) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return;
+    }
+    
+    await this.initDatabase();
+  }
+
   async initDatabase(): Promise<void> {
+    if (this.db || this.isInitializing) {
+      return;
+    }
+
     try {
+      this.isInitializing = true;
       this.db = await openDB<SalesAppDBSchema>(this.dbName, this.version, {
         upgrade(db) {
           if (!db.objectStoreNames.contains('clients')) {
@@ -67,27 +94,23 @@ class WebDatabaseService implements DatabaseAdapter {
     } catch (error) {
       console.error('❌ Error initializing database:', error);
       throw error;
+    } finally {
+      this.isInitializing = false;
     }
   }
 
   async getClients(): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     return this.db!.getAll('clients');
   }
 
   async getVisitRoutes(): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     return this.db!.getAll('visit_routes');
   }
 
   async getOrders(clientId?: string): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     if (clientId) {
       const tx = this.db!.transaction('orders', 'readonly');
       const index = tx.store.index('customer_id');
@@ -98,38 +121,44 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async getProducts(): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     return this.db!.getAll('products');
   }
 
-  async getPendingSyncItems(table: string): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
+  async getPendingSyncItems(tableName: string): Promise<any[]> {
+    await this.ensureInitialized();
+    
+    // Verificar se a tabela existe
+    if (!this.db!.objectStoreNames.contains(tableName)) {
+      console.warn(`⚠️ Table ${tableName} does not exist`);
+      return [];
     }
-    const items = await this.db!.getAll(table);
+    
+    const items = await this.db!.getAll(tableName as keyof SalesAppDBSchema);
     return items.filter(item => item.sync_status === 'pending_sync');
   }
 
-  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
+  async updateSyncStatus(tableName: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
+    await this.ensureInitialized();
+    
+    // Verificar se a tabela existe
+    if (!this.db!.objectStoreNames.contains(tableName)) {
+      console.warn(`⚠️ Table ${tableName} does not exist`);
+      return;
     }
-    const item = await this.db!.get(table, id);
+    
+    const item = await this.db!.get(tableName as keyof SalesAppDBSchema, id);
     if (item) {
       item.sync_status = status;
-      await this.db!.put(table, item);
-      console.log(`✅ Sync status updated for ${table} with id ${id} to ${status}`);
+      await this.db!.put(tableName as keyof SalesAppDBSchema, item);
+      console.log(`✅ Sync status updated for ${tableName} with id ${id} to ${status}`);
     } else {
-      console.warn(`⚠️ Item not found in ${table} with id ${id}`);
+      console.warn(`⚠️ Item not found in ${tableName} with id ${id}`);
     }
   }
 
   async logSync(type: string, status: string, details?: string): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const logEntry = {
       id: `sync_${Date.now()}`,
       type,
@@ -142,17 +171,13 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async saveOrder(order: any): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     await this.db!.put('orders', order);
     console.log('💾 Order saved/updated:', order);
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const client = await this.getClientById(clientId);
     if (client) {
       client.status = status;
@@ -164,9 +189,7 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async getClientById(clientId: string): Promise<any | null> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     return this.db!.get('clients', clientId);
   }
 
@@ -180,17 +203,13 @@ class WebDatabaseService implements DatabaseAdapter {
 
   // New methods for offline flow
   async getPendingOrders(): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const orders = await this.db!.getAll('orders');
     return orders.filter(order => order.sync_status === 'pending_sync');
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const order = await this.db!.get('orders', orderId);
     if (order) {
       order.sync_status = 'transmitted';
@@ -202,59 +221,45 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async getOfflineOrdersCount(): Promise<number> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const orders = await this.db!.getAll('orders');
     return orders.filter(order => order.sync_status === 'pending_sync').length;
   }
 
   // New methods for improved order management
   async getClientOrders(clientId: string): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const tx = this.db!.transaction('orders', 'readonly');
     const index = tx.store.index('customer_id');
     return index.getAll(clientId);
   }
 
   async deleteOrder(orderId: string): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     await this.db!.delete('orders', orderId);
     console.log(`🗑️ Order ${orderId} deleted`);
   }
 
   async getTransmittedOrders(): Promise<any[]> {
-     if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const orders = await this.db!.getAll('orders');
     return orders.filter(order => order.sync_status === 'transmitted');
   }
 
   async getAllOrders(): Promise<any[]> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     return this.db!.getAll('orders');
   }
   
   async saveMobileOrder(order: any): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     await this.db!.put('orders', order);
     console.log('📱 Mobile order saved locally:', order);
   }
 
   // ✅ NOVO: Métodos para salvar dados em batch
   async saveClients(clientsArray: any[]): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const tx = this.db!.transaction('clients', 'readwrite');
     clientsArray.forEach(client => {
       tx.store.put(client);
@@ -264,9 +269,7 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async saveProducts(productsArray: any[]): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     const tx = this.db!.transaction('products', 'readwrite');
     productsArray.forEach(product => {
       tx.store.put(product);
@@ -276,17 +279,13 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async saveClient(client: any): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     await this.db!.put('clients', client);
     console.log('✅ Client saved:', client);
   }
 
   async saveProduct(product: any): Promise<void> {
-    if (!this.db) {
-      await this.initDatabase();
-    }
+    await this.ensureInitialized();
     await this.db!.put('products', product);
     console.log('✅ Product saved:', product);
   }
@@ -305,7 +304,6 @@ class WebDatabaseService implements DatabaseAdapter {
     try {
       await this.updateClientStatus(clientId, 'Pendente');
       
-      // Log the unnegation
       const logEntry = {
         id: `unnegate_${Date.now()}`,
         client_id: clientId,
@@ -315,7 +313,6 @@ class WebDatabaseService implements DatabaseAdapter {
         sync_status: 'pending_sync'
       };
       
-      // Save to a status history if needed
       console.log('📝 Client unnegation logged:', logEntry);
     } catch (error) {
       console.error('Error unnegating client:', error);
@@ -324,7 +321,6 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async getClientStatusHistory(clientId: string): Promise<any[]> {
-    // Implementation for status history - can be added later if needed
     return [];
   }
 
@@ -348,7 +344,6 @@ class WebDatabaseService implements DatabaseAdapter {
       );
       
       if (pendingOrders.length > 0) {
-        // Return the most recent pending order
         return pendingOrders.sort((a, b) => 
           new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
         )[0];
@@ -363,7 +358,6 @@ class WebDatabaseService implements DatabaseAdapter {
 
   async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
     try {
-      // 1. Check if client is negated
       const isNegated = await this.isClientNegated(clientId);
       if (isNegated) {
         return {
@@ -372,7 +366,6 @@ class WebDatabaseService implements DatabaseAdapter {
         };
       }
 
-      // 2. Check if client has pending orders
       const activePendingOrder = await this.getActivePendingOrder(clientId);
       if (activePendingOrder) {
         return {
