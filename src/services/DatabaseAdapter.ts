@@ -31,6 +31,12 @@ interface DatabaseAdapter {
   saveProducts(productsArray: any[]): Promise<void>;
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
+  // ✅ NOVOS métodos para validações e controle de status
+  isClientNegated(clientId: string): Promise<boolean>;
+  unnegateClient(clientId: string, reason: string): Promise<void>;
+  getClientStatusHistory(clientId: string): Promise<any[]>;
+  hasClientPendingOrders(clientId: string): Promise<boolean>;
+  canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

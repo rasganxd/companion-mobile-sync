@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -10,6 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { useConfirm } from '@/hooks/useConfirm';
 
 const NegativeSale = () => {
   const navigate = useNavigate();
@@ -19,12 +20,31 @@ const NegativeSale = () => {
   const [reason, setReason] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [clientAlreadyNegated, setClientAlreadyNegated] = useState<boolean>(false);
+  
+  const { isOpen, options, confirm, handleConfirm, handleCancel } = useConfirm();
   
   useEffect(() => {
     if (!clientId) {
       navigate(-1);
+    } else {
+      checkClientStatus();
     }
   }, [clientId, navigate]);
+
+  const checkClientStatus = async () => {
+    try {
+      const db = getDatabaseAdapter();
+      const isNegated = await db.isClientNegated(clientId);
+      setClientAlreadyNegated(isNegated);
+      
+      if (isNegated) {
+        console.log(`⚠️ Cliente ${clientName} já está negativado`);
+      }
+    } catch (error) {
+      console.error('Error checking client status:', error);
+    }
+  };
 
   const handleCancel = () => {
     navigate(-1);
@@ -32,7 +52,22 @@ const NegativeSale = () => {
 
   const handleConfirm = async () => {
     if (!reason) {
+      toast.error('Selecione o motivo da negativação');
       return;
+    }
+
+    // Se cliente já está negativado, pedir confirmação
+    if (clientAlreadyNegated) {
+      const confirmed = await confirm({
+        title: 'Cliente já negativado',
+        description: `O cliente ${clientName} já está com status "Negativado". Deseja registrar uma nova negativação mesmo assim?`,
+        confirmText: 'Sim, negativar novamente',
+        cancelText: 'Cancelar'
+      });
+      
+      if (!confirmed) {
+        return;
+      }
     }
 
     try {
@@ -62,9 +97,16 @@ const NegativeSale = () => {
       
       console.log('📱 Negative sale saved locally:', order);
       
+      if (clientAlreadyNegated) {
+        toast.success(`Nova negativação registrada para ${clientName}`);
+      } else {
+        toast.success(`Cliente ${clientName} negativado com sucesso`);
+      }
+      
       navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
     } catch (error) {
       console.error("Error saving negative sale:", error);
+      toast.error('Erro ao negativar cliente');
     } finally {
       setIsLoading(false);
     }
@@ -81,10 +123,31 @@ const NegativeSale = () => {
       {clientName && (
         <div className="bg-red-600 text-white px-3 py-1 text-xs">
           <span className="font-semibold">{clientId}</span> - {clientName}
+          {clientAlreadyNegated && (
+            <span className="ml-2 bg-red-800 px-2 py-0.5 rounded text-xs">
+              ⚠️ JÁ NEGATIVADO
+            </span>
+          )}
         </div>
       )}
       
       <ScrollArea className="flex-1 px-4 py-4">
+        {clientAlreadyNegated && (
+          <Card className="mb-4 border-yellow-300 bg-yellow-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-yellow-800">
+                <AlertTriangle className="h-5 w-5" />
+                <div>
+                  <h3 className="font-medium">Cliente já negativado</h3>
+                  <p className="text-sm">
+                    Este cliente já possui status "Negativado". Uma nova negativação será registrada como histórico adicional.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
         <Card className="mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
@@ -152,9 +215,19 @@ const NegativeSale = () => {
           className="flex items-center justify-center"
         >
           <Check size={16} className="mr-2" />
-          Confirmar
+          {clientAlreadyNegated ? 'Registrar Nova Negativação' : 'Confirmar'}
         </AppButton>
       </div>
+      
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        description={options.description}
+        confirmText={options.confirmText || 'Confirmar'}
+        cancelText={options.cancelText || 'Cancelar'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

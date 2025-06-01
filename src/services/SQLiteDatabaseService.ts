@@ -482,6 +482,92 @@ class SQLiteDatabaseService {
     }
   }
 
+  async isClientNegated(clientId: string): Promise<boolean> {
+    const client = await this.getClientById(clientId);
+    return client?.status === 'Negativado' || client?.status === 'negativado';
+  }
+
+  async unnegateClient(clientId: string, reason: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const now = new Date().toISOString();
+      
+      // Obter status atual
+      const client = await this.getClientById(clientId);
+      if (!client) return;
+      
+      // Salvar histórico (assumindo que a tabela existe ou será criada)
+      try {
+        await this.db!.run(
+          'INSERT INTO client_status_history (id, client_id, previous_status, new_status, reason, changed_at, changed_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [Date.now().toString(), clientId, client.status, 'Pendente', reason, now, 'user']
+        );
+      } catch (historyError) {
+        console.warn('⚠️ Could not save status history:', historyError);
+      }
+      
+      // Atualizar cliente
+      await this.db!.run(
+        'UPDATE clients SET status = ?, lastVisit = ?, sync_status = ?, updated_at = ? WHERE id = ?',
+        ['Pendente', now, 'pending_sync', now, clientId]
+      );
+      
+      console.log(`✅ Cliente ${clientId} desnegativado. Motivo: ${reason}`);
+    } catch (error) {
+      console.error('❌ Error unnegating client:', error);
+    }
+  }
+
+  async getClientStatusHistory(clientId: string): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM client_status_history WHERE client_id = ? ORDER BY changed_at DESC',
+        [clientId]
+      );
+      return result.values || [];
+    } catch (error) {
+      console.warn('⚠️ Status history table may not exist:', error);
+      return [];
+    }
+  }
+
+  async hasClientPendingOrders(clientId: string): Promise<boolean> {
+    const orders = await this.getClientOrders(clientId);
+    return orders.some(order => 
+      order.sync_status === 'pending_sync' && 
+      order.status !== 'cancelled'
+    );
+  }
+
+  async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
+    // Verificar se cliente está negativado
+    const isNegated = await this.isClientNegated(clientId);
+    if (isNegated) {
+      return {
+        canCreate: false,
+        reason: 'Cliente está negativado. É necessário reativar o cliente antes de criar pedidos.'
+      };
+    }
+
+    // Verificar se há pedidos pendentes
+    const clientOrders = await this.getClientOrders(clientId);
+    const pendingOrder = clientOrders.find(order => 
+      order.sync_status === 'pending_sync' && 
+      order.status !== 'cancelled'
+    );
+
+    if (pendingOrder) {
+      return {
+        canCreate: false,
+        reason: 'Cliente já possui um pedido pendente.',
+        existingOrder: pendingOrder
+      };
+    }
+
+    return { canCreate: true };
+  }
+
   async closeDatabase(): Promise<void> {
     if (this.db) {
       await this.db.close();

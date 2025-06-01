@@ -305,6 +305,86 @@ class WebDatabaseService {
     return activeOrders;
   }
 
+  // ✅ NOVOS métodos para validações e controle de status
+  async isClientNegated(clientId: string): Promise<boolean> {
+    const client = await this.getClientById(clientId);
+    return client?.status === 'Negativado' || client?.status === 'negativado';
+  }
+
+  async unnegateClient(clientId: string, reason: string): Promise<void> {
+    const clients = this.getTableData('clients');
+    const clientIndex = clients.findIndex(client => client.id === clientId);
+    
+    if (clientIndex >= 0) {
+      const now = new Date().toISOString();
+      
+      // Salvar histórico
+      const statusHistory = this.getTableData('client_status_history') || [];
+      statusHistory.push({
+        id: Date.now().toString(),
+        client_id: clientId,
+        previous_status: clients[clientIndex].status,
+        new_status: 'Pendente',
+        reason: reason,
+        changed_at: now,
+        changed_by: 'user'
+      });
+      this.setTableData('client_status_history', statusHistory);
+      
+      // Atualizar cliente
+      clients[clientIndex].status = 'Pendente';
+      clients[clientIndex].lastVisit = now;
+      clients[clientIndex].sync_status = 'pending_sync';
+      clients[clientIndex].updated_at = now;
+      this.setTableData('clients', clients);
+      
+      console.log(`✅ Cliente ${clientId} desnegativado. Motivo: ${reason}`);
+    }
+  }
+
+  async getClientStatusHistory(clientId: string): Promise<any[]> {
+    const statusHistory = this.getTableData('client_status_history') || [];
+    return statusHistory
+      .filter(history => history.client_id === clientId)
+      .sort((a, b) => new Date(b.changed_at).getTime() - new Date(a.changed_at).getTime());
+  }
+
+  async hasClientPendingOrders(clientId: string): Promise<boolean> {
+    const orders = await this.getClientOrders(clientId);
+    return orders.some(order => 
+      order.sync_status === 'pending_sync' && 
+      order.status !== 'cancelled'
+    );
+  }
+
+  async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
+    // Verificar se cliente está negativado
+    const isNegated = await this.isClientNegated(clientId);
+    if (isNegated) {
+      return {
+        canCreate: false,
+        reason: 'Cliente está negativado. É necessário reativar o cliente antes de criar pedidos.'
+      };
+    }
+
+    // Verificar se há pedidos pendentes
+    const clientOrders = await this.getClientOrders(clientId);
+    const pendingOrder = clientOrders.find(order => 
+      order.sync_status === 'pending_sync' && 
+      order.status !== 'cancelled'
+    );
+
+    if (pendingOrder) {
+      return {
+        canCreate: false,
+        reason: 'Cliente já possui um pedido pendente.',
+        existingOrder: pendingOrder
+      };
+    }
+
+    return { canCreate: true };
+  }
+
   async closeDatabase(): Promise<void> {
     // No cleanup needed for localStorage
     console.log('🌐 WebDatabase closed');

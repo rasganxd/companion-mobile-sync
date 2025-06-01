@@ -5,6 +5,10 @@ import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+import UnnegateClientModal from '@/components/clients/UnnegateClientModal';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { toast } from 'sonner';
+
 interface Client {
   id: string;
   name: string;
@@ -39,22 +43,37 @@ const ClientFullScreenView = () => {
     day: 'Segunda'
   };
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [showUnnegateModal, setShowUnnegateModal] = useState(false);
+  const [isUnnegating, setIsUnnegating] = useState(false);
+  const [currentClients, setCurrentClients] = useState(clients);
+  
   useEffect(() => {
     if (!clients || clients.length === 0) {
       goBack();
     }
   }, [clients, goBack]);
+  
   if (!clients || clients.length === 0) {
     return null;
   }
-  const currentClient = clients[currentIndex];
+  
+  const currentClient = currentClients[currentIndex];
+  
   const handlePrevious = () => {
     setCurrentIndex(prev => prev > 0 ? prev - 1 : clients.length - 1);
   };
+  
   const handleNext = () => {
     setCurrentIndex(prev => prev < clients.length - 1 ? prev + 1 : 0);
   };
+  
   const handleStartActivity = () => {
+    // Se cliente está negativado, oferecer opção de desnegativar
+    if (currentClient.status === 'negativado' || currentClient.status === 'Negativado') {
+      setShowUnnegateModal(true);
+      return;
+    }
+    
     navigate('/client-activities', {
       state: {
         clientName: currentClient.company_name || currentClient.name,
@@ -63,6 +82,44 @@ const ClientFullScreenView = () => {
       }
     });
   };
+  
+  const handleUnnegateClient = async (reason: string) => {
+    try {
+      setIsUnnegating(true);
+      const db = getDatabaseAdapter();
+      
+      await db.unnegateClient(currentClient.id, reason);
+      
+      // Atualizar cliente na lista local
+      const updatedClients = [...currentClients];
+      updatedClients[currentIndex] = {
+        ...currentClient,
+        status: 'pendente'
+      };
+      setCurrentClients(updatedClients);
+      
+      toast.success(`Cliente ${currentClient.name} foi reativado com sucesso!`);
+      setShowUnnegateModal(false);
+      
+      // Agora proceder com atividades
+      setTimeout(() => {
+        navigate('/client-activities', {
+          state: {
+            clientName: currentClient.company_name || currentClient.name,
+            clientId: currentClient.id,
+            day: day
+          }
+        });
+      }, 500);
+      
+    } catch (error) {
+      console.error('Error unnegating client:', error);
+      toast.error('Erro ao reativar cliente');
+    } finally {
+      setIsUnnegating(false);
+    }
+  };
+  
   const getStatusInfo = (client: Client) => {
     const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
     const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
@@ -85,15 +142,23 @@ const ClientFullScreenView = () => {
         };
     }
   };
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
   };
+  
   const statusInfo = getStatusInfo(currentClient);
-  return <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title={`Cliente ${currentIndex + 1} de ${clients.length}`} showBackButton backgroundColor="blue" />
+  
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header 
+        title={`Cliente ${currentIndex + 1} de ${currentClients.length}`} 
+        showBackButton 
+        backgroundColor="blue" 
+      />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
         <span className="font-semibold">{day}</span> - Visualização Detalhada
@@ -105,44 +170,51 @@ const ClientFullScreenView = () => {
           <CardContent className="p-4">
             {/* Header do Cliente - Compactado */}
             <div className="text-center mb-4">
-              
-              
               <h2 className="mb-1 text-sm font-medium text-zinc-700">
                 {currentClient.company_name || currentClient.name}
               </h2>
               
-              {currentClient.company_name && currentClient.name && <p className="mb-2 text-sm font-bold text-zinc-950">
+              {currentClient.company_name && currentClient.name && (
+                <p className="mb-2 text-sm font-bold text-zinc-950">
                   Razão Social: {currentClient.name}
-                </p>}
+                </p>
+              )}
               
               <div className={`inline-block px-3 py-1 rounded-lg border text-sm ${statusInfo.color}`}>
                 <span className="font-medium">{statusInfo.text}</span>
               </div>
               
-              {currentClient.status === 'positivado' && currentClient.orderTotal && currentClient.orderTotal > 0 && <div className="mt-2 text-xl font-bold text-green-600">
+              {currentClient.status === 'positivado' && currentClient.orderTotal && currentClient.orderTotal > 0 && (
+                <div className="mt-2 text-xl font-bold text-green-600">
                   {formatCurrency(currentClient.orderTotal)}
-                </div>}
+                </div>
+              )}
             </div>
             
             {/* Informações Detalhadas - Compactadas */}
             <div className="space-y-3">
-              {currentClient.code && <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+              {currentClient.code && (
+                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                   <Hash className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-xs text-gray-600">Código</p>
                     <p className="text-sm font-medium">{currentClient.code}</p>
                   </div>
-                </div>}
+                </div>
+              )}
               
-              {currentClient.phone && <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
+              {currentClient.phone && (
+                <div className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                   <Phone className="h-4 w-4 text-gray-600" />
                   <div>
                     <p className="text-xs text-gray-600">Telefone</p>
                     <p className="text-sm font-medium">{currentClient.phone}</p>
                   </div>
-                </div>}
+                </div>
+              )}
               
-              {(currentClient.address || currentClient.city || currentClient.state) && <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
+              {(currentClient.address || currentClient.city || currentClient.state) && (
+                <div className="flex items-start gap-3 p-2 bg-gray-50 rounded-lg">
                   <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
                   <div>
                     <p className="text-xs text-gray-600">Endereço</p>
@@ -155,15 +227,24 @@ const ClientFullScreenView = () => {
                         </p>}
                     </div>
                   </div>
-                </div>}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
         
         {/* Botão de Ação Principal - Separado do card */}
         <div className="mt-4">
-          <AppButton variant="blue" fullWidth onClick={handleStartActivity} className="text-base py-3">
-            Iniciar Atividades
+          <AppButton 
+            variant={currentClient.status === 'negativado' || currentClient.status === 'Negativado' ? 'orange' : 'blue'} 
+            fullWidth 
+            onClick={handleStartActivity} 
+            className="text-base py-3"
+          >
+            {(currentClient.status === 'negativado' || currentClient.status === 'Negativado') 
+              ? 'Reativar Cliente' 
+              : 'Iniciar Atividades'
+            }
           </AppButton>
         </div>
       </div>
@@ -179,7 +260,7 @@ const ClientFullScreenView = () => {
           
           <div className="text-center">
             <p className="text-sm font-medium text-gray-900">
-              {currentIndex + 1} de {clients.length}
+              {currentIndex + 1} de {currentClients.length}
             </p>
             <p className="text-xs text-gray-500 truncate max-w-32">
               {currentClient.company_name || currentClient.name}
@@ -198,6 +279,16 @@ const ClientFullScreenView = () => {
           <span className="text-sm">Voltar</span>
         </AppButton>
       </div>
-    </div>;
+      
+      <UnnegateClientModal
+        isOpen={showUnnegateModal}
+        onClose={() => setShowUnnegateModal(false)}
+        onConfirm={handleUnnegateClient}
+        clientName={currentClient?.company_name || currentClient?.name || ''}
+        isLoading={isUnnegating}
+      />
+    </div>
+  );
 };
+
 export default ClientFullScreenView;
