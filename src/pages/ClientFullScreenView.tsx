@@ -5,9 +5,9 @@ import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
-import UnnegateClientModal from '@/components/clients/UnnegateClientModal';
+import ClientNegationConfirmModal from '@/components/clients/ClientNegationConfirmModal';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface Client {
   id: string;
@@ -27,12 +27,11 @@ interface Client {
   hasTransmittedOrders?: boolean;
   transmittedOrdersCount?: number;
 }
+
 const ClientFullScreenView = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    goBack
-  } = useAppNavigation();
+  const { goBack } = useAppNavigation();
   const {
     clients,
     initialIndex = 0,
@@ -43,8 +42,8 @@ const ClientFullScreenView = () => {
     day: 'Segunda'
   };
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [showUnnegateModal, setShowUnnegateModal] = useState(false);
-  const [isUnnegating, setIsUnnegating] = useState(false);
+  const [showNegationModal, setShowNegationModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [currentClients, setCurrentClients] = useState(clients);
   
   useEffect(() => {
@@ -67,28 +66,72 @@ const ClientFullScreenView = () => {
     setCurrentIndex(prev => prev < clients.length - 1 ? prev + 1 : 0);
   };
   
-  const handleStartActivity = () => {
-    // Se cliente está negativado, oferecer opção de desnegativar
-    if (currentClient.status === 'negativado' || currentClient.status === 'Negativado') {
-      setShowUnnegateModal(true);
-      return;
-    }
-    
-    navigate('/client-activities', {
-      state: {
-        clientName: currentClient.company_name || currentClient.name,
-        clientId: currentClient.id,
-        day: day
-      }
-    });
-  };
-  
-  const handleUnnegateClient = async (reason: string) => {
+  const handleStartActivity = async () => {
     try {
-      setIsUnnegating(true);
       const db = getDatabaseAdapter();
       
-      await db.unnegateClient(currentClient.id, reason);
+      // 1. Verificar se cliente está negativado
+      const isNegated = await db.isClientNegated(currentClient.id);
+      if (isNegated) {
+        console.log('🚫 Cliente negativado, mostrando modal de confirmação');
+        setShowNegationModal(true);
+        return;
+      }
+      
+      // 2. Verificar se cliente já tem pedido pendente
+      const hasActivePendingOrder = await db.hasClientPendingOrders(currentClient.id);
+      if (hasActivePendingOrder) {
+        console.log('📝 Cliente tem pedido pendente, abrindo para edição');
+        
+        // Buscar o pedido existente
+        const clientOrders = await db.getClientOrders(currentClient.id);
+        const pendingOrder = clientOrders.find(order => 
+          order.sync_status === 'pending_sync' && order.status !== 'cancelled'
+        );
+        
+        if (pendingOrder) {
+          // Navegar direto para edição do pedido existente
+          navigate('/place-order', {
+            state: {
+              clientId: currentClient.id,
+              clientName: currentClient.company_name || currentClient.name,
+              day: day,
+              existingOrderItems: pendingOrder.items || [],
+              isEditingOrder: true,
+              editingOrderId: pendingOrder.id
+            }
+          });
+          return;
+        }
+      }
+      
+      // 3. Cliente normal - ir para atividades
+      console.log('✅ Cliente normal, indo para atividades');
+      navigate('/client-activities', {
+        state: {
+          clientName: currentClient.company_name || currentClient.name,
+          clientId: currentClient.id,
+          day: day
+        }
+      });
+      
+    } catch (error) {
+      console.error('Erro ao verificar status do cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao verificar status do cliente",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleConfirmUnnegate = async () => {
+    try {
+      setIsProcessing(true);
+      const db = getDatabaseAdapter();
+      
+      // Desnegativar cliente
+      await db.unnegateClient(currentClient.id, 'Removido para criação de novo pedido');
       
       // Atualizar cliente na lista local
       const updatedClients = [...currentClients];
@@ -98,10 +141,14 @@ const ClientFullScreenView = () => {
       };
       setCurrentClients(updatedClients);
       
-      toast.success(`Cliente ${currentClient.name} foi reativado com sucesso!`);
-      setShowUnnegateModal(false);
+      toast({
+        title: "Sucesso",
+        description: `Cliente ${currentClient.name} foi reativado com sucesso!`
+      });
       
-      // Agora proceder com atividades
+      setShowNegationModal(false);
+      
+      // Agora proceder com criação de pedido
       setTimeout(() => {
         navigate('/client-activities', {
           state: {
@@ -113,10 +160,14 @@ const ClientFullScreenView = () => {
       }, 500);
       
     } catch (error) {
-      console.error('Error unnegating client:', error);
-      toast.error('Erro ao reativar cliente');
+      console.error('Erro ao reativar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao reativar cliente",
+        variant: "destructive"
+      });
     } finally {
-      setIsUnnegating(false);
+      setIsProcessing(false);
     }
   };
   
@@ -236,15 +287,12 @@ const ClientFullScreenView = () => {
         {/* Botão de Ação Principal - Separado do card */}
         <div className="mt-4">
           <AppButton 
-            variant={currentClient.status === 'negativado' || currentClient.status === 'Negativado' ? 'orange' : 'blue'} 
+            variant="blue"
             fullWidth 
             onClick={handleStartActivity} 
             className="text-base py-3"
           >
-            {(currentClient.status === 'negativado' || currentClient.status === 'Negativado') 
-              ? 'Reativar Cliente' 
-              : 'Iniciar Atividades'
-            }
+            Iniciar Atividades
           </AppButton>
         </div>
       </div>
@@ -280,12 +328,12 @@ const ClientFullScreenView = () => {
         </AppButton>
       </div>
       
-      <UnnegateClientModal
-        isOpen={showUnnegateModal}
-        onClose={() => setShowUnnegateModal(false)}
-        onConfirm={handleUnnegateClient}
+      <ClientNegationConfirmModal
+        isOpen={showNegationModal}
+        onClose={() => setShowNegationModal(false)}
+        onConfirm={handleConfirmUnnegate}
         clientName={currentClient?.company_name || currentClient?.name || ''}
-        isLoading={isUnnegating}
+        isLoading={isProcessing}
       />
     </div>
   );

@@ -82,12 +82,6 @@ const PlaceOrder = () => {
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   
-  // New states for client validation and unnegating
-  const [showUnnegateModal, setShowUnnegateModal] = useState(false);
-  const [showOrderChoiceModal, setShowOrderChoiceModal] = useState(false);
-  const [clientValidationResult, setClientValidationResult] = useState<any>(null);
-  const [isUnnegating, setIsUnnegating] = useState(false);
-  
   const locationState = location.state as any;
 
   const loadData = async () => {
@@ -174,36 +168,18 @@ const PlaceOrder = () => {
     if (locationState?.existingOrderItems) {
       setOrderItems(locationState.existingOrderItems);
     }
+    if (locationState?.isEditingOrder && locationState?.editingOrderId) {
+      setIsEditingOrder(true);
+      setEditingOrderId(locationState.editingOrderId);
+    }
   }, [locationState]);
 
-  // Check for existing orders when client is selected
-  const checkForExistingOrders = async (client: Client) => {
-    try {
-      const db = getDatabaseAdapter();
-      const clientOrders = await db.getClientOrders(client.id);
-      
-      // Filter for non-transmitted orders (pending_sync status)
-      const pendingOrders = clientOrders.filter(order => 
-        order.sync_status === 'pending_sync' && order.status !== 'cancelled'
-      );
-      
-      if (pendingOrders.length > 0) {
-        // Get the most recent order
-        const mostRecentOrder = pendingOrders.sort((a, b) => 
-          new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
-        )[0];
-        
-        console.log('📋 Found existing order for client:', mostRecentOrder);
-        setExistingOrder(mostRecentOrder);
-        setShowExistingOrderModal(true);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Error checking for existing orders:', error);
-      return false;
-    }
+  // Simplified client selection - no complex validation since it's done before
+  const handleSelectClient = async (client: Client) => {
+    setSelectedClient(client);
+    setShowClientSelection(false);
+    setClientSearchTerm('');
+    console.log('✅ Cliente selecionado:', client.name);
   };
 
   const loadExistingOrder = async (order: any) => {
@@ -242,99 +218,6 @@ const PlaceOrder = () => {
     } catch (error) {
       console.error('Error loading existing order:', error);
       toast.error('Erro ao carregar pedido existente');
-    }
-  };
-
-  const validateClientForOrder = async (client: Client) => {
-    try {
-      const db = getDatabaseAdapter();
-      const validationResult = await db.canCreateOrderForClient(client.id);
-      
-      console.log('🔍 Client validation result:', validationResult);
-      setClientValidationResult(validationResult);
-      
-      if (!validationResult.canCreate) {
-        if (validationResult.reason?.includes('negativado')) {
-          // Cliente negativado - mostrar modal para desnegativar
-          setShowUnnegateModal(true);
-          return false;
-        } else if (validationResult.existingOrder) {
-          // Cliente com pedido pendente - mostrar opções
-          setExistingOrder(validationResult.existingOrder);
-          setShowOrderChoiceModal(true);
-          return false;
-        } else {
-          // Outro motivo - mostrar toast
-          toast.error(validationResult.reason || 'Não é possível criar pedido para este cliente');
-          return false;
-        }
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error validating client for order:', error);
-      toast.error('Erro ao validar cliente');
-      return false;
-    }
-  };
-
-  const handleSelectClient = async (client: Client) => {
-    setSelectedClient(client);
-    setShowClientSelection(false);
-    setClientSearchTerm('');
-    
-    // Validar se cliente pode receber pedidos
-    const canProceed = await validateClientForOrder(client);
-    
-    if (!canProceed) {
-      console.log('❌ Cannot proceed with order creation for client:', client.name);
-    } else {
-      console.log('✅ Client validated, can proceed with order:', client.name);
-    }
-  };
-
-  const handleUnnegateClient = async (reason: string) => {
-    if (!selectedClient) return;
-    
-    try {
-      setIsUnnegating(true);
-      const db = getDatabaseAdapter();
-      
-      await db.unnegateClient(selectedClient.id, reason);
-      
-      // Atualizar status local do cliente
-      setSelectedClient(prev => prev ? { ...prev, status: 'Pendente' } : null);
-      
-      toast.success(`Cliente ${selectedClient.name} foi reativado com sucesso!`);
-      setShowUnnegateModal(false);
-      
-      console.log(`✅ Cliente ${selectedClient.name} desnegativado por: ${reason}`);
-    } catch (error) {
-      console.error('Error unnegating client:', error);
-      toast.error('Erro ao reativar cliente');
-    } finally {
-      setIsUnnegating(false);
-    }
-  };
-
-  const handleOrderChoice = async (choice: 'edit' | 'new' | 'delete') => {
-    if (!existingOrder) return;
-    
-    setShowOrderChoiceModal(false);
-    
-    switch (choice) {
-      case 'edit':
-        await loadExistingOrder(existingOrder);
-        break;
-      case 'new':
-        await handleDeleteExistingOrder();
-        break;
-      case 'delete':
-        await handleDeleteExistingOrder();
-        // Reset cliente após excluir pedido
-        setSelectedClient(null);
-        toast.success('Pedido excluído. Selecione um cliente para criar novo pedido.');
-        break;
     }
   };
 
@@ -651,32 +534,7 @@ const PlaceOrder = () => {
           onSelectClient={handleSelectClient}
         />
 
-        <ExistingOrderModal
-          isOpen={showExistingOrderModal}
-          onClose={handleCancelExistingOrder}
-          order={existingOrder}
-          onEditOrder={handleEditExistingOrder}
-          onCreateNew={handleCreateNewOrder}
-        />
-
-        <UnnegateClientModal
-          isOpen={showUnnegateModal}
-          onClose={() => setShowUnnegateModal(false)}
-          onConfirm={handleUnnegateClient}
-          clientName={selectedClient?.name || ''}
-          isLoading={isUnnegating}
-        />
-
-        <OrderChoiceModal
-          isOpen={showOrderChoiceModal}
-          onClose={() => setShowOrderChoiceModal(false)}
-          onEditOrder={() => handleOrderChoice('edit')}
-          onCreateNew={() => handleOrderChoice('new')}
-          onDeleteOrder={() => handleOrderChoice('delete')}
-          clientName={selectedClient?.name || ''}
-          orderTotal={existingOrder?.total || 0}
-          orderItemsCount={existingOrder?.items?.length || 0}
-        />
+        {/* Remove the complex validation modals since validation is done before */}
       </div>
     </div>
   );

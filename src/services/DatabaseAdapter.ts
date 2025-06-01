@@ -1,3 +1,4 @@
+
 import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
@@ -37,6 +38,8 @@ interface DatabaseAdapter {
   getClientStatusHistory(clientId: string): Promise<any[]>;
   hasClientPendingOrders(clientId: string): Promise<boolean>;
   canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }>;
+  // ✅ NOVO: Método específico para verificar pedido ativo único
+  getActivePendingOrder(clientId: string): Promise<any | null>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
