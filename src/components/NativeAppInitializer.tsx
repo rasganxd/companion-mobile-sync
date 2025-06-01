@@ -4,7 +4,6 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Keyboard } from '@capacitor/keyboard';
-import { toast } from 'sonner';
 
 interface NativeAppInitializerProps {
   children: ReactNode;
@@ -60,7 +59,7 @@ export const NativeAppInitializer: React.FC<NativeAppInitializerProps> = ({ chil
 
       } catch (error) {
         console.error('❌ Native app initialization failed:', error);
-        toast.error('Erro na inicialização do app');
+        console.error('Erro na inicialização do app');
         setIsInitialized(true); // Continue mesmo com erro
       }
     };

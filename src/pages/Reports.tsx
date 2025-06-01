@@ -70,7 +70,7 @@ const Reports = () => {
       // Calcular métricas
       const totalValue = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
 
-      // Agrupar por status
+      // Agrupar por status - corrigindo os tipos
       const statusGroups = filteredOrders.reduce((acc, order) => {
         const status = order.status || 'pending';
         if (!acc[status]) {
