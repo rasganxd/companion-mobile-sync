@@ -141,7 +141,7 @@ const Reports = () => {
               <Button variant="ghost" size="icon" onClick={() => navigate('/home')} className="mr-4">
                 <ArrowLeft className="h-6 w-6" />
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Relatórios</h1>
+              <h1 className="font-semibold text-gray-900 text-lg">Relatórios</h1>
             </div>
             
             {/* Filtro de período */}
