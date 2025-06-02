@@ -25,97 +25,17 @@ export const useMobileAuth = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Helper function to validate if a token is valid (starts with sk_)
-  const isValidToken = (value: string): boolean => {
-    return value.trim().startsWith('sk_') && value.trim().length > 10;
-  };
-
-  // Helper function to detect if a value is a URL
-  const isUrl = (value: string): boolean => {
-    try {
-      new URL(value);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  // Function to force session reload from localStorage
-  const forceSessionReload = () => {
-    console.log('🔄 Forcing session reload from localStorage...');
-    const savedSession = localStorage.getItem('mobile_session');
-    if (savedSession) {
-      try {
-        const parsedSession = JSON.parse(savedSession);
-        setSession(parsedSession);
-        console.log('✅ Session reloaded successfully');
-      } catch (error) {
-        console.error('❌ Error reloading session:', error);
-        setSession(null);
-      }
-    } else {
-      console.log('📝 No session found in localStorage');
-      setSession(null);
-    }
-  };
-
   useEffect(() => {
     // Load session from localStorage on mount
     const savedSession = localStorage.getItem('mobile_session');
     if (savedSession) {
       try {
         const parsedSession = JSON.parse(savedSession);
-        
-        console.log('📱 Loading mobile session from localStorage:', {
+        setSession(parsedSession);
+        console.log('📱 Mobile session loaded from localStorage:', {
           salesRep: parsedSession.salesRep?.name,
           hasApiConfig: !!parsedSession.apiConfig
         });
-
-        // Validate API config for corruption if it exists
-        if (parsedSession.apiConfig) {
-          const { token, apiUrl } = parsedSession.apiConfig;
-          
-          console.log('🔍 Validating API config:', {
-            tokenPreview: token ? `${token.substring(0, 6)}...` : 'empty',
-            apiUrl,
-            tokenValid: token ? isValidToken(token) : false,
-            urlValid: apiUrl ? isUrl(apiUrl) : false
-          });
-
-          // Check for data corruption
-          let hasCorruption = false;
-
-          if (token && isUrl(token)) {
-            console.error('❌ CORRUPTION: Token field contains URL:', token);
-            hasCorruption = true;
-          }
-
-          if (apiUrl && isValidToken(apiUrl)) {
-            console.error('❌ CORRUPTION: API URL field contains token');
-            hasCorruption = true;
-          }
-
-          if (token && !isValidToken(token) && !isUrl(token)) {
-            console.error('❌ INVALID TOKEN: Does not start with sk_');
-            hasCorruption = true;
-          }
-
-          if (hasCorruption) {
-            console.log('🧹 Removing corrupted session data...');
-            localStorage.removeItem('mobile_session');
-            setSession({
-              sessionToken: parsedSession.sessionToken,
-              salesRep: parsedSession.salesRep
-              // Remove corrupted apiConfig
-            });
-          } else {
-            setSession(parsedSession);
-            console.log('✅ Valid session loaded');
-          }
-        } else {
-          setSession(parsedSession);
-          console.log('📝 Session loaded without API config');
-        }
       } catch (error) {
         console.error('❌ Error parsing saved session:', error);
         localStorage.removeItem('mobile_session');
@@ -175,30 +95,16 @@ export const useMobileAuth = () => {
 
   const updateApiConfig = (config: { token: string; apiUrl: string }) => {
     if (session) {
-      // Validate the config before saving
-      if (!isValidToken(config.token)) {
-        console.error('❌ Invalid token provided:', config.token.substring(0, 10) + '...');
-        throw new Error('Token inválido. Deve começar com "sk_"');
-      }
-
-      if (!isUrl(config.apiUrl)) {
-        console.error('❌ Invalid API URL provided:', config.apiUrl);
-        throw new Error('URL da API inválida');
-      }
-
       const updatedSession = {
         ...session,
         apiConfig: config
       };
-      
-      console.log('🔧 Updating API config:', {
-        apiUrl: config.apiUrl,
-        tokenPreview: `${config.token.substring(0, 6)}...`,
-        tokenLength: config.token.length
-      });
-
       localStorage.setItem('mobile_session', JSON.stringify(updatedSession));
       setSession(updatedSession);
+      console.log('🔧 API config updated:', {
+        apiUrl: config.apiUrl,
+        tokenLength: config.token.length
+      });
     }
   };
 
@@ -206,27 +112,13 @@ export const useMobileAuth = () => {
   
   const hasApiConfig = () => {
     const hasConfig = session?.apiConfig?.token && session?.apiConfig?.apiUrl;
-    
-    // Additional validation to ensure the config is not corrupted
-    if (hasConfig) {
-      const { token, apiUrl } = session.apiConfig;
-      const validToken = isValidToken(token);
-      const validUrl = isUrl(apiUrl);
-      
-      console.log('🔍 Checking API config validity:', {
-        hasSession: !!session,
-        hasToken: !!token,
-        hasApiUrl: !!apiUrl,
-        validToken,
-        validUrl,
-        result: validToken && validUrl
-      });
-
-      return validToken && validUrl;
-    }
-    
-    console.log('🔍 No API config found');
-    return false;
+    console.log('🔍 Checking API config:', {
+      hasSession: !!session,
+      hasToken: !!session?.apiConfig?.token,
+      hasApiUrl: !!session?.apiConfig?.apiUrl,
+      result: !!hasConfig
+    });
+    return !!hasConfig;
   };
 
   return {
@@ -237,7 +129,6 @@ export const useMobileAuth = () => {
     hasApiConfig,
     login,
     logout,
-    updateApiConfig,
-    forceSessionReload
+    updateApiConfig
   };
 };
