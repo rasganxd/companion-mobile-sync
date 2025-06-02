@@ -43,7 +43,7 @@ const QRScanPage = () => {
         // Update sync service with new configuration
         const syncService = SyncService.getInstance();
         await syncService.updateApiConfig({
-          baseUrl: qrData.servidor,
+          apiUrl: qrData.servidor,
           token: qrData.token,
           vendorId: qrData.vendedor_id,
           endpoints: qrData.endpoints

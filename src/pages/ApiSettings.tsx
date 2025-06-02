@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, CheckCircle, XCircle, User, AlertCircle, Settings, Wifi } from 'lucide-react';
+import { Database, CheckCircle, XCircle, User, AlertCircle, Settings, Wifi, AlertTriangle } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
