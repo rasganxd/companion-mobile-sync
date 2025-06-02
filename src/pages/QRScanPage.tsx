@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QrCode, Server, Wifi, User, Key } from 'lucide-react';
@@ -44,9 +43,7 @@ const QRScanPage = () => {
         const syncService = SyncService.getInstance();
         await syncService.updateApiConfig({
           apiUrl: qrData.servidor,
-          token: qrData.token,
-          vendorId: qrData.vendedor_id,
-          endpoints: qrData.endpoints
+          token: qrData.token
         });
         
         toast.success('Configuração da API móvel atualizada com sucesso!');
