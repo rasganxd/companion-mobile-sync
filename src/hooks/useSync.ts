@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import SyncService, { SyncProgress, SyncUpdate } from '../services/SyncService';
+import SyncService, { SyncProgress } from '../services/SyncService';
 
 interface SyncStatus {
   lastSync: Date | null;
@@ -15,6 +15,15 @@ interface SyncSettings {
   syncInterval: number;
   syncOnWifiOnly: boolean;
   syncEnabled: boolean;
+}
+
+// Define a simple update interface for the hook
+interface UpdateInfo {
+  id: string;
+  description: string;
+  data_types: string[];
+  created_at: string;
+  metadata?: any;
 }
 
 export const useSync = () => {
@@ -33,7 +42,7 @@ export const useSync = () => {
   });
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
-  const [activeUpdate, setActiveUpdate] = useState<SyncUpdate | null>(null);
+  const [activeUpdate, setActiveUpdate] = useState<UpdateInfo | null>(null);
   const [checkingUpdates, setCheckingUpdates] = useState<boolean>(false);
 
   const syncService = SyncService.getInstance();
