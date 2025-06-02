@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import SyncService, { SyncProgress } from '../services/SyncService';
 
@@ -23,6 +22,7 @@ interface UpdateInfo {
   description: string;
   data_types: string[];
   created_at: string;
+  created_by_user?: string;
   metadata?: any;
 }
 
