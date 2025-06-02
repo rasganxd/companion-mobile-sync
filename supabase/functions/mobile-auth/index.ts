@@ -16,7 +16,10 @@ serve(async (req) => {
   try {
     const { code, password } = await req.json();
     
+    console.log('🔐 Mobile auth attempt for sales rep code:', code);
+    
     if (!code || !password) {
+      console.log('❌ Missing credentials - code:', !!code, 'password:', !!password);
       return new Response(
         JSON.stringify({ error: 'Código e senha são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -31,6 +34,7 @@ serve(async (req) => {
     // Convert code to number since it's stored as integer
     const codeNumber = parseInt(code);
     if (isNaN(codeNumber)) {
+      console.log('❌ Invalid code format:', code);
       return new Response(
         JSON.stringify({ error: 'Código deve ser um número válido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -40,23 +44,48 @@ serve(async (req) => {
     // Query sales_reps table to find the sales rep
     const { data: salesRep, error: salesRepError } = await supabase
       .from('sales_reps')
-      .select('id, code, name, email, phone, password_hash, active')
+      .select('id, code, name, email, phone, password, active')
       .eq('code', codeNumber)
       .eq('active', true)
       .single();
 
     if (salesRepError || !salesRep) {
-      console.log('Sales rep not found or inactive:', salesRepError);
+      console.log('❌ Sales rep not found or inactive:', salesRepError);
       return new Response(
         JSON.stringify({ error: 'Vendedor não encontrado ou inativo' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // For now, we'll do a simple password comparison
-    // In production, you'd want to hash the password and compare hashes
-    if (salesRep.password_hash !== password) {
-      console.log('Password mismatch for sales rep:', codeNumber);
+    console.log('✅ Sales rep found:', salesRep.name, 'has password:', !!salesRep.password);
+
+    // Check if sales rep has a password set
+    if (!salesRep.password) {
+      console.log('❌ Sales rep has no password configured:', codeNumber);
+      return new Response(
+        JSON.stringify({ error: 'Senha não configurada para este vendedor. Entre em contato com o administrador.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use the verify_password function to validate the password
+    console.log('🔑 Verifying password with hash function...');
+    const { data: passwordValid, error: passwordError } = await supabase
+      .rpc('verify_password', {
+        password: password,
+        hash: salesRep.password
+      });
+
+    if (passwordError) {
+      console.log('❌ Error verifying password:', passwordError);
+      return new Response(
+        JSON.stringify({ error: 'Erro interno ao verificar senha' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!passwordValid) {
+      console.log('❌ Password verification failed for sales rep:', codeNumber);
       return new Response(
         JSON.stringify({ error: 'Código ou senha incorretos' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -79,7 +108,7 @@ serve(async (req) => {
       }
     };
 
-    console.log('Mobile auth successful for sales rep:', codeNumber);
+    console.log('✅ Mobile auth successful for sales rep:', codeNumber, '- Session token generated');
     
     return new Response(
       JSON.stringify(authResult),
@@ -87,7 +116,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Mobile auth error:', error);
+    console.error('❌ Mobile auth error:', error);
     return new Response(
       JSON.stringify({ error: 'Erro interno do servidor' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
