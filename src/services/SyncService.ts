@@ -37,19 +37,13 @@ export interface SyncUpdate {
 }
 
 export interface ApiConfig {
-  baseUrl: string;
   token: string;
-  vendorId: string;
-  endpoints: {
-    download: string;
-    upload: string;
-  };
+  apiUrl: string;
 }
 
 class SyncService {
   private static instance: SyncService;
   private dbService = getDatabaseAdapter();
-  private apiUrl: string = 'https://preview--vendas-fortes.lovable.app/api';
   private apiConfig: ApiConfig | null = null;
   private syncInProgress: boolean = false;
   private syncSettings: SyncSettings = {
@@ -124,7 +118,7 @@ class SyncService {
     if (this.syncSettings.autoSync && this.syncSettings.syncEnabled) {
       const interval = this.syncSettings.syncInterval * 60 * 1000;
       this.autoSyncTimer = setInterval(() => {
-        if (this.connected && !this.syncInProgress) {
+        if (this.connected && !this.syncInProgress && this.apiConfig) {
           if (this.syncSettings.syncOnWifiOnly) {
             this.checkWifiAndSync();
           } else {
@@ -157,97 +151,122 @@ class SyncService {
 
   private async loadApiConfig(): Promise<void> {
     try {
-      const savedConfig = localStorage.getItem('api_config');
-      if (savedConfig) {
-        const config = JSON.parse(savedConfig);
-        if (config.type === 'api_mobile_config') {
+      const savedSession = localStorage.getItem('mobile_session');
+      if (savedSession) {
+        const session = JSON.parse(savedSession);
+        if (session.apiConfig) {
           this.apiConfig = {
-            baseUrl: config.servidor,
-            token: config.token,
-            vendorId: config.vendedor_id,
-            endpoints: config.endpoints
+            token: session.apiConfig.token,
+            apiUrl: session.apiConfig.apiUrl
           };
-          this.apiUrl = this.apiConfig.baseUrl;
-          console.log('API configuration loaded from QR code:', this.apiConfig);
+          console.log('✅ API configuration loaded from session:', {
+            apiUrl: this.apiConfig.apiUrl,
+            tokenLength: this.apiConfig.token.length
+          });
         }
       }
     } catch (error) {
-      console.error('Error loading API config:', error);
+      console.error('❌ Error loading API config:', error);
     }
   }
 
   async checkForActiveUpdates(): Promise<SyncUpdate | null> {
-    try {
-      console.log('🔍 Checking for active sync updates...');
-      
-      const { data, error } = await supabase
-        .from('sync_updates')
-        .select('id, description, data_types, created_at, metadata, created_by_user')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
+    if (!this.apiConfig) {
+      console.log('❌ No API config available for checking updates');
+      return null;
+    }
 
-      if (error) {
-        console.error('Error checking for active updates:', error);
+    try {
+      console.log('🔍 Checking for active sync updates via external API...');
+      
+      const response = await fetch(`${this.apiConfig.apiUrl}/sync-updates`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiConfig.token}`
+        }
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to check for updates:', response.status, response.statusText);
         return null;
       }
 
-      if (data && data.length > 0) {
-        console.log('✅ Found active sync update:', data[0]);
-        return data[0] as SyncUpdate;
+      const data = await response.json();
+      
+      if (data && data.id) {
+        console.log('✅ Found active sync update:', data);
+        return data as SyncUpdate;
       }
 
       console.log('ℹ️ No active sync updates found');
       return null;
     } catch (error) {
-      console.error('Error checking for active updates:', error);
+      console.error('❌ Error checking for active updates:', error);
       return null;
     }
   }
 
   async consumeUpdate(updateId: string): Promise<boolean> {
+    if (!this.apiConfig) {
+      console.log('❌ No API config available for consuming update');
+      return false;
+    }
+
     try {
       console.log('🔄 Consuming sync update:', updateId);
       
-      const { error } = await supabase
-        .from('sync_updates')
-        .update({ 
-          is_active: false, 
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', updateId);
+      const response = await fetch(`${this.apiConfig.apiUrl}/sync-updates/${updateId}/consume`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiConfig.token}`
+        }
+      });
 
-      if (error) {
-        console.error('Error consuming update:', error);
+      if (!response.ok) {
+        console.error('❌ Error consuming update:', response.status, response.statusText);
         return false;
       }
 
       console.log('✅ Successfully consumed sync update');
       return true;
     } catch (error) {
-      console.error('Error consuming update:', error);
+      console.error('❌ Error consuming update:', error);
       return false;
     }
   }
 
   private async checkConnection(): Promise<void> {
+    if (!this.apiConfig) {
+      this.connected = false;
+      this.notifyStatusChange();
+      return;
+    }
+
     try {
       if (Capacitor.isNativePlatform()) {
         // Usar Capacitor Network em apps nativos
         const status = await Network.getStatus();
-        this.connected = status.connected;
-        console.log('📶 Network status (native):', status);
-      } else {
-        // Fallback para método web
-        try {
-          const response = await fetch(`${this.apiUrl}/ping`);
-          this.connected = response.ok;
-        } catch {
-          this.connected = navigator.onLine;
+        if (!status.connected) {
+          this.connected = false;
+          this.notifyStatusChange();
+          return;
         }
-        console.log('📶 Network status (web):', this.connected);
       }
+
+      // Test connection to external API
+      console.log('📶 Testing connection to external API:', this.apiConfig.apiUrl);
+      const response = await fetch(`${this.apiConfig.apiUrl}/health`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiConfig.token}`
+        }
+      });
+      
+      this.connected = response.ok;
+      console.log('📶 External API connection status:', this.connected ? 'Connected' : 'Disconnected');
     } catch (error) {
       console.error('❌ Error checking connection:', error);
       this.connected = false;
@@ -312,12 +331,22 @@ class SyncService {
 
   async updateApiConfig(config: ApiConfig): Promise<void> {
     this.apiConfig = config;
-    this.apiUrl = config.baseUrl;
-    console.log('API configuration updated:', config);
+    console.log('✅ API configuration updated:', {
+      apiUrl: config.apiUrl,
+      tokenLength: config.token.length
+    });
+    
+    // Re-check connection with new config
+    await this.checkConnection();
   }
 
   async sync(): Promise<boolean> {
     if (this.syncInProgress) return false;
+    
+    if (!this.apiConfig) {
+      toast.error("Configuração da API não encontrada");
+      return false;
+    }
     
     try {
       this.syncInProgress = true;
@@ -364,7 +393,7 @@ class SyncService {
       await this.dbService.logSync('full', 'success');
       return true;
     } catch (error) {
-      console.error('Sync error:', error);
+      console.error('❌ Sync error:', error);
       toast.error("Erro na sincronização");
       await this.dbService.logSync('full', 'error', String(error));
       return false;
@@ -375,9 +404,7 @@ class SyncService {
   }
 
   private async uploadData(): Promise<void> {
-    // Use configured endpoints if available
-    const baseUrl = this.apiConfig ? this.apiConfig.baseUrl : this.apiUrl;
-    const uploadEndpoint = this.apiConfig?.endpoints?.upload || '';
+    if (!this.apiConfig) return;
     
     const tables = ['clients', 'orders', 'visit_routes'];
     let totalUploaded = 0;
@@ -388,31 +415,25 @@ class SyncService {
       
       for (const item of pendingItems) {
         try {
-          const url = this.apiConfig ? 
-            `${baseUrl}${uploadEndpoint}/${table}` : 
-            `${baseUrl}/${table}`;
-            
-          const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-          };
-          
-          if (this.apiConfig?.token) {
-            headers['Authorization'] = `Bearer ${this.apiConfig.token}`;
-          }
+          console.log(`🚀 Uploading ${table} item:`, item.id);
 
-          const response = await fetch(url, {
+          const response = await fetch(`${this.apiConfig.apiUrl}/${table}`, {
             method: 'POST',
-            headers,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiConfig.token}`
+            },
             body: JSON.stringify(item)
           });
 
           if (response.ok) {
             await this.dbService.updateSyncStatus(table, item.id, 'synced');
+            console.log(`✅ ${table} item uploaded successfully:`, item.id);
           } else {
-            throw new Error(`Server returned ${response.status}`);
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
           }
         } catch (error) {
-          console.error(`Error uploading ${table} item:`, error);
+          console.error(`❌ Error uploading ${table} item:`, item.id, error);
           await this.dbService.updateSyncStatus(table, item.id, 'error');
         }
         
@@ -427,26 +448,29 @@ class SyncService {
   }
 
   private async downloadData(activeUpdate: SyncUpdate): Promise<void> {
+    if (!this.apiConfig) return;
+    
     console.log('📥 Downloading data for update:', activeUpdate.id);
     
-    // Use configured download endpoint if available
-    if (this.apiConfig?.endpoints?.download) {
-      try {
-        const url = `${this.apiConfig.baseUrl}${this.apiConfig.endpoints.download}`;
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${this.apiConfig.token}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Downloaded data:', data);
-          // Process downloaded data here based on activeUpdate.data_types
+    try {
+      const response = await fetch(`${this.apiConfig.apiUrl}/download/${activeUpdate.id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiConfig.token}`
         }
-      } catch (error) {
-        console.error('Error downloading data:', error);
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 Downloaded data:', data);
+        // Process downloaded data here based on activeUpdate.data_types
+        // This would typically involve updating local database tables
+      } else {
+        console.error('❌ Error downloading data:', response.status, response.statusText);
       }
+    } catch (error) {
+      console.error('❌ Error downloading data:', error);
     }
     
     this.notifyProgress({
@@ -457,6 +481,9 @@ class SyncService {
   }
 
   async refreshConnection(): Promise<boolean> {
+    // Reload API config first
+    await this.loadApiConfig();
+    // Then check connection
     await this.checkConnection();
     return this.connected;
   }

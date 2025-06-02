@@ -32,8 +32,12 @@ export const useMobileAuth = () => {
       try {
         const parsedSession = JSON.parse(savedSession);
         setSession(parsedSession);
+        console.log('📱 Mobile session loaded from localStorage:', {
+          salesRep: parsedSession.salesRep?.name,
+          hasApiConfig: !!parsedSession.apiConfig
+        });
       } catch (error) {
-        console.error('Error parsing saved session:', error);
+        console.error('❌ Error parsing saved session:', error);
         localStorage.removeItem('mobile_session');
       }
     }
@@ -44,15 +48,19 @@ export const useMobileAuth = () => {
     try {
       setIsLoading(true);
       
+      console.log('🔐 Attempting mobile auth for sales rep code:', code);
+      
       const { data, error } = await supabase.functions.invoke('mobile-auth', {
         body: { code, password }
       });
 
       if (error) {
+        console.error('❌ Mobile auth error:', error);
         throw new Error(error.message || 'Erro de autenticação');
       }
 
       if (!data.success) {
+        console.error('❌ Mobile auth failed:', data.error);
         throw new Error(data.error || 'Credenciais inválidas');
       }
 
@@ -65,9 +73,10 @@ export const useMobileAuth = () => {
       localStorage.setItem('mobile_session', JSON.stringify(newSession));
       setSession(newSession);
 
+      console.log('✅ Mobile auth successful for sales rep:', data.salesRep.name);
       return { success: true };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Erro desconhecido' 
@@ -78,8 +87,8 @@ export const useMobileAuth = () => {
   };
 
   const logout = () => {
+    console.log('👋 Logging out mobile session');
     localStorage.removeItem('mobile_session');
-    localStorage.removeItem('api_config');
     setSession(null);
     navigate('/login');
   };
@@ -92,12 +101,25 @@ export const useMobileAuth = () => {
       };
       localStorage.setItem('mobile_session', JSON.stringify(updatedSession));
       setSession(updatedSession);
+      console.log('🔧 API config updated:', {
+        apiUrl: config.apiUrl,
+        tokenLength: config.token.length
+      });
     }
   };
 
   const isAuthenticated = () => session !== null;
   
-  const hasApiConfig = () => session?.apiConfig?.token && session?.apiConfig?.apiUrl;
+  const hasApiConfig = () => {
+    const hasConfig = session?.apiConfig?.token && session?.apiConfig?.apiUrl;
+    console.log('🔍 Checking API config:', {
+      hasSession: !!session,
+      hasToken: !!session?.apiConfig?.token,
+      hasApiUrl: !!session?.apiConfig?.apiUrl,
+      result: !!hasConfig
+    });
+    return !!hasConfig;
+  };
 
   return {
     session,
