@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Database, CheckCircle, XCircle, User, AlertCircle, Settings, Wifi, AlertTriangle } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { useMobileAuth } from '@/hooks/useMobileAuth';
+
 const ApiSettings = () => {
   const navigate = useNavigate();
   const {
@@ -14,80 +16,53 @@ const ApiSettings = () => {
     updateApiConfig,
     hasApiConfig
   } = useMobileAuth();
-  const [token, setToken] = useState('');
+  
   const [apiUrl, setApiUrl] = useState('');
-  const [isTestingToken, setIsTestingToken] = useState(false);
   const [isTestingApi, setIsTestingApi] = useState(false);
-  const [tokenStatus, setTokenStatus] = useState<boolean | null>(null);
   const [apiStatus, setApiStatus] = useState<boolean | null>(null);
+
   useEffect(() => {
     // Load existing config if available
     if (session?.apiConfig) {
-      setToken(session.apiConfig.token);
       setApiUrl(session.apiConfig.apiUrl);
-      setTokenStatus(true);
       setApiStatus(true);
     }
   }, [session]);
-  const testToken = async () => {
-    if (!token.trim()) {
-      toast.error('Digite o token do vendedor');
-      return;
-    }
-    if (!apiUrl.trim()) {
-      toast.error('Digite a URL da API primeiro');
-      return;
-    }
-    setIsTestingToken(true);
-    try {
-      console.log('🔑 Testing token against Orders API:', apiUrl);
 
-      // Test token with the orders API (GET /)
-      const response = await fetch(`${apiUrl}/`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        setTokenStatus(true);
-        toast.success('Token validado com sucesso!');
-        console.log('✅ Token validation successful');
-      } else {
-        setTokenStatus(false);
-        const errorText = await response.text();
-        console.error('❌ Token validation failed:', response.status, errorText);
-        toast.error('Token inválido');
-      }
-    } catch (error) {
-      setTokenStatus(false);
-      console.error('❌ Token validation error:', error);
-      toast.error('Erro ao validar token');
-    } finally {
-      setIsTestingToken(false);
-    }
-  };
   const testApiConnection = async () => {
     if (!apiUrl.trim()) {
       toast.error('Digite a URL da API');
       return;
     }
+
+    if (!session?.sessionToken) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
     setIsTestingApi(true);
     try {
-      console.log('📡 Testing API connection to:', apiUrl);
+      console.log('📡 Testing API connection to mobile orders import:', apiUrl);
 
-      // Test API connection using GET / (list orders)
-      const response = await fetch(`${apiUrl}/`, {
-        method: 'GET',
+      // Test API connection using the correct mobile-orders-import endpoint
+      const testEndpoint = `${apiUrl}/mobile-orders-import`;
+      const response = await fetch(testEndpoint, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token && {
-            'Authorization': `Bearer ${token}`
-          })
-        }
+          'Authorization': `Bearer ${session.sessionToken}`
+        },
+        body: JSON.stringify({
+          test: true,
+          customer_id: 'test',
+          date: new Date().toISOString(),
+          status: 'pending',
+          total: 0
+        })
       });
-      if (response.ok) {
+
+      if (response.ok || response.status === 400) {
+        // 400 is expected for test data, but it means the endpoint is reachable
         setApiStatus(true);
         toast.success('Conexão com API estabelecida!');
         console.log('✅ API connection successful');
@@ -105,26 +80,37 @@ const ApiSettings = () => {
       setIsTestingApi(false);
     }
   };
+
   const saveConfiguration = () => {
-    if (!token.trim() || !apiUrl.trim()) {
-      toast.error('Preencha todos os campos obrigatórios');
+    if (!apiUrl.trim()) {
+      toast.error('Digite a URL da API');
       return;
     }
-    if (!tokenStatus || !apiStatus) {
-      toast.error('Teste e valide todas as configurações antes de salvar');
+
+    if (!apiStatus) {
+      toast.error('Teste e valide a conexão com a API antes de salvar');
       return;
     }
+
+    if (!session?.sessionToken) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
     updateApiConfig({
-      token,
+      token: session.sessionToken, // Use the session token
       apiUrl
     });
+
     console.log('💾 API configuration saved:', {
       apiUrl,
-      tokenLength: token.length
+      hasAuth: !!session.sessionToken
     });
+    
     toast.success('Configuração salva com sucesso!');
     navigate('/home');
   };
+
   const handleContinue = () => {
     if (hasApiConfig()) {
       navigate('/home');
@@ -132,12 +118,15 @@ const ApiSettings = () => {
       saveConfiguration();
     }
   };
-  return <div className="min-h-screen bg-slate-50 flex flex-col">
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Configuração Mobile" showBackButton={false} backgroundColor="blue" />
       
       <div className="p-4 flex-1">
         {/* User Info Card */}
-        {session?.salesRep && <Card className="mb-4">
+        {session?.salesRep && (
+          <Card className="mb-4">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <User className="mr-2" size={20} />
@@ -153,19 +142,22 @@ const ApiSettings = () => {
                 <span className="text-gray-600">Código:</span>
                 <span className="font-medium">{session.salesRep.code}</span>
               </div>
-              {session.salesRep.email && <div className="flex justify-between">
+              {session.salesRep.email && (
+                <div className="flex justify-between">
                   <span className="text-gray-600">Email:</span>
                   <span className="font-medium text-sm">{session.salesRep.email}</span>
-                </div>}
+                </div>
+              )}
             </CardContent>
-          </Card>}
+          </Card>
+        )}
 
         {/* API Configuration Card */}
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Wifi className="mr-2" size={20} />
-              API de Pedidos
+              API de Importação de Pedidos
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -173,75 +165,117 @@ const ApiSettings = () => {
               <label className="text-sm font-medium text-gray-700">
                 URL da API <span className="text-red-500">*</span>
               </label>
-              <Input type="url" value={apiUrl} onChange={e => setApiUrl(e.target.value)} placeholder="https://api.exemplo.com/orders" className="w-full" />
+              <Input 
+                type="url" 
+                value={apiUrl} 
+                onChange={e => setApiUrl(e.target.value)} 
+                placeholder="https://api.exemplo.com/functions/v1" 
+                className="w-full" 
+              />
+              <p className="text-xs text-gray-500">
+                URL base da API (ex: https://projeto.supabase.co/functions/v1)
+              </p>
             </div>
             
             <div className="flex items-center justify-between">
               <span>Status da Conexão:</span>
               <div className="flex items-center">
-                {apiStatus === null ? <span className="text-gray-500">Não testado</span> : apiStatus ? <>
+                {apiStatus === null ? (
+                  <span className="text-gray-500">Não testado</span>
+                ) : apiStatus ? (
+                  <>
                     <CheckCircle className="text-green-500 mr-1" size={16} />
                     <span className="text-green-500">Conectado</span>
-                  </> : <>
+                  </>
+                ) : (
+                  <>
                     <XCircle className="text-red-500 mr-1" size={16} />
                     <span className="text-red-500">Desconectado</span>
-                  </>}
+                  </>
+                )}
               </div>
             </div>
             
-            <Button onClick={testApiConnection} disabled={isTestingApi || !apiUrl.trim()} className="w-full" variant="outline">
+            <Button 
+              onClick={testApiConnection} 
+              disabled={isTestingApi || !apiUrl.trim() || !session?.sessionToken} 
+              className="w-full" 
+              variant="outline"
+            >
               {isTestingApi ? 'Testando...' : 'Testar Conexão'}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Token Configuration Card */}
+        {/* Authentication Info Card */}
         <Card className="mb-4">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Settings className="mr-2" size={20} />
-              Token de Autenticação
+              Autenticação
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Token da API <span className="text-red-500">*</span>
-              </label>
-              <Input type="text" value={token} onChange={e => setToken(e.target.value)} placeholder="Digite o token de autenticação da API" className="w-full" />
-            </div>
-            
             <div className="flex items-center justify-between">
-              <span>Status do Token:</span>
+              <span>Status da Autenticação:</span>
               <div className="flex items-center">
-                {tokenStatus === null ? <span className="text-gray-500">Não testado</span> : tokenStatus ? <>
+                {session?.sessionToken ? (
+                  <>
                     <CheckCircle className="text-green-500 mr-1" size={16} />
-                    <span className="text-green-500">Válido</span>
-                  </> : <>
+                    <span className="text-green-500">Autenticado</span>
+                  </>
+                ) : (
+                  <>
                     <XCircle className="text-red-500 mr-1" size={16} />
-                    <span className="text-red-500">Inválido</span>
-                  </>}
+                    <span className="text-red-500">Não autenticado</span>
+                  </>
+                )}
               </div>
             </div>
             
-            <Button onClick={testToken} disabled={isTestingToken || !token.trim() || !apiUrl.trim()} className="w-full" variant="outline">
-              {isTestingToken ? 'Testando...' : 'Testar Token'}
-            </Button>
+            <p className="text-sm text-gray-600">
+              A autenticação é feita automaticamente com o login do vendedor.
+            </p>
           </CardContent>
         </Card>
 
         {/* Continue Button */}
         <Card className="mb-4">
           <CardContent className="pt-6">
-            <Button onClick={handleContinue} disabled={!tokenStatus || !apiStatus} className="w-full" size="lg">
+            <Button 
+              onClick={handleContinue} 
+              disabled={!apiStatus || !session?.sessionToken} 
+              className="w-full" 
+              size="lg"
+            >
               {hasApiConfig() ? 'Continuar para o Sistema' : 'Salvar e Continuar'}
             </Button>
           </CardContent>
         </Card>
 
         {/* Information Card */}
-        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <AlertCircle className="mr-2" size={20} />
+              Informações Importantes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-gray-600">
+              • A API deve ter o endpoint <code>/mobile-orders-import</code> disponível
+            </p>
+            <p className="text-sm text-gray-600">
+              • A autenticação é feita com o token da sessão do vendedor
+            </p>
+            <p className="text-sm text-gray-600">
+              • Os pedidos enviados ficam pendentes de importação manual
+            </p>
+          </CardContent>
+        </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default ApiSettings;

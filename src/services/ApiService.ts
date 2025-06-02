@@ -59,7 +59,32 @@ class ApiService {
     return ApiService.instance;
   }
 
+  private async getMobileAuthHeaders(): Promise<Record<string, string>> {
+    // Get mobile session from localStorage
+    const savedSession = localStorage.getItem('mobile_session');
+    if (!savedSession) {
+      throw new Error('Sessão móvel não encontrada');
+    }
+
+    const session = JSON.parse(savedSession);
+    if (!session.sessionToken) {
+      throw new Error('Token de sessão não encontrado');
+    }
+
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.sessionToken}`,
+      'Accept': 'application/json'
+    };
+  }
+
   private async getAuthHeaders(method?: string): Promise<Record<string, string>> {
+    // For mobile endpoints, use mobile auth
+    if (this.useMobileImportEndpoint) {
+      return await this.getMobileAuthHeaders();
+    }
+
+    // For direct Supabase endpoints, use Supabase auth
     const { data: { session } } = await supabase.auth.getSession();
     
     const headers: Record<string, string> = {
@@ -169,18 +194,38 @@ class ApiService {
     try {
       console.log('📱 Using mobile import endpoint...');
       
-      const { data, error } = await supabase.functions.invoke('mobile-orders-import', {
-        body: {
-          ...orderData,
-          items: items
-        }
-      });
-
-      if (error) {
-        console.error('❌ Mobile import error:', error);
-        throw new Error(`Erro na importação móvel: ${error.message}`);
+      // Get mobile session for API URL
+      const savedSession = localStorage.getItem('mobile_session');
+      if (!savedSession) {
+        throw new Error('Sessão móvel não encontrada');
       }
 
+      const session = JSON.parse(savedSession);
+      if (!session.apiConfig?.apiUrl) {
+        throw new Error('URL da API não configurada');
+      }
+
+      const apiUrl = `${session.apiConfig.apiUrl}/mobile-orders-import`;
+      const headers = await this.getMobileAuthHeaders();
+
+      console.log('🔄 Making mobile import request to:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...orderData,
+          items: items
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Mobile import error:', response.status, errorText);
+        throw new Error(`Erro na importação móvel: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
       console.log('✅ Mobile import successful:', data);
       return data as T;
     } catch (error) {

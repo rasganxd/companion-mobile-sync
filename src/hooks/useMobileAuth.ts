@@ -103,7 +103,7 @@ export const useMobileAuth = () => {
       setSession(updatedSession);
       console.log('🔧 API config updated:', {
         apiUrl: config.apiUrl,
-        tokenLength: config.token.length
+        hasToken: !!config.token
       });
     }
   };
@@ -111,11 +111,11 @@ export const useMobileAuth = () => {
   const isAuthenticated = () => session !== null;
   
   const hasApiConfig = () => {
-    const hasConfig = session?.apiConfig?.token && session?.apiConfig?.apiUrl;
+    const hasConfig = session?.apiConfig?.apiUrl && session?.sessionToken;
     console.log('🔍 Checking API config:', {
       hasSession: !!session,
-      hasToken: !!session?.apiConfig?.token,
       hasApiUrl: !!session?.apiConfig?.apiUrl,
+      hasSessionToken: !!session?.sessionToken,
       result: !!hasConfig
     });
     return !!hasConfig;
