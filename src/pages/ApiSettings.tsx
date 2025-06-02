@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Database, CheckCircle, XCircle, User, AlertCircle, Settings, Wifi, AlertTriangle } from 'lucide-react';
+import { Database, CheckCircle, XCircle, User, AlertCircle, Settings, Wifi, AlertTriangle, Trash2 } from 'lucide-react';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -274,6 +274,22 @@ const ApiSettings = () => {
     }
   };
 
+  const clearAllData = () => {
+    console.log('🗑️ Clearing all API configuration data...');
+    
+    // Clear localStorage
+    localStorage.removeItem('mobile_session');
+    
+    // Reset form fields
+    setToken('');
+    setApiUrl('');
+    setTokenStatus(null);
+    setApiStatus(null);
+    
+    toast.success('Todos os dados foram limpos com sucesso!');
+    console.log('✅ All data cleared successfully');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
@@ -310,6 +326,30 @@ const ApiSettings = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Clear Data Card */}
+        <Card className="mb-4 border-red-200">
+          <CardHeader>
+            <CardTitle className="flex items-center text-red-600">
+              <Trash2 className="mr-2" size={20} />
+              Limpar Dados
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Use esta opção para limpar todos os dados de configuração salvos. 
+              Você precisará inserir novamente a URL da API e o token.
+            </p>
+            <Button 
+              onClick={clearAllData} 
+              variant="destructive" 
+              className="w-full"
+            >
+              <Trash2 className="mr-2" size={16} />
+              Limpar Todos os Dados
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* API Configuration Card */}
         <Card className="mb-4">
