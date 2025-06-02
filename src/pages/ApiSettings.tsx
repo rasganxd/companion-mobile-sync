@@ -22,6 +22,10 @@ const ApiSettings = () => {
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [tokenStatus, setTokenStatus] = useState<boolean | null>(null);
   const [apiStatus, setApiStatus] = useState<boolean | null>(null);
+  
+  // Novos estados para controle de edição
+  const [isManualEditing, setIsManualEditing] = useState(false);
+  const [hasDataBeenCleared, setHasDataBeenCleared] = useState(false);
 
   // Helper function to validate if a token is valid (starts with sk_)
   const isValidToken = (value: string): boolean => {
@@ -46,10 +50,17 @@ const ApiSettings = () => {
     setApiUrl('');
     setTokenStatus(null);
     setApiStatus(null);
+    setHasDataBeenCleared(true);
     toast.warning('Dados de configuração corrompidos foram limpos. Por favor, configure novamente.');
   };
 
   useEffect(() => {
+    // Se o usuário está editando manualmente ou os dados foram limpos, não recarregar
+    if (isManualEditing || hasDataBeenCleared) {
+      console.log('⏸️ Skipping data loading - user is editing manually or data was cleared');
+      return;
+    }
+
     console.log('🔧 Loading API configuration...');
     
     // Load existing config if available
@@ -104,7 +115,7 @@ const ApiSettings = () => {
     } else {
       console.log('📝 No existing configuration found');
     }
-  }, [session]);
+  }, [session, isManualEditing, hasDataBeenCleared]);
 
   const testToken = async () => {
     if (!token.trim()) {
@@ -234,6 +245,10 @@ const ApiSettings = () => {
       apiUrl
     });
 
+    // Reset editing states after saving
+    setIsManualEditing(false);
+    setHasDataBeenCleared(false);
+
     toast.success('Configuração salva com sucesso!');
     navigate('/home');
   };
@@ -250,6 +265,7 @@ const ApiSettings = () => {
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setToken(value);
+    setIsManualEditing(true); // Marcar que o usuário está editando manualmente
     
     // Reset token status when user changes the value
     setTokenStatus(null);
@@ -264,6 +280,7 @@ const ApiSettings = () => {
   const handleApiUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setApiUrl(value);
+    setIsManualEditing(true); // Marcar que o usuário está editando manualmente
     
     // Reset API status when user changes the value
     setApiStatus(null);
@@ -277,7 +294,7 @@ const ApiSettings = () => {
   const clearAllData = () => {
     console.log('🗑️ Clearing all API configuration data...');
     
-    // Clear localStorage
+    // Clear localStorage - força limpeza completa da sessão
     localStorage.removeItem('mobile_session');
     
     // Reset form fields
@@ -286,8 +303,27 @@ const ApiSettings = () => {
     setTokenStatus(null);
     setApiStatus(null);
     
-    toast.success('Todos os dados foram limpos com sucesso!');
-    console.log('✅ All data cleared successfully');
+    // Marcar que os dados foram limpos e permitir edição livre
+    setHasDataBeenCleared(true);
+    setIsManualEditing(true);
+    
+    toast.success('Todos os dados foram limpos com sucesso! Agora você pode inserir novas informações.');
+    console.log('✅ All data cleared successfully - ready for new input');
+  };
+
+  const startFreshEntry = () => {
+    console.log('🆕 Starting fresh entry mode...');
+    
+    // Limpar tudo e entrar em modo de edição
+    setToken('');
+    setApiUrl('');
+    setTokenStatus(null);
+    setApiStatus(null);
+    setIsManualEditing(true);
+    setHasDataBeenCleared(true);
+    
+    toast.info('Modo de entrada livre ativado. Digite suas novas configurações.');
+    console.log('✅ Fresh entry mode activated');
   };
 
   return (
@@ -327,27 +363,38 @@ const ApiSettings = () => {
           </Card>
         )}
 
-        {/* Clear Data Card */}
-        <Card className="mb-4 border-red-200">
+        {/* Control Actions Card */}
+        <Card className="mb-4 border-blue-200">
           <CardHeader>
-            <CardTitle className="flex items-center text-red-600">
-              <Trash2 className="mr-2" size={20} />
-              Limpar Dados
+            <CardTitle className="flex items-center text-blue-600">
+              <Settings className="mr-2" size={20} />
+              Controles de Configuração
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Use esta opção para limpar todos os dados de configuração salvos. 
-              Você precisará inserir novamente a URL da API e o token.
-            </p>
-            <Button 
-              onClick={clearAllData} 
-              variant="destructive" 
-              className="w-full"
-            >
-              <Trash2 className="mr-2" size={16} />
-              Limpar Todos os Dados
-            </Button>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
+              <Button 
+                onClick={startFreshEntry} 
+                variant="outline" 
+                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                <Settings className="mr-2" size={16} />
+                Nova Configuração
+              </Button>
+              <Button 
+                onClick={clearAllData} 
+                variant="destructive" 
+                className="w-full"
+              >
+                <Trash2 className="mr-2" size={16} />
+                Limpar Todos os Dados
+              </Button>
+            </div>
+            {(isManualEditing || hasDataBeenCleared) && (
+              <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
+                ✅ Modo de edição livre ativo - você pode digitar livremente
+              </div>
+            )}
           </CardContent>
         </Card>
 

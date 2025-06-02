@@ -40,6 +40,25 @@ export const useMobileAuth = () => {
     }
   };
 
+  // Function to force session reload from localStorage
+  const forceSessionReload = () => {
+    console.log('🔄 Forcing session reload from localStorage...');
+    const savedSession = localStorage.getItem('mobile_session');
+    if (savedSession) {
+      try {
+        const parsedSession = JSON.parse(savedSession);
+        setSession(parsedSession);
+        console.log('✅ Session reloaded successfully');
+      } catch (error) {
+        console.error('❌ Error reloading session:', error);
+        setSession(null);
+      }
+    } else {
+      console.log('📝 No session found in localStorage');
+      setSession(null);
+    }
+  };
+
   useEffect(() => {
     // Load session from localStorage on mount
     const savedSession = localStorage.getItem('mobile_session');
@@ -218,6 +237,7 @@ export const useMobileAuth = () => {
     hasApiConfig,
     login,
     logout,
-    updateApiConfig
+    updateApiConfig,
+    forceSessionReload
   };
 };
