@@ -117,9 +117,19 @@ const PlaceOrder = () => {
           .order('name');
           
         if (supabaseProducts && !error) {
+          // Transform Supabase product data to match Product interface
           const productsWithStock = supabaseProducts.map(product => ({
-            ...product,
-            stock: product.stock || 0
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            price: product.sale_price || 0, // Map sale_price to price
+            unit: 'UN', // Default unit
+            stock: product.stock || 0,
+            has_subunit: false, // Default values for optional properties
+            subunit: undefined,
+            subunit_ratio: undefined,
+            min_price: undefined,
+            max_price: undefined
           }));
           await db.saveProducts(productsWithStock);
           setProducts(productsWithStock);
