@@ -4,14 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import AppButton from '@/components/AppButton';
 import { KeyRound, LogIn } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useMobileAuth } from '@/hooks/useMobileAuth';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useMobileAuth();
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,68 +28,17 @@ const Login = () => {
       return;
     }
     
-    if (password.length < 6) {
-      toast.error('Senha deve ter pelo menos 6 caracteres');
-      return;
-    }
-    
     setIsLoading(true);
 
     try {
-      // Convert username to number since code field is integer
-      const codeNumber = parseInt(username);
-      if (isNaN(codeNumber)) {
-        toast.error('Código deve ser um número válido');
-        return;
-      }
-
-      // Query the sales_reps table to authenticate the user
-      const { data: salesRep, error: salesRepError } = await supabase
-        .from('sales_reps')
-        .select('*')
-        .eq('code', codeNumber)
-        .eq('active', true)
-        .single();
-
-      if (salesRepError || !salesRep) {
-        toast.error('Vendedor não encontrado ou inativo');
-        return;
-      }
-
-      // Create email based on sales rep data
-      const tempEmail = salesRep.email || `salesrep_${salesRep.code}@company.local`;
-
-      // Try to sign in with the provided password - NO FALLBACKS
-      const { data: authResult, error: authError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: password,
-      });
-
-      if (authError) {
-        console.error('Authentication failed:', authError.message);
-        
-        // Provide specific error messages
-        if (authError.message.includes('Invalid login credentials')) {
-          toast.error('Código ou senha incorretos');
-        } else if (authError.message.includes('Email not confirmed')) {
-          toast.error('Email não confirmado. Entre em contato com o administrador.');
-        } else {
-          toast.error('Erro de autenticação. Verifique suas credenciais.');
-        }
-        return;
-      }
-
-      if (!authResult.user) {
-        toast.error('Falha na autenticação');
-        return;
-      }
-
-      // Store the authenticated sales rep data
-      localStorage.setItem('authenticated_sales_rep', JSON.stringify(salesRep));
+      const result = await login(username, password);
       
-      toast.success(`Bem-vindo, ${salesRep.name}!`);
-      navigate('/home');
-      
+      if (result.success) {
+        toast.success('Login realizado com sucesso!');
+        navigate('/api-settings'); // Redirecionar para configuração da API
+      } else {
+        toast.error(result.error || 'Erro ao fazer login');
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Erro inesperado ao fazer login. Tente novamente.');
@@ -153,14 +103,13 @@ const Login = () => {
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
                   placeholder="Digite sua senha"
                   required
-                  minLength={6}
                   disabled={isLoading}
                 />
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
                   <KeyRound size={16} />
                 </div>
               </div>
-              <p className="text-xs text-gray-500">Mínimo de 6 caracteres</p>
+              <p className="text-xs text-gray-500">Senha criada no sistema desktop</p>
             </div>
             
             <AppButton
@@ -176,7 +125,7 @@ const Login = () => {
           
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Problemas para acessar? Entre em contato com o administrador.
+              Use as credenciais criadas no sistema desktop.
             </p>
           </div>
         </div>

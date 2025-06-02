@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider } from '@/contexts/NavigationContext';
 import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
+import { useMobileAuth } from '@/hooks/useMobileAuth';
 
 import Index from '@/pages/Index';
 import Login from '@/pages/Login';
@@ -29,6 +30,40 @@ import Reports from '@/pages/Reports';
 
 const queryClient = new QueryClient();
 
+// Protected Route Component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useMobileAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Config Route - requires auth but redirects to config if not configured
+const ConfigRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, hasApiConfig, isLoading } = useMobileAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (!isAuthenticated()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!hasApiConfig()) {
+    return <Navigate to="/api-settings" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -37,38 +72,123 @@ function App() {
           <NavigationProvider>
             <MobileBackButtonManager />
             <Routes>
-              {/* Redirecionar rota raiz para /home */}
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              
+              {/* Public routes */}
               <Route path="/login" element={<Login />} />
-              <Route path="/home" element={<Home />} />
               
-              {/* Lista de Atividades - acessível apenas com estado de cliente */}
-              <Route path="/client-activities" element={<Index />} />
+              {/* Config route - requires auth but allows unconfigured users */}
+              <Route path="/api-settings" element={
+                <ProtectedRoute>
+                  <ApiSettings />
+                </ProtectedRoute>
+              } />
               
-              {/* Nova rota para visualização full-screen de clientes */}
-              <Route path="/client-fullscreen" element={<ClientFullScreenView />} />
+              {/* Protected routes - require auth AND config */}
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={
+                <ConfigRoute>
+                  <Home />
+                </ConfigRoute>
+              } />
               
-              <Route path="/clients" element={<ClientsList />} />
-              <Route path="/clientes-lista" element={<ClientsList />} />
-              <Route path="/client/:id" element={<ClientDetails />} />
-              <Route path="/place-order" element={<PlaceOrder />} />
-              <Route path="/order-review" element={<OrderReview />} />
-              <Route path="/my-orders" element={<MyOrders />} />
-              <Route path="/order-details/:id" element={<OrderDetails />} />
-              <Route path="/ultimas-compras" element={<LastPurchases />} />
-              <Route path="/visit-routes" element={<VisitRoutes />} />
-              <Route path="/rotas" element={<VisitRoutes />} />
-              <Route path="/negativar-venda" element={<NegativeSale />} />
-              <Route path="/mensagem" element={<MessagePage />} />
-              <Route path="/capturar-posicao" element={<CapturePosition />} />
-              <Route path="/sync-settings" element={<SyncSettings />} />
-              <Route path="/api-settings" element={<ApiSettings />} />
-              <Route path="/qr-scanner" element={<QRScanPage />} />
-              <Route path="/transmit-orders" element={<TransmitOrders />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/client-activities" element={
+                <ConfigRoute>
+                  <Index />
+                </ConfigRoute>
+              } />
               
-              {/* Redirecionamentos para rotas antigas em inglês */}
+              <Route path="/client-fullscreen" element={
+                <ConfigRoute>
+                  <ClientFullScreenView />
+                </ConfigRoute>
+              } />
+              
+              <Route path="/clients" element={
+                <ConfigRoute>
+                  <ClientsList />
+                </ConfigRoute>
+              } />
+              <Route path="/clientes-lista" element={
+                <ConfigRoute>
+                  <ClientsList />
+                </ConfigRoute>
+              } />
+              <Route path="/client/:id" element={
+                <ConfigRoute>
+                  <ClientDetails />
+                </ConfigRoute>
+              } />
+              <Route path="/place-order" element={
+                <ConfigRoute>
+                  <PlaceOrder />
+                </ConfigRoute>
+              } />
+              <Route path="/order-review" element={
+                <ConfigRoute>
+                  <OrderReview />
+                </ConfigRoute>
+              } />
+              <Route path="/my-orders" element={
+                <ConfigRoute>
+                  <MyOrders />
+                </ConfigRoute>
+              } />
+              <Route path="/order-details/:id" element={
+                <ConfigRoute>
+                  <OrderDetails />
+                </ConfigRoute>
+              } />
+              <Route path="/ultimas-compras" element={
+                <ConfigRoute>
+                  <LastPurchases />
+                </ConfigRoute>
+              } />
+              <Route path="/visit-routes" element={
+                <ConfigRoute>
+                  <VisitRoutes />
+                </ConfigRoute>
+              } />
+              <Route path="/rotas" element={
+                <ConfigRoute>
+                  <VisitRoutes />
+                </ConfigRoute>
+              } />
+              <Route path="/negativar-venda" element={
+                <ConfigRoute>
+                  <NegativeSale />
+                </ConfigRoute>
+              } />
+              <Route path="/mensagem" element={
+                <ConfigRoute>
+                  <MessagePage />
+                </ConfigRoute>
+              } />
+              <Route path="/capturar-posicao" element={
+                <ConfigRoute>
+                  <CapturePosition />
+                </ConfigRoute>
+              } />
+              <Route path="/sync-settings" element={
+                <ConfigRoute>
+                  <SyncSettings />
+                </ConfigRoute>
+              } />
+              <Route path="/qr-scanner" element={
+                <ConfigRoute>
+                  <QRScanPage />
+                </ConfigRoute>
+              } />
+              <Route path="/transmit-orders" element={
+                <ConfigRoute>
+                  <TransmitOrders />
+                </ConfigRoute>
+              } />
+              <Route path="/reports" element={
+                <ConfigRoute>
+                  <Reports />
+                </ConfigRoute>
+              } />
+              
+              {/* Redirects for old routes */}
               <Route path="/message" element={<Navigate to="/mensagem" replace />} />
               <Route path="/negative-sale" element={<Navigate to="/negativar-venda" replace />} />
               
