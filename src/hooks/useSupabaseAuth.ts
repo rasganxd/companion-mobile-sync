@@ -54,26 +54,26 @@ export const useSupabaseAuth = () => {
 
   const loadSalesRepProfile = async (userId: string) => {
     try {
-      // First check if there's a profile linking the user to a sales rep
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*, sales_reps(*)')
+      // Query sales_reps table directly using the user ID
+      const { data: salesRepData, error: salesRepError } = await supabase
+        .from('sales_reps')
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (profileError && profileError.code !== 'PGRST116') {
-        console.error('Error loading profile:', profileError);
+      if (salesRepError && salesRepError.code !== 'PGRST116') {
+        console.error('Error loading sales rep:', salesRepError);
         return;
       }
 
-      if (profile?.sales_reps) {
+      if (salesRepData) {
         setSalesRep({
-          id: profile.id,
-          sales_rep_id: profile.sales_reps.id,
-          name: profile.sales_reps.name,
-          email: profile.sales_reps.email,
-          phone: profile.sales_reps.phone,
-          code: profile.sales_reps.code
+          id: salesRepData.id,
+          sales_rep_id: salesRepData.id,
+          name: salesRepData.name,
+          email: salesRepData.email,
+          phone: salesRepData.phone,
+          code: salesRepData.code
         });
       }
     } catch (error) {

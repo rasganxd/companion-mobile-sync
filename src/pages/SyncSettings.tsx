@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle, CheckCircle, Clock, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -26,6 +27,7 @@ const SyncSettings = () => {
   } = useSync();
   
   const [lastSyncText, setLastSyncText] = useState<string>('Nunca');
+  const [useSupabaseSync, setUseSupabaseSync] = useState<boolean>(true);
   
   useEffect(() => {
     if (syncStatus.lastSync) {
@@ -54,7 +56,7 @@ const SyncSettings = () => {
   };
 
   const handleToggleSupabaseSync = async () => {
-    await updateSettings({ useSupabaseSync: !syncSettings.useSupabaseSync });
+    setUseSupabaseSync(!useSupabaseSync);
   };
 
   const handleCheckUpdates = async () => {
@@ -137,12 +139,12 @@ const SyncSettings = () => {
                 </div>
               </div>
               <Switch 
-                checked={syncSettings.useSupabaseSync} 
+                checked={useSupabaseSync} 
                 onCheckedChange={handleToggleSupabaseSync} 
               />
             </div>
             
-            {syncSettings.useSupabaseSync && (
+            {useSupabaseSync && (
               <div className="pl-4 border-l-2 border-green-200">
                 <Button 
                   onClick={() => navigate('/supabase-sync')}
@@ -154,7 +156,7 @@ const SyncSettings = () => {
               </div>
             )}
             
-            {!syncSettings.useSupabaseSync && (
+            {!useSupabaseSync && (
               <div className="pl-4 border-l-2 border-blue-200">
                 <div className="text-sm text-gray-600 mb-2">
                   Usando sincronização via API REST externa
@@ -183,139 +185,143 @@ const SyncSettings = () => {
           </div>
         </div>
 
-        {/* Update Status Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Atualizações</h2>
+        {/* Update Status Card - Only show for non-Supabase sync */}
+        {!useSupabaseSync && (
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Atualizações</h2>
+              <Button 
+                onClick={handleCheckUpdates}
+                disabled={checkingUpdates}
+                variant="outline"
+                size="sm"
+              >
+                {checkingUpdates ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin mr-2" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={16} className="mr-2" />
+                    Verificar
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {activeUpdate ? (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center mb-2">
+                  <CheckCircle size={20} className="text-green-500 mr-2" />
+                  <span className="font-medium text-green-800">Atualização Disponível</span>
+                </div>
+                <div className="text-sm text-green-700">
+                  <p><strong>Descrição:</strong> {activeUpdate.description || 'Atualização de dados'}</p>
+                  <p><strong>Tipos:</strong> {activeUpdate.data_types.join(', ')}</p>
+                  <p><strong>Criada em:</strong> {formatUpdateDate(activeUpdate.created_at)}</p>
+                  {activeUpdate.created_by_user && (
+                    <p><strong>Criada por:</strong> {activeUpdate.created_by_user}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center">
+                  <Clock size={20} className="text-gray-500 mr-2" />
+                  <span className="text-gray-700">Nenhuma atualização disponível</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Status Card - Only show for non-Supabase sync */}
+        {!useSupabaseSync && (
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Status</h2>
+              <div className="flex items-center">
+                {syncStatus.connected ? (
+                  <Cloud size={20} className="text-green-500 mr-2" />
+                ) : (
+                  <CloudOff size={20} className="text-red-500 mr-2" />
+                )}
+                <span className={syncStatus.connected ? "text-green-500" : "text-red-500"}>
+                  {syncStatus.connected ? "Conectado" : "Desconectado"}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">Última sincronização:</span>
+                <span className="font-medium">{lastSyncText}</span>
+              </div>
+              
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">Pendentes para envio:</span>
+                <span className={syncStatus.pendingUploads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingUploads}</span>
+              </div>
+              
+              <div className="flex justify-between py-2">
+                <span className="text-gray-600">Pendentes para baixar:</span>
+                <span className={syncStatus.pendingDownloads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingDownloads}</span>
+              </div>
+            </div>
+            
+            {syncStatus.inProgress && syncProgress && (
+              <div className="mt-2">
+                <ProgressIndicator 
+                  progress={syncProgress} 
+                  type={syncProgress.type === 'upload' ? 'Enviando' : 'Baixando'} 
+                />
+              </div>
+            )}
+            
             <Button 
-              onClick={handleCheckUpdates}
-              disabled={checkingUpdates}
-              variant="outline"
-              size="sm"
+              onClick={handleSyncNow}
+              disabled={syncStatus.inProgress || !activeUpdate}
+              className="w-full mt-4"
+              variant="default"
             >
-              {checkingUpdates ? (
+              {syncStatus.inProgress ? (
                 <>
                   <RefreshCw size={16} className="animate-spin mr-2" />
-                  Verificando...
+                  Sincronizando...
+                </>
+              ) : !activeUpdate ? (
+                <>
+                  <RefreshCw size={16} className="mr-2" />
+                  Nenhuma Atualização Disponível
                 </>
               ) : (
                 <>
                   <RefreshCw size={16} className="mr-2" />
-                  Verificar
+                  Sincronizar Agora
                 </>
               )}
             </Button>
-          </div>
-          
-          {activeUpdate ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center mb-2">
-                <CheckCircle size={20} className="text-green-500 mr-2" />
-                <span className="font-medium text-green-800">Atualização Disponível</span>
-              </div>
-              <div className="text-sm text-green-700">
-                <p><strong>Descrição:</strong> {activeUpdate.description || 'Atualização de dados'}</p>
-                <p><strong>Tipos:</strong> {activeUpdate.data_types.join(', ')}</p>
-                <p><strong>Criada em:</strong> {formatUpdateDate(activeUpdate.created_at)}</p>
-                {activeUpdate.created_by_user && (
-                  <p><strong>Criada por:</strong> {activeUpdate.created_by_user}</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-              <div className="flex items-center">
-                <Clock size={20} className="text-gray-500 mr-2" />
-                <span className="text-gray-700">Nenhuma atualização disponível</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Status Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Status</h2>
-            <div className="flex items-center">
-              {syncStatus.connected ? (
-                <Cloud size={20} className="text-green-500 mr-2" />
-              ) : (
-                <CloudOff size={20} className="text-red-500 mr-2" />
-              )}
-              <span className={syncStatus.connected ? "text-green-500" : "text-red-500"}>
-                {syncStatus.connected ? "Conectado" : "Desconectado"}
-              </span>
-            </div>
-          </div>
-          
-          <div className="mt-4">
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Última sincronização:</span>
-              <span className="font-medium">{lastSyncText}</span>
-            </div>
             
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Pendentes para envio:</span>
-              <span className={syncStatus.pendingUploads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingUploads}</span>
-            </div>
+            <Button 
+              onClick={() => navigate('/qr-scanner')}
+              className="w-full mt-2"
+              variant="outline"
+            >
+              <QrCode size={16} className="mr-2" />
+              Escanear QR para Atualizar
+            </Button>
             
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Pendentes para baixar:</span>
-              <span className={syncStatus.pendingDownloads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingDownloads}</span>
-            </div>
+            <Button 
+              onClick={() => navigate('/api-settings')}
+              className="w-full mt-2"
+              variant="outline"
+            >
+              <Settings size={16} className="mr-2" />
+              Configurar API REST
+            </Button>
           </div>
-          
-          {syncStatus.inProgress && syncProgress && (
-            <div className="mt-2">
-              <ProgressIndicator 
-                progress={syncProgress} 
-                type={syncProgress.type === 'upload' ? 'Enviando' : 'Baixando'} 
-              />
-            </div>
-          )}
-          
-          <Button 
-            onClick={handleSyncNow}
-            disabled={syncStatus.inProgress || !activeUpdate}
-            className="w-full mt-4"
-            variant="default"
-          >
-            {syncStatus.inProgress ? (
-              <>
-                <RefreshCw size={16} className="animate-spin mr-2" />
-                Sincronizando...
-              </>
-            ) : !activeUpdate ? (
-              <>
-                <RefreshCw size={16} className="mr-2" />
-                Nenhuma Atualização Disponível
-              </>
-            ) : (
-              <>
-                <RefreshCw size={16} className="mr-2" />
-                Sincronizar Agora
-              </>
-            )}
-          </Button>
-          
-          <Button 
-            onClick={() => navigate('/qr-scanner')}
-            className="w-full mt-2"
-            variant="outline"
-          >
-            <QrCode size={16} className="mr-2" />
-            Escanear QR para Atualizar
-          </Button>
-          
-          <Button 
-            onClick={() => navigate('/api-settings')}
-            className="w-full mt-2"
-            variant="outline"
-          >
-            <Settings size={16} className="mr-2" />
-            Configurar API REST
-          </Button>
-        </div>
+        )}
         
         {/* Settings Card */}
         <div className="bg-white rounded-lg shadow p-4">
