@@ -1,7 +1,5 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMobileAuth } from './useMobileAuth';
+import { useLocalAuth } from './useLocalAuth';
 
 interface SalesRep {
   id: string;
@@ -12,35 +10,24 @@ interface SalesRep {
 }
 
 export const useAuth = () => {
-  const navigate = useNavigate();
-  const { session, isLoading: mobileAuthLoading, signOut: mobileSignOut } = useMobileAuth();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Use mobile auth loading state
-    setIsLoading(mobileAuthLoading);
-  }, [mobileAuthLoading]);
+  const { session, isLoading, isAuthenticated: localIsAuthenticated, signOut } = useLocalAuth();
 
   const logout = async () => {
     try {
-      await mobileSignOut();
+      await signOut();
     } catch (error) {
       console.error('Error during logout:', error);
-      // Force cleanup even with error
-      localStorage.removeItem('mobile_session');
-      localStorage.removeItem('api_config');
-      navigate('/login');
     }
   };
 
   const isAuthenticated = () => {
-    return session !== null;
+    return localIsAuthenticated();
   };
 
-  // Convert mobile session to expected format
+  // Convert local session to expected format
   const salesRep: SalesRep | null = session ? {
     id: session.salesRep.id,
-    code: session.salesRep.code.toString(), // Convert number to string
+    code: session.salesRep.code.toString(),
     name: session.salesRep.name,
     email: session.salesRep.email,
     phone: session.salesRep.phone

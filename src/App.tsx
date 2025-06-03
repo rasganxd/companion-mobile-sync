@@ -4,10 +4,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NavigationProvider } from '@/contexts/NavigationContext';
 import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
-import { useMobileAuth } from '@/hooks/useMobileAuth';
+import { useLocalAuth } from '@/hooks/useLocalAuth';
 
 import Index from '@/pages/Index';
-import Login from '@/pages/Login';
+import InitialSync from '@/pages/InitialSync';
+import LocalLogin from '@/pages/LocalLogin';
 import Home from '@/pages/Home';
 import ClientsList from '@/pages/ClientsList';
 import ClientDetails from '@/pages/ClientDetails';
@@ -25,20 +26,38 @@ import OrderDetails from '@/pages/OrderDetails';
 import TransmitOrders from '@/pages/TransmitOrders';
 import ClientFullScreenView from '@/pages/ClientFullScreenView';
 import Reports from '@/pages/Reports';
-import SupabaseSync from '@/pages/SupabaseSync';
 
 const queryClient = new QueryClient();
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useMobileAuth();
+  const { isAuthenticated, isLoading, hasInitialSync } = useLocalAuth();
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
+  if (!hasInitialSync()) {
+    return <Navigate to="/initial-sync" replace />;
+  }
+
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+// Public Route Component (for initial sync and login)
+const PublicRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading, hasInitialSync } = useLocalAuth();
+
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  }
+
+  if (isAuthenticated()) {
+    return <Navigate to="/home" replace />;
   }
 
   return <>{children}</>;
@@ -53,7 +72,16 @@ function App() {
             <MobileBackButtonManager />
             <Routes>
               {/* Public routes */}
-              <Route path="/login" element={<Login />} />
+              <Route path="/initial-sync" element={
+                <PublicRoute>
+                  <InitialSync />
+                </PublicRoute>
+              } />
+              <Route path="/login" element={
+                <PublicRoute>
+                  <LocalLogin />
+                </PublicRoute>
+              } />
               
               {/* Protected routes */}
               <Route path="/" element={<Navigate to="/home" replace />} />
