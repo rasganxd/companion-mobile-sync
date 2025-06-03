@@ -1374,6 +1374,24 @@ export type Database = {
           customer_phone: string
         }[]
       }
+      get_sync_data_for_sales_rep: {
+        Args: { p_sales_rep_id: string; p_last_sync?: string }
+        Returns: {
+          products_updated: Json
+          customers_updated: Json
+          sync_timestamp: string
+        }[]
+      }
+      get_sync_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          sales_rep_id: string
+          sales_rep_name: string
+          pending_orders: number
+          last_sync: string
+          total_orders: number
+        }[]
+      }
       hash_password: {
         Args: { password: string }
         Returns: string
@@ -1385,6 +1403,19 @@ export type Database = {
           failed_count: number
           error_messages: string[]
         }[]
+      }
+      import_mobile_orders_enhanced: {
+        Args: { p_sales_rep_id?: string; p_imported_by?: string }
+        Returns: {
+          imported_count: number
+          failed_count: number
+          error_messages: string[]
+          imported_order_ids: string[]
+        }[]
+      }
+      mark_orders_as_synced: {
+        Args: { p_sales_rep_id: string; p_order_ids: string[] }
+        Returns: number
       }
       sync_customers_to_route: {
         Args: { p_route_id: string; p_sales_rep_id: string }

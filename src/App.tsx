@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -27,6 +26,7 @@ import OrderDetails from '@/pages/OrderDetails';
 import TransmitOrders from '@/pages/TransmitOrders';
 import ClientFullScreenView from '@/pages/ClientFullScreenView';
 import Reports from '@/pages/Reports';
+import SupabaseSync from '@/pages/SupabaseSync';
 
 const queryClient = new QueryClient();
 
@@ -187,6 +187,7 @@ function App() {
                   <Reports />
                 </ConfigRoute>
               } />
+              <Route path="/supabase-sync" element={<SupabaseSync />} />
               
               {/* Redirects for old routes */}
               <Route path="/message" element={<Navigate to="/mensagem" replace />} />

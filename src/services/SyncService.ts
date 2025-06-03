@@ -1,9 +1,9 @@
-
 import { v4 as uuidv4 } from 'uuid';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from './DatabaseAdapter';
 import { Network } from '@capacitor/network';
 import { Capacitor } from '@capacitor/core';
+import SupabaseSyncService from './SupabaseSyncService';
 
 export interface SyncProgress {
   total: number;
@@ -24,6 +24,7 @@ export interface SyncSettings {
   syncInterval: number;
   syncOnWifiOnly: boolean;
   syncEnabled: boolean;
+  useSupabaseSync: boolean; // NEW: Option to use Supabase sync
 }
 
 export interface ApiConfig {
@@ -34,13 +35,15 @@ export interface ApiConfig {
 class SyncService {
   private static instance: SyncService;
   private dbService = getDatabaseAdapter();
+  private supabaseSyncService = SupabaseSyncService.getInstance();
   private apiConfig: ApiConfig | null = null;
   private syncInProgress: boolean = false;
   private syncSettings: SyncSettings = {
     autoSync: true,
     syncInterval: 30, // 30 minutes
     syncOnWifiOnly: true,
-    syncEnabled: true
+    syncEnabled: true,
+    useSupabaseSync: true // Default to Supabase sync
   };
   
   private lastSync: Date | null = null;
@@ -157,6 +160,41 @@ class SyncService {
 
   // Simular endpoint de verificação de atualizações usando GET /
   async checkForActiveUpdates(): Promise<any> {
+    // Check if using Supabase sync first
+    if (this.syncSettings.useSupabaseSync) {
+      try {
+        console.log('🔍 Checking for Supabase sync updates...');
+        
+        // Use Supabase sync service to check for updates
+        const syncData = await this.supabaseSyncService.getSyncDataForCurrentUser();
+        
+        if (syncData && (
+          (syncData.products_updated && syncData.products_updated.length > 0) ||
+          (syncData.customers_updated && syncData.customers_updated.length > 0)
+        )) {
+          console.log('✅ Found Supabase updates available');
+          return {
+            id: 'supabase-sync',
+            description: 'Atualizações disponíveis via Supabase',
+            data_types: ['products', 'customers'],
+            created_at: new Date().toISOString(),
+            metadata: { 
+              type: 'supabase',
+              products_count: syncData.products_updated?.length || 0,
+              customers_count: syncData.customers_updated?.length || 0
+            }
+          };
+        }
+
+        console.log('ℹ️ No Supabase updates found');
+        return null;
+      } catch (error) {
+        console.error('❌ Error checking Supabase updates:', error);
+        // Fall back to API sync if Supabase fails
+      }
+    }
+
+    // Fallback to original API sync logic
     if (!this.apiConfig) {
       console.log('❌ No API config available for checking updates');
       return null;
@@ -292,6 +330,9 @@ class SyncService {
   async updateSyncSettings(settings: Partial<SyncSettings>): Promise<void> {
     this.syncSettings = { ...this.syncSettings, ...settings };
     this.setupAutoSync();
+    
+    // Save settings to localStorage
+    localStorage.setItem('syncSettings', JSON.stringify(this.syncSettings));
   }
 
   async updateApiConfig(config: ApiConfig): Promise<void> {
@@ -307,14 +348,30 @@ class SyncService {
   async sync(): Promise<boolean> {
     if (this.syncInProgress) return false;
     
-    if (!this.apiConfig) {
-      toast.error("Configuração da API não encontrada");
-      return false;
-    }
-    
     try {
       this.syncInProgress = true;
       this.notifyStatusChange();
+
+      // Use Supabase sync if enabled
+      if (this.syncSettings.useSupabaseSync) {
+        console.log('🔄 Using Supabase sync...');
+        const success = await this.supabaseSyncService.sync();
+        
+        if (success) {
+          this.lastSync = new Date();
+          this.saveLastSyncTime();
+          this.notifyStatusChange();
+          return true;
+        }
+        
+        return false;
+      }
+
+      // Fallback to API sync
+      if (!this.apiConfig) {
+        toast.error("Configuração da API não encontrada");
+        return false;
+      }
 
       await this.checkConnection();
       if (!this.connected) {

@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Cloud, CloudOff, RefreshCw, Settings, QrCode, AlertTriangle, CheckCircle, Clock, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useSync } from '@/hooks/useSync';
@@ -9,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { ProgressIndicator } from '@/components/SyncComponents';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 const SyncSettings = () => {
   const navigate = useNavigate();
@@ -51,6 +51,10 @@ const SyncSettings = () => {
 
   const handleToggleSyncEnabled = async () => {
     await updateSettings({ syncEnabled: !syncSettings.syncEnabled });
+  };
+
+  const handleToggleSupabaseSync = async () => {
+    await updateSettings({ useSupabaseSync: !syncSettings.useSupabaseSync });
   };
 
   const handleCheckUpdates = async () => {
@@ -119,6 +123,65 @@ const SyncSettings = () => {
             </p>
           </div>
         )}
+
+        {/* Sync Method Selection */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <h2 className="text-lg font-semibold mb-4">Método de Sincronização</h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex-1">
+                <div className="font-medium text-green-700">Supabase Integrado</div>
+                <div className="text-sm text-gray-500">
+                  Sincronização direta via Supabase (Recomendado)
+                </div>
+              </div>
+              <Switch 
+                checked={syncSettings.useSupabaseSync} 
+                onCheckedChange={handleToggleSupabaseSync} 
+              />
+            </div>
+            
+            {syncSettings.useSupabaseSync && (
+              <div className="pl-4 border-l-2 border-green-200">
+                <Button 
+                  onClick={() => navigate('/supabase-sync')}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  <Database size={16} className="mr-2" />
+                  Abrir Sincronização Supabase
+                </Button>
+              </div>
+            )}
+            
+            {!syncSettings.useSupabaseSync && (
+              <div className="pl-4 border-l-2 border-blue-200">
+                <div className="text-sm text-gray-600 mb-2">
+                  Usando sincronização via API REST externa
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => navigate('/qr-scanner')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <QrCode size={16} className="mr-2" />
+                    Escanear QR
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => navigate('/api-settings')}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Settings size={16} className="mr-2" />
+                    Config API
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Update Status Card */}
         <div className="bg-white rounded-lg shadow p-4 mb-4">
