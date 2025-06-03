@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface SyncResult {
@@ -43,17 +43,16 @@ export const useLocalSync = () => {
         return { success: false, error: 'Não foi possível conectar ao desktop' };
       }
 
-      // Make request to desktop
+      // Make request to desktop with custom timeout
       const url = `http://${ip}:8080/primeira-atualizacao/${salesRepCode}`;
       console.log(`📡 Requesting: ${url}`);
       
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        timeout: 30000, // 30 second timeout
-      });
+      }, 30000); // 30 second timeout
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -130,6 +129,26 @@ export const useLocalSync = () => {
     }
   };
 
+  const fetchWithTimeout = (url: string, options: RequestInit, timeout: number): Promise<Response> => {
+    return new Promise((resolve, reject) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        reject(new Error('Request timeout'));
+      }, timeout);
+
+      fetch(url, { ...options, signal: controller.signal })
+        .then(response => {
+          clearTimeout(timeoutId);
+          resolve(response);
+        })
+        .catch(error => {
+          clearTimeout(timeoutId);
+          reject(error);
+        });
+    });
+  };
+
   const saveInitialData = async (data: InitialSyncData) => {
     const db = getDatabaseAdapter();
     await db.initDatabase();
@@ -175,15 +194,10 @@ export const useLocalSync = () => {
 
   const testConnection = async (ip: string, timeout = 5000): Promise<boolean> => {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-      
-      const response = await fetch(`http://${ip}:8080/health`, {
+      const response = await fetchWithTimeout(`http://${ip}:8080/health`, {
         method: 'GET',
-        signal: controller.signal,
-      });
+      }, timeout);
       
-      clearTimeout(timeoutId);
       return response.ok;
     } catch (error) {
       return false;

@@ -8,7 +8,6 @@ import { useLocalAuth } from '@/hooks/useLocalAuth';
 
 import Index from '@/pages/Index';
 import InitialSync from '@/pages/InitialSync';
-import LocalLogin from '@/pages/LocalLogin';
 import Home from '@/pages/Home';
 import ClientsList from '@/pages/ClientsList';
 import ClientDetails from '@/pages/ClientDetails';
@@ -31,7 +30,7 @@ const queryClient = new QueryClient();
 
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading, hasInitialSync } = useLocalAuth();
+  const { isLoading, hasInitialSync } = useLocalAuth();
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
@@ -41,22 +40,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/initial-sync" replace />;
   }
 
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-
   return <>{children}</>;
 };
 
-// Public Route Component (for initial sync and login)
+// Public Route Component (for initial sync only)
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading, hasInitialSync } = useLocalAuth();
+  const { isLoading, hasInitialSync } = useLocalAuth();
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
   }
 
-  if (isAuthenticated()) {
+  if (hasInitialSync()) {
     return <Navigate to="/home" replace />;
   }
 
@@ -71,15 +66,10 @@ function App() {
           <NavigationProvider>
             <MobileBackButtonManager />
             <Routes>
-              {/* Public routes */}
+              {/* Public route for initial sync */}
               <Route path="/initial-sync" element={
                 <PublicRoute>
                   <InitialSync />
-                </PublicRoute>
-              } />
-              <Route path="/login" element={
-                <PublicRoute>
-                  <LocalLogin />
                 </PublicRoute>
               } />
               
@@ -181,11 +171,6 @@ function App() {
               <Route path="/reports" element={
                 <ProtectedRoute>
                   <Reports />
-                </ProtectedRoute>
-              } />
-              <Route path="/supabase-sync" element={
-                <ProtectedRoute>
-                  <SupabaseSync />
                 </ProtectedRoute>
               } />
               

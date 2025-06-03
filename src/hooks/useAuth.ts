@@ -10,7 +10,7 @@ interface SalesRep {
 }
 
 export const useAuth = () => {
-  const { session, isLoading, isAuthenticated: localIsAuthenticated, signOut } = useLocalAuth();
+  const { isLoading, signOut } = useLocalAuth();
 
   const logout = async () => {
     try {
@@ -21,17 +21,30 @@ export const useAuth = () => {
   };
 
   const isAuthenticated = () => {
-    return localIsAuthenticated();
+    return localStorage.getItem('desktop_ip') !== null && 
+           localStorage.getItem('sales_rep_code') !== null;
   };
 
-  // Convert local session to expected format
-  const salesRep: SalesRep | null = session ? {
-    id: session.salesRep.id,
-    code: session.salesRep.code.toString(),
-    name: session.salesRep.name,
-    email: session.salesRep.email,
-    phone: session.salesRep.phone
-  } : null;
+  // Get sales rep info from localStorage
+  const getSalesRepFromStorage = (): SalesRep | null => {
+    try {
+      const code = localStorage.getItem('sales_rep_code');
+      if (!code) return null;
+
+      // For now, return basic info from localStorage
+      // Later this can be enhanced to get full data from local database
+      return {
+        id: code,
+        code: code,
+        name: `Vendedor ${code}`,
+      };
+    } catch (error) {
+      console.error('Error getting sales rep from storage:', error);
+      return null;
+    }
+  };
+
+  const salesRep = getSalesRepFromStorage();
 
   return {
     salesRep,
