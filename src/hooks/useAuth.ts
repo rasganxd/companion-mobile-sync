@@ -13,7 +13,7 @@ interface SalesRep {
 
 export const useAuth = () => {
   const navigate = useNavigate();
-  const { session, isLoading: mobileAuthLoading, logout: mobileLogout } = useMobileAuth();
+  const { session, isLoading: mobileAuthLoading, signOut: mobileSignOut } = useMobileAuth();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
-      mobileLogout();
+      await mobileSignOut();
     } catch (error) {
       console.error('Error during logout:', error);
       // Force cleanup even with error
@@ -40,7 +40,7 @@ export const useAuth = () => {
   // Convert mobile session to expected format
   const salesRep: SalesRep | null = session ? {
     id: session.salesRep.id,
-    code: session.salesRep.code,
+    code: session.salesRep.code.toString(), // Convert number to string
     name: session.salesRep.name,
     email: session.salesRep.email,
     phone: session.salesRep.phone
