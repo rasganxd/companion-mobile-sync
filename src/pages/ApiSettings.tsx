@@ -20,6 +20,7 @@ const ApiSettings = () => {
   const [apiUrl, setApiUrl] = useState('');
   const [isTestingApi, setIsTestingApi] = useState(false);
   const [apiStatus, setApiStatus] = useState<boolean | null>(null);
+  const [lastTestError, setLastTestError] = useState<string | null>(null);
 
   useEffect(() => {
     // Load existing config if available
@@ -41,6 +42,8 @@ const ApiSettings = () => {
     }
 
     setIsTestingApi(true);
+    setLastTestError(null);
+    
     try {
       console.log('📡 Testing API connection to mobile orders import:', apiUrl);
 
@@ -53,27 +56,27 @@ const ApiSettings = () => {
           'Authorization': `Bearer ${session.sessionToken}`
         },
         body: JSON.stringify({
-          test: true,
-          customer_id: 'test',
-          date: new Date().toISOString(),
-          status: 'pending',
-          total: 0
+          test: true
         })
       });
 
-      if (response.ok || response.status === 400) {
-        // 400 is expected for test data, but it means the endpoint is reachable
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ API connection successful:', data);
         setApiStatus(true);
+        setLastTestError(null);
         toast.success('Conexão com API estabelecida!');
-        console.log('✅ API connection successful');
       } else {
-        setApiStatus(false);
         const errorText = await response.text();
         console.error('❌ API connection failed:', response.status, errorText);
-        toast.error('Falha ao conectar com a API');
+        setApiStatus(false);
+        setLastTestError(`${response.status}: ${errorText}`);
+        toast.error(`Falha ao conectar: ${response.status}`);
       }
     } catch (error) {
       setApiStatus(false);
+      const errorMessage = error instanceof Error ? error.message : 'Erro de conexão';
+      setLastTestError(errorMessage);
       console.error('❌ API connection error:', error);
       toast.error('Erro de conexão com a API');
     } finally {
@@ -87,18 +90,13 @@ const ApiSettings = () => {
       return;
     }
 
-    if (!apiStatus) {
-      toast.error('Teste e valide a conexão com a API antes de salvar');
-      return;
-    }
-
     if (!session?.sessionToken) {
       toast.error('Usuário não autenticado');
       return;
     }
 
     updateApiConfig({
-      token: session.sessionToken, // Use the session token
+      token: session.sessionToken,
       apiUrl
     });
 
@@ -169,11 +167,11 @@ const ApiSettings = () => {
                 type="url" 
                 value={apiUrl} 
                 onChange={e => setApiUrl(e.target.value)} 
-                placeholder="https://api.exemplo.com/functions/v1" 
+                placeholder="https://projeto.supabase.co/functions/v1" 
                 className="w-full" 
               />
               <p className="text-xs text-gray-500">
-                URL base da API (ex: https://projeto.supabase.co/functions/v1)
+                URL base da API Supabase Functions (ex: https://projeto.supabase.co/functions/v1)
               </p>
             </div>
             
@@ -196,6 +194,19 @@ const ApiSettings = () => {
               </div>
             </div>
             
+            {/* Show error details if connection failed */}
+            {apiStatus === false && lastTestError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <span className="text-sm font-medium text-red-700">Erro de Conexão:</span>
+                    <p className="text-sm text-red-600 mt-1">{lastTestError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <Button 
               onClick={testApiConnection} 
               disabled={isTestingApi || !apiUrl.trim() || !session?.sessionToken} 
@@ -204,6 +215,17 @@ const ApiSettings = () => {
             >
               {isTestingApi ? 'Testando...' : 'Testar Conexão'}
             </Button>
+            
+            {/* Skip test option */}
+            {apiStatus === false && (
+              <Button 
+                onClick={saveConfiguration}
+                variant="ghost"
+                className="w-full text-sm"
+              >
+                Salvar mesmo assim (pular teste)
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -234,7 +256,7 @@ const ApiSettings = () => {
             </div>
             
             <p className="text-sm text-gray-600">
-              A autenticação é feita automaticamente com o login do vendedor.
+              A autenticação é feita automaticamente com o token de sessão do vendedor logado.
             </p>
           </CardContent>
         </Card>
@@ -244,12 +266,18 @@ const ApiSettings = () => {
           <CardContent className="pt-6">
             <Button 
               onClick={handleContinue} 
-              disabled={!apiStatus || !session?.sessionToken} 
+              disabled={!session?.sessionToken} 
               className="w-full" 
               size="lg"
             >
               {hasApiConfig() ? 'Continuar para o Sistema' : 'Salvar e Continuar'}
             </Button>
+            
+            {apiStatus === false && (
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Você pode continuar mesmo se o teste falhar. A configuração será salva.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -266,10 +294,13 @@ const ApiSettings = () => {
               • A API deve ter o endpoint <code>/mobile-orders-import</code> disponível
             </p>
             <p className="text-sm text-gray-600">
-              • A autenticação é feita com o token da sessão do vendedor
+              • A autenticação é feita com o token de sessão do vendedor logado
             </p>
             <p className="text-sm text-gray-600">
-              • Os pedidos enviados ficam pendentes de importação manual
+              • Os pedidos enviados ficam pendentes de importação manual no sistema desktop
+            </p>
+            <p className="text-sm text-gray-600">
+              • URL típica: <code>https://projeto.supabase.co/functions/v1</code>
             </p>
           </CardContent>
         </Card>

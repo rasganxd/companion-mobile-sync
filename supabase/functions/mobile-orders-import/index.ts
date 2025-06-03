@@ -25,6 +25,7 @@ interface MobileOrder {
   notes?: string;
   payment_method?: string;
   items?: OrderItem[];
+  test?: boolean; // For connection testing
 }
 
 serve(async (req) => {
@@ -52,38 +53,121 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    if (authError || !user) {
+    // Primeiro, tentar validar como JWT do Supabase
+    let user = null;
+    let authError = null;
+    
+    try {
+      const { data: { user: jwtUser }, error: jwtError } = await supabase.auth.getUser(token);
+      user = jwtUser;
+      authError = jwtError;
+    } catch (err) {
+      // Se falhar como JWT, verificar se é um token de sessão móvel customizado
+      console.log('🔍 Token is not a valid JWT, checking if it\'s a mobile session token');
+      
+      if (token.startsWith('mobile_')) {
+        // Validar formato do token de sessão móvel: mobile_{sales_rep_id}_{timestamp}_{random}
+        const tokenParts = token.split('_');
+        if (tokenParts.length >= 4 && tokenParts[0] === 'mobile') {
+          const salesRepId = tokenParts[1];
+          const timestamp = parseInt(tokenParts[2]);
+          
+          // Verificar se o token não é muito antigo (24 horas)
+          const tokenAge = Date.now() - timestamp;
+          const maxAge = 24 * 60 * 60 * 1000; // 24 horas
+          
+          if (tokenAge > maxAge) {
+            throw new Error('Mobile session token expired');
+          }
+          
+          // Verificar se o vendedor existe e está ativo
+          const { data: salesRep, error: salesRepError } = await supabase
+            .from('sales_reps')
+            .select('id, code, name, email, active')
+            .eq('id', salesRepId)
+            .eq('active', true)
+            .single();
+          
+          if (salesRepError || !salesRep) {
+            console.error('❌ Sales rep not found for mobile token:', salesRepId, salesRepError);
+            throw new Error('Invalid mobile session token');
+          }
+          
+          console.log('✅ Mobile session token validated for sales rep:', salesRep.name);
+          
+          // Criar um objeto user-like para compatibilidade
+          user = {
+            id: `mobile_${salesRepId}`,
+            email: salesRep.email || `sales_rep_${salesRep.code}@mobile.app`,
+            sales_rep_id: salesRepId,
+            sales_rep_data: salesRep
+          };
+        } else {
+          throw new Error('Invalid mobile session token format');
+        }
+      } else {
+        throw new Error('Invalid authentication token');
+      }
+    }
+    
+    if (!user) {
       console.error('❌ Authentication failed:', authError);
       throw new Error('Invalid authentication');
     }
 
     console.log('✅ User authenticated:', user.id);
 
-    // Buscar informações do vendedor baseado no user autenticado
-    const { data: salesRep, error: salesRepError } = await supabase
-      .from('sales_reps')
-      .select('id, code, name, email')
-      .eq('auth_user_id', user.id)
-      .eq('active', true)
-      .single();
-
-    if (salesRepError || !salesRep) {
-      console.error('❌ Sales rep not found for user:', user.id, salesRepError);
-      throw new Error('Sales representative not found for authenticated user');
-    }
-
-    console.log('✅ Sales rep found:', salesRep);
-
     // Parse dos dados do pedido
     const orderData: MobileOrder = await req.json();
     console.log('📦 Received order data:', orderData);
 
-    // Validar dados obrigatórios
+    // Se for um teste de conexão, retornar sucesso
+    if (orderData.test) {
+      console.log('✅ Connection test successful');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Connection test successful',
+          endpoint: 'mobile-orders-import',
+          authenticated_user: user.id,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
+    // Validar dados obrigatórios para pedidos reais
     if (!orderData.customer_id || !orderData.total || !orderData.date) {
       throw new Error('Missing required order fields: customer_id, total, date');
     }
+
+    let salesRep;
+    
+    // Se o usuário tem dados de vendedor (mobile token), usar esses dados
+    if (user.sales_rep_data) {
+      salesRep = user.sales_rep_data;
+    } else {
+      // Buscar informações do vendedor baseado no user autenticado (JWT)
+      const { data: foundSalesRep, error: salesRepError } = await supabase
+        .from('sales_reps')
+        .select('id, code, name, email')
+        .eq('auth_user_id', user.id)
+        .eq('active', true)
+        .single();
+
+      if (salesRepError || !foundSalesRep) {
+        console.error('❌ Sales rep not found for user:', user.id, salesRepError);
+        throw new Error('Sales representative not found for authenticated user');
+      }
+      
+      salesRep = foundSalesRep;
+    }
+
+    console.log('✅ Sales rep found:', salesRep);
 
     // Verificar se o cliente pertence ao vendedor
     const { data: customer, error: customerError } = await supabase
