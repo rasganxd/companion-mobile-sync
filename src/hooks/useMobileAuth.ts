@@ -1,134 +1,81 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { useSupabaseAuth } from './useSupabaseAuth';
 
-interface MobileSalesRep {
-  id: string;
-  code: string;
-  name: string;
-  email?: string;
-  phone?: string;
+// Interface para manter compatibilidade com código existente
+interface ApiConfig {
+  apiUrl: string;
+  token: string;
 }
 
 interface MobileSession {
   sessionToken: string;
-  salesRep: MobileSalesRep;
-  apiConfig?: {
-    token: string;
-    apiUrl: string;
+  salesRep: {
+    id: string;
+    name: string;
+    code: number;
+    email?: string;
+    phone?: string;
   };
+  apiConfig?: ApiConfig;
 }
 
 export const useMobileAuth = () => {
-  const [session, setSession] = useState<MobileSession | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+  const { 
+    user, 
+    salesRep, 
+    isLoading, 
+    isAuthenticated, 
+    signInWithEmailPassword, 
+    signOut: supabaseSignOut 
+  } = useSupabaseAuth();
 
-  useEffect(() => {
-    // Load session from localStorage on mount
-    const savedSession = localStorage.getItem('mobile_session');
-    if (savedSession) {
-      try {
-        const parsedSession = JSON.parse(savedSession);
-        setSession(parsedSession);
-        console.log('📱 Mobile session loaded from localStorage:', {
-          salesRep: parsedSession.salesRep?.name,
-          hasApiConfig: !!parsedSession.apiConfig
-        });
-      } catch (error) {
-        console.error('❌ Error parsing saved session:', error);
-        localStorage.removeItem('mobile_session');
-      }
+  // Criar sessão compatível com o formato existente
+  const session: MobileSession | null = user && salesRep ? {
+    sessionToken: user.id, // Usar user ID como token de sessão
+    salesRep: {
+      id: salesRep.sales_rep_id,
+      name: salesRep.name,
+      code: salesRep.code,
+      email: salesRep.email,
+      phone: salesRep.phone
     }
-    setIsLoading(false);
-  }, []);
+  } : null;
 
-  const login = async (code: string, password: string) => {
-    try {
-      setIsLoading(true);
-      
-      console.log('🔐 Attempting mobile auth for sales rep code:', code);
-      
-      const { data, error } = await supabase.functions.invoke('mobile-auth', {
-        body: { code, password }
-      });
-
-      if (error) {
-        console.error('❌ Mobile auth error:', error);
-        throw new Error(error.message || 'Erro de autenticação');
-      }
-
-      if (!data.success) {
-        console.error('❌ Mobile auth failed:', data.error);
-        throw new Error(data.error || 'Credenciais inválidas');
-      }
-
-      const newSession: MobileSession = {
-        sessionToken: data.sessionToken,
-        salesRep: data.salesRep
+  const login = async (username: string, password: string) => {
+    // Converter código do vendedor para email se necessário
+    let email = username;
+    if (!username.includes('@')) {
+      // Se não é email, assumir que é código do vendedor
+      // Para funcionar, o vendedor precisa ter email cadastrado
+      console.log('⚠️ Login por código ainda não implementado. Use email e senha.');
+      return {
+        success: false,
+        error: 'Use email e senha para fazer login'
       };
-
-      // Save session to localStorage
-      localStorage.setItem('mobile_session', JSON.stringify(newSession));
-      setSession(newSession);
-
-      console.log('✅ Mobile auth successful for sales rep:', data.salesRep.name);
-      return { success: true };
-    } catch (error) {
-      console.error('❌ Login error:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      };
-    } finally {
-      setIsLoading(false);
     }
+
+    return await signInWithEmailPassword(email, password);
   };
 
-  const logout = () => {
-    console.log('👋 Logging out mobile session');
-    localStorage.removeItem('mobile_session');
-    setSession(null);
-    navigate('/login');
+  const signOut = async () => {
+    await supabaseSignOut();
   };
 
-  const updateApiConfig = (config: { token: string; apiUrl: string }) => {
-    if (session) {
-      const updatedSession = {
-        ...session,
-        apiConfig: config
-      };
-      localStorage.setItem('mobile_session', JSON.stringify(updatedSession));
-      setSession(updatedSession);
-      console.log('🔧 API config updated:', {
-        apiUrl: config.apiUrl,
-        hasToken: !!config.token
-      });
-    }
-  };
+  // Para manter compatibilidade, sempre retorna true (não precisa de config API)
+  const hasApiConfig = () => true;
 
-  const isAuthenticated = () => session !== null;
-  
-  const hasApiConfig = () => {
-    const hasConfig = session?.apiConfig?.apiUrl && session?.sessionToken;
-    console.log('🔍 Checking API config:', {
-      hasSession: !!session,
-      hasApiUrl: !!session?.apiConfig?.apiUrl,
-      hasSessionToken: !!session?.sessionToken,
-      result: !!hasConfig
-    });
-    return !!hasConfig;
+  // Função vazia para manter compatibilidade
+  const updateApiConfig = (config: ApiConfig) => {
+    console.log('🔄 API config not needed with Supabase integration');
   };
 
   return {
     session,
-    salesRep: session?.salesRep || null,
-    isLoading,
-    isAuthenticated,
-    hasApiConfig,
     login,
-    logout,
+    signOut,
+    isAuthenticated,
+    isLoading,
+    hasApiConfig,
     updateApiConfig
   };
 };

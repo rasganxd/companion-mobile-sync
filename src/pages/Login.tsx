@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useMobileAuth } from '@/hooks/useMobileAuth';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -17,9 +17,8 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validar campos obrigatórios
-    if (!username.trim()) {
-      toast.error('Código do vendedor é obrigatório');
+    if (!email.trim()) {
+      toast.error('Email é obrigatório');
       return;
     }
     
@@ -31,11 +30,11 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(username, password);
+      const result = await login(email, password);
       
       if (result.success) {
         toast.success('Login realizado com sucesso!');
-        navigate('/api-settings'); // Redirecionar para configuração da API
+        navigate('/home');
       } else {
         toast.error(result.error || 'Erro ao fazer login');
       }
@@ -64,21 +63,21 @@ const Login = () => {
               </div>
             </div>
             <h2 className="text-xl font-semibold text-gray-800">Acesso ao Sistema</h2>
-            <p className="text-gray-500 mt-2">Insira suas credenciais para continuar</p>
+            <p className="text-gray-500 mt-2">Use suas credenciais do Supabase</p>
           </div>
           
           <form className="space-y-5" onSubmit={handleLogin}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
-                Código do Vendedor <span className="text-red-500">*</span>
+                Email <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <Input
-                  type="number"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="pl-10 py-2 border-gray-300 focus:border-app-blue focus:ring focus:ring-app-blue/30 transition-all duration-200"
-                  placeholder="Digite seu código"
+                  placeholder="Digite seu email"
                   required
                   disabled={isLoading}
                 />
@@ -109,7 +108,7 @@ const Login = () => {
                   <KeyRound size={16} />
                 </div>
               </div>
-              <p className="text-xs text-gray-500">Senha criada no sistema desktop</p>
+              <p className="text-xs text-gray-500">Use a mesma senha do sistema Supabase</p>
             </div>
             
             <AppButton
@@ -117,7 +116,7 @@ const Login = () => {
               variant="blue"
               fullWidth
               className="mt-6 py-2.5 transition-all duration-200 transform hover:translate-y-[-2px]"
-              disabled={isLoading || !username.trim() || !password.trim()}
+              disabled={isLoading || !email.trim() || !password.trim()}
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </AppButton>
@@ -125,7 +124,7 @@ const Login = () => {
           
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Use as credenciais criadas no sistema desktop.
+              Sistema integrado com Supabase - sem necessidade de configuração adicional.
             </p>
           </div>
         </div>

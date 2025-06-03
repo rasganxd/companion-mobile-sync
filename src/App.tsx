@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,9 +19,7 @@ import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import CapturePosition from '@/pages/CapturePosition';
 import SyncSettings from '@/pages/SyncSettings';
-import QRScanPage from '@/pages/QRScanPage';
 import NotFound from '@/pages/NotFound';
-import ApiSettings from '@/pages/ApiSettings';
 import MyOrders from '@/pages/MyOrders';
 import OrderDetails from '@/pages/OrderDetails';
 import TransmitOrders from '@/pages/TransmitOrders';
@@ -45,25 +44,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Config Route - requires auth but redirects to config if not configured
-const ConfigRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, hasApiConfig, isLoading } = useMobileAuth();
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  }
-
-  if (!isAuthenticated()) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!hasApiConfig()) {
-    return <Navigate to="/api-settings" replace />;
-  }
-
-  return <>{children}</>;
-};
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -75,119 +55,111 @@ function App() {
               {/* Public routes */}
               <Route path="/login" element={<Login />} />
               
-              {/* Config route - requires auth but allows unconfigured users */}
-              <Route path="/api-settings" element={
+              {/* Protected routes */}
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              <Route path="/home" element={
                 <ProtectedRoute>
-                  <ApiSettings />
+                  <Home />
                 </ProtectedRoute>
               } />
               
-              {/* Protected routes - require auth AND config */}
-              <Route path="/" element={<Navigate to="/home" replace />} />
-              <Route path="/home" element={
-                <ConfigRoute>
-                  <Home />
-                </ConfigRoute>
-              } />
-              
               <Route path="/client-activities" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <Index />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               
               <Route path="/client-fullscreen" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <ClientFullScreenView />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               
               <Route path="/clients" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <ClientsList />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/clientes-lista" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <ClientsList />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/client/:id" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <ClientDetails />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/place-order" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <PlaceOrder />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/order-review" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <OrderReview />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/my-orders" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <MyOrders />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/order-details/:id" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <OrderDetails />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/ultimas-compras" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <LastPurchases />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/visit-routes" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <VisitRoutes />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/rotas" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <VisitRoutes />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/negativar-venda" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <NegativeSale />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/mensagem" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <MessagePage />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/capturar-posicao" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <CapturePosition />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/sync-settings" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <SyncSettings />
-                </ConfigRoute>
-              } />
-              <Route path="/qr-scanner" element={
-                <ConfigRoute>
-                  <QRScanPage />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/transmit-orders" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <TransmitOrders />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
               <Route path="/reports" element={
-                <ConfigRoute>
+                <ProtectedRoute>
                   <Reports />
-                </ConfigRoute>
+                </ProtectedRoute>
               } />
-              <Route path="/supabase-sync" element={<SupabaseSync />} />
+              <Route path="/supabase-sync" element={
+                <ProtectedRoute>
+                  <SupabaseSync />
+                </ProtectedRoute>
+              } />
               
               {/* Redirects for old routes */}
               <Route path="/message" element={<Navigate to="/mensagem" replace />} />
