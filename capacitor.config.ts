@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'app.lovable.b59a35aa537b448a9b7f6ed0f1ddcd77',
-  appName: 'Vendas Fortes Mobile',
+  appName: 'SalesTrack Mobile',
   webDir: 'dist',
   bundledWebRuntime: true, // Bundle runtime for standalone app
   plugins: {

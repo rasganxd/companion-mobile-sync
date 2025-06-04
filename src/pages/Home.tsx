@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Route, Package, BarChart3, Settings, Send, LogOut } from 'lucide-react';
@@ -74,7 +75,7 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header title="Vendas Fortes" backgroundColor="blue" />
+      <Header title="SalesTrack Mobile" backgroundColor="blue" />
       
       {/* Informações do vendedor e sincronização */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 space-y-2">
