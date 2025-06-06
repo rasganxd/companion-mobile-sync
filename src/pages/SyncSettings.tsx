@@ -1,49 +1,32 @@
 
-import React, { useEffect, useState } from 'react';
-import { Cloud, CloudOff, RefreshCw, Settings, Database, CheckCircle, Clock } from 'lucide-react';
+import React from 'react';
+import { Database, Clock, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import { useSync } from '@/hooks/useSync';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { toast } from 'sonner';
+import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const SyncSettings = () => {
   const navigate = useNavigate();
-  const { 
-    syncStatus, 
-    syncSettings, 
-    updateSettings
-  } = useSync();
-  
-  const [lastSyncText, setLastSyncText] = useState<string>('Nunca');
-  
-  useEffect(() => {
-    if (syncStatus.lastSync) {
-      const date = new Date(syncStatus.lastSync);
-      setLastSyncText(
-        `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
-      );
+  const { syncStatus } = useLocalSyncStatus();
+
+  const formatLastSync = () => {
+    if (!syncStatus.lastSync) {
+      return 'Nunca sincronizado';
     }
-  }, [syncStatus.lastSync]);
-
-  const handleToggleAutoSync = async () => {
-    await updateSettings({ autoSync: !syncSettings.autoSync });
-  };
-
-  const handleToggleWifiOnly = async () => {
-    await updateSettings({ syncOnWifiOnly: !syncSettings.syncOnWifiOnly });
-  };
-
-  const handleToggleSyncEnabled = async () => {
-    await updateSettings({ syncEnabled: !syncSettings.syncEnabled });
+    
+    try {
+      return format(syncStatus.lastSync, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    } catch (error) {
+      return 'Data inválida';
+    }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
-        title="Sincronização" 
+        title="Configurações de Sync" 
         showBackButton={true} 
         backgroundColor="blue" 
       />
@@ -58,27 +41,20 @@ const SyncSettings = () => {
               <div className="flex-1">
                 <div className="font-medium text-green-700">
                   <CheckCircle size={16} className="inline mr-2" />
-                  Supabase Integrado
+                  Sistema Local (Offline-First)
                 </div>
                 <div className="text-sm text-gray-600 mt-1">
-                  Sincronização direta via Supabase - sempre ativo
+                  Todos os dados são armazenados localmente
                 </div>
               </div>
             </div>
             
             <div className="pl-4 border-l-2 border-green-200">
               <div className="text-sm text-gray-600 mb-2">
-                ✅ Mobile envia pedidos para o banco compartilhado<br/>
-                ✅ Desktop importa pedidos do banco compartilhado<br/>
-                ✅ Atualizações de produtos e clientes sincronizadas automaticamente
+                ✅ Dados salvos localmente no dispositivo<br/>
+                ✅ Funciona completamente offline<br/>
+                ✅ Pedidos aguardam transmissão para o desktop
               </div>
-              <Button 
-                onClick={() => navigate('/supabase-sync')}
-                className="w-full bg-green-600 hover:bg-green-700 mt-2"
-              >
-                <Database size={16} className="mr-2" />
-                Abrir Sincronização Supabase
-              </Button>
             </div>
           </div>
         </div>
@@ -86,33 +62,24 @@ const SyncSettings = () => {
         {/* Status Card */}
         <div className="bg-white rounded-lg shadow p-4 mb-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Status da Sincronização</h2>
+            <h2 className="text-lg font-semibold">Status do Sistema</h2>
             <div className="flex items-center">
-              {syncStatus.connected ? (
-                <Cloud size={20} className="text-green-500 mr-2" />
-              ) : (
-                <CloudOff size={20} className="text-red-500 mr-2" />
-              )}
-              <span className={syncStatus.connected ? "text-green-500" : "text-red-500"}>
-                {syncStatus.connected ? "Conectado" : "Desconectado"}
-              </span>
+              <Database size={20} className="text-green-500 mr-2" />
+              <span className="text-green-500">Local</span>
             </div>
           </div>
           
           <div className="mt-4">
             <div className="flex justify-between py-2">
               <span className="text-gray-600">Última sincronização:</span>
-              <span className="font-medium">{lastSyncText}</span>
+              <span className="font-medium">{formatLastSync()}</span>
             </div>
             
             <div className="flex justify-between py-2">
-              <span className="text-gray-600">Pedidos para enviar:</span>
-              <span className={syncStatus.pendingUploads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingUploads}</span>
-            </div>
-            
-            <div className="flex justify-between py-2">
-              <span className="text-gray-600">Atualizações disponíveis:</span>
-              <span className={syncStatus.pendingDownloads > 0 ? "font-medium text-amber-600" : "font-medium"}>{syncStatus.pendingDownloads}</span>
+              <span className="text-gray-600">Pedidos para transmitir:</span>
+              <span className={syncStatus.pendingOrdersCount > 0 ? "font-medium text-amber-600" : "font-medium"}>
+                {syncStatus.pendingOrdersCount}
+              </span>
             </div>
           </div>
           
@@ -120,46 +87,27 @@ const SyncSettings = () => {
             <div className="flex items-center">
               <Clock size={20} className="text-blue-500 mr-2" />
               <span className="text-blue-700 text-sm">
-                Sincronização automática via Supabase - sem necessidade de configuração manual
+                Sistema funcionando em modo local - dados salvos no dispositivo
               </span>
             </div>
           </div>
         </div>
         
-        {/* Settings Card */}
+        {/* Info Card */}
         <div className="bg-white rounded-lg shadow p-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Configurações</h2>
-            <Settings size={20} className="text-gray-600" />
-          </div>
+          <h2 className="text-lg font-semibold mb-4">Informações do Sistema</h2>
           
-          <div className="mt-4">
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <div className="font-medium">Sincronização automática</div>
-                <div className="text-sm text-gray-500">Sincronizar automaticamente em intervalos</div>
-              </div>
-              <Switch checked={syncSettings.autoSync} onCheckedChange={handleToggleAutoSync} />
+          <div className="space-y-3">
+            <div className="text-sm text-gray-600">
+              <strong>Configuração Atual:</strong> Sistema Local (Offline-First)
             </div>
             
-            <Separator className="my-2" />
-            
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <div className="font-medium">Apenas em Wi-Fi</div>
-                <div className="text-sm text-gray-500">Sincronizar somente quando conectado em Wi-Fi</div>
-              </div>
-              <Switch checked={syncSettings.syncOnWifiOnly} onCheckedChange={handleToggleWifiOnly} />
+            <div className="text-sm text-gray-600">
+              <strong>Armazenamento:</strong> SQLite Local
             </div>
             
-            <Separator className="my-2" />
-            
-            <div className="flex items-center justify-between py-2">
-              <div>
-                <div className="font-medium">Sincronização ativa</div>
-                <div className="text-sm text-gray-500">Ativar/desativar sincronização</div>
-              </div>
-              <Switch checked={syncSettings.syncEnabled} onCheckedChange={handleToggleSyncEnabled} />
+            <div className="text-sm text-gray-600">
+              <strong>Transmissão:</strong> Via sincronização com desktop
             </div>
           </div>
         </div>
