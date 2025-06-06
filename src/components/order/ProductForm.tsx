@@ -5,8 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import ProductNavigation from './ProductNavigation';
 import QuantityInput from './QuantityInput';
-import { supabase } from '@/integrations/supabase/client';
 import { useProductPricing } from '@/hooks/useProductPricing';
+import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface Product {
   id: string;
@@ -54,20 +54,26 @@ const ProductForm: React.FC<ProductFormProps> = ({
   useEffect(() => {
     const fetchPaymentTables = async () => {
       try {
-        const { data, error } = await supabase
-          .from('payment_tables')
-          .select('id, name, description')
-          .eq('active', true)
-          .order('name');
-
-        if (error) {
-          console.error('Error fetching payment tables:', error);
-          return;
-        }
-
-        setPaymentTables(data || []);
+        // Buscar tabelas de pagamento do banco local
+        const db = getDatabaseAdapter();
+        const tables = await db.getPaymentTables();
+        
+        // Converter para o formato esperado
+        const formattedTables = tables.map(table => ({
+          id: table.id || table.name,
+          name: table.name,
+          description: table.description
+        }));
+        
+        setPaymentTables(formattedTables);
       } catch (error) {
-        console.error('Error fetching payment tables:', error);
+        console.error('Error fetching payment tables from local database:', error);
+        // Fallback para tabelas padrão
+        setPaymentTables([
+          { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
+          { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
+          { id: '3', name: 'Prazo 60', description: 'Pagamento em 60 dias' }
+        ]);
       }
     };
 

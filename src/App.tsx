@@ -1,188 +1,97 @@
 
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { NavigationProvider } from '@/contexts/NavigationContext';
-import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
-import { useLocalAuth } from '@/hooks/useLocalAuth';
 
-import Index from '@/pages/Index';
-import InitialSync from '@/pages/InitialSync';
+// Pages
 import Home from '@/pages/Home';
-import ClientsList from '@/pages/ClientsList';
-import ClientDetails from '@/pages/ClientDetails';
-import PlaceOrder from '@/pages/PlaceOrder';
-import OrderReview from '@/pages/OrderReview';
-import LastPurchases from '@/pages/LastPurchases';
+import InitialSync from '@/pages/InitialSync';
 import VisitRoutes from '@/pages/VisitRoutes';
-import NegativeSale from '@/pages/NegativeSale';
-import MessagePage from '@/pages/MessagePage';
-import CapturePosition from '@/pages/CapturePosition';
-import SyncSettings from '@/pages/SyncSettings';
-import NotFound from '@/pages/NotFound';
+import ClientsList from '@/pages/ClientsList';
+import ClientActivities from '@/pages/ClientActivities';
 import MyOrders from '@/pages/MyOrders';
-import OrderDetails from '@/pages/OrderDetails';
-import TransmitOrders from '@/pages/TransmitOrders';
-import ClientFullScreenView from '@/pages/ClientFullScreenView';
 import Reports from '@/pages/Reports';
+import SyncSettings from '@/pages/SyncSettings';
+import TransmitOrders from '@/pages/TransmitOrders';
 
-const queryClient = new QueryClient();
+// Context Providers
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // Protected Route Component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isLoading, hasInitialSync } = useLocalAuth();
+import ProtectedRoute from '@/components/ProtectedRoute';
 
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  }
-
-  if (!hasInitialSync()) {
-    return <Navigate to="/initial-sync" replace />;
-  }
-
-  return <>{children}</>;
-};
-
-// Public Route Component (for initial sync only)
-const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isLoading, hasInitialSync } = useLocalAuth();
-
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
-  }
-
-  if (hasInitialSync()) {
-    return <Navigate to="/home" replace />;
-  }
-
-  return <>{children}</>;
-};
+const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen bg-gray-50">
-        <BrowserRouter>
-          <NavigationProvider>
-            <MobileBackButtonManager />
+      <AuthProvider>
+        <Router>
+          <div className="App">
             <Routes>
-              {/* Public route for initial sync */}
-              <Route path="/initial-sync" element={
-                <PublicRoute>
-                  <InitialSync />
-                </PublicRoute>
-              } />
+              {/* Initial Sync Route - não protegida */}
+              <Route path="/initial-sync" element={<InitialSync />} />
               
-              {/* Protected routes */}
-              <Route path="/" element={<Navigate to="/home" replace />} />
+              {/* Protected Routes */}
               <Route path="/home" element={
                 <ProtectedRoute>
                   <Home />
                 </ProtectedRoute>
               } />
               
-              <Route path="/client-activities" element={
-                <ProtectedRoute>
-                  <Index />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/client-fullscreen" element={
-                <ProtectedRoute>
-                  <ClientFullScreenView />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/clients" element={
-                <ProtectedRoute>
-                  <ClientsList />
-                </ProtectedRoute>
-              } />
-              <Route path="/clientes-lista" element={
-                <ProtectedRoute>
-                  <ClientsList />
-                </ProtectedRoute>
-              } />
-              <Route path="/client/:id" element={
-                <ProtectedRoute>
-                  <ClientDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/place-order" element={
-                <ProtectedRoute>
-                  <PlaceOrder />
-                </ProtectedRoute>
-              } />
-              <Route path="/order-review" element={
-                <ProtectedRoute>
-                  <OrderReview />
-                </ProtectedRoute>
-              } />
-              <Route path="/my-orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              <Route path="/order-details/:id" element={
-                <ProtectedRoute>
-                  <OrderDetails />
-                </ProtectedRoute>
-              } />
-              <Route path="/ultimas-compras" element={
-                <ProtectedRoute>
-                  <LastPurchases />
-                </ProtectedRoute>
-              } />
-              <Route path="/visit-routes" element={
-                <ProtectedRoute>
-                  <VisitRoutes />
-                </ProtectedRoute>
-              } />
               <Route path="/rotas" element={
                 <ProtectedRoute>
                   <VisitRoutes />
                 </ProtectedRoute>
               } />
-              <Route path="/negativar-venda" element={
+              
+              <Route path="/clients-list" element={
                 <ProtectedRoute>
-                  <NegativeSale />
+                  <ClientsList />
                 </ProtectedRoute>
               } />
-              <Route path="/mensagem" element={
+              
+              <Route path="/client-activities" element={
                 <ProtectedRoute>
-                  <MessagePage />
+                  <ClientActivities />
                 </ProtectedRoute>
               } />
-              <Route path="/capturar-posicao" element={
+              
+              <Route path="/my-orders" element={
                 <ProtectedRoute>
-                  <CapturePosition />
+                  <MyOrders />
                 </ProtectedRoute>
               } />
-              <Route path="/sync-settings" element={
-                <ProtectedRoute>
-                  <SyncSettings />
-                </ProtectedRoute>
-              } />
-              <Route path="/transmit-orders" element={
-                <ProtectedRoute>
-                  <TransmitOrders />
-                </ProtectedRoute>
-              } />
+              
               <Route path="/reports" element={
                 <ProtectedRoute>
                   <Reports />
                 </ProtectedRoute>
               } />
               
-              {/* Redirects for old routes */}
-              <Route path="/message" element={<Navigate to="/mensagem" replace />} />
-              <Route path="/negative-sale" element={<Navigate to="/negativar-venda" replace />} />
+              <Route path="/sync-settings" element={
+                <ProtectedRoute>
+                  <SyncSettings />
+                </ProtectedRoute>
+              } />
               
-              <Route path="*" element={<NotFound />} />
+              <Route path="/transmit-orders" element={
+                <ProtectedRoute>
+                  <TransmitOrders />
+                </ProtectedRoute>
+              } />
+              
+              {/* Default redirect */}
+              <Route path="/" element={<Navigate to="/initial-sync" replace />} />
+              
+              {/* Catch all route */}
+              <Route path="*" element={<Navigate to="/initial-sync" replace />} />
             </Routes>
-          </NavigationProvider>
-        </BrowserRouter>
-      </div>
+            
+            <Toaster richColors position="top-center" />
+          </div>
+        </Router>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

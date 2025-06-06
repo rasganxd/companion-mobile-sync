@@ -1,10 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -35,14 +35,11 @@ const ClientsList = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Melhorar a lógica para obter o dia da semana
   const getDayFromState = () => {
-    // Primeiro, tentar pegar do state da navegação
     if (location.state?.day) {
       return location.state.day;
     }
     
-    // Se não houver, usar o dia atual da semana
     const today = new Date();
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const currentDay = dayNames[today.getDay()];
@@ -94,76 +91,40 @@ const ClientsList = () => {
           return;
         }
         
-        console.log(`🔍 Fetching customers for ${day} (${englishDay}) from Supabase...`);
+        console.log(`🔍 Fetching customers for ${day} (${englishDay}) from local database...`);
         
-        const { data: customers, error: customersError } = await supabase
-          .from('customers')
-          .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
-          .eq('active', true)
-          .eq('sales_rep_id', salesRep.id)
-          .not('visit_days', 'is', null);
+        // Buscar clientes do banco local
+        const db = getDatabaseAdapter();
+        const allCustomers = await db.getCustomers();
         
-        if (customersError) {
-          console.error('❌ Error fetching customers:', customersError);
-          throw customersError;
-        }
-        
-        const dayClients = customers?.filter(customer => 
+        // Filtrar clientes ativos do vendedor que têm o dia de visita
+        const dayClients = allCustomers.filter(customer => 
+          customer.active && 
+          customer.sales_rep_id === salesRep.id &&
           customer.visit_days && 
           Array.isArray(customer.visit_days) && 
           customer.visit_days.includes(englishDay)
-        ) || [];
+        );
         
         const today = new Date().toISOString().split('T')[0];
         const clientIds = dayClients.map(client => client.id);
         
-        const { data: orders, error: ordersError } = await supabase
-          .from('orders')
-          .select('customer_id, status, total, date')
-          .in('customer_id', clientIds)
-          .gte('date', today)
-          .lt('date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-        
-        if (ordersError) {
-          console.error('❌ Error fetching orders:', ordersError);
-        }
-        
-        const db = getDatabaseAdapter();
+        // Buscar pedidos locais do dia
         const allLocalOrders = await db.getAllOrders();
-        
-        // CORREÇÃO: Incluir TODOS os pedidos locais (pending_sync, transmitted, synced, pending_import)
         const localOrders = allLocalOrders.filter(order => 
           order.sales_rep_id === salesRep.id && 
           clientIds.includes(order.customer_id) &&
-          order.sync_status !== 'error' // Incluir pending_sync, transmitted, synced E pending_import
+          order.sync_status !== 'error' &&
+          new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0] === today
         );
         
         console.log('👥 Day clients for salesperson:', dayClients);
-        console.log('📋 Online orders for today:', orders);
-        console.log('📱 ALL Local orders for salesperson (including transmitted and pending_import):', localOrders);
+        console.log('📱 Local orders for today:', localOrders);
         
         const clientsWithStatus = dayClients.map(client => {
-          const clientOnlineOrders = orders?.filter(order => order.customer_id === client.id) || [];
-          
-          // CORREÇÃO: Considerar TODOS os pedidos locais, incluindo pending_import
           const clientLocalOrders = localOrders.filter(order => 
             order.customer_id === client.id
           );
-          
-          // DEBUG específico para mymymy
-          if (client.name.toLowerCase().includes('mymymy') || client.company_name?.toLowerCase().includes('mymymy')) {
-            console.log(`🔍 DEBUG mymymy - Cliente:`, client);
-            console.log(`🔍 DEBUG mymymy - Online orders:`, clientOnlineOrders);
-            console.log(`🔍 DEBUG mymymy - Local orders:`, clientLocalOrders);
-            console.log(`🔍 DEBUG mymymy - All local orders with sync_status:`, 
-              clientLocalOrders.map(order => ({ 
-                id: order.id, 
-                sync_status: order.sync_status, 
-                status: order.status, 
-                total: order.total 
-              }))
-            );
-          }
           
           const pendingLocalOrders = clientLocalOrders.filter(order => order.sync_status === 'pending_sync');
           const transmittedLocalOrders = clientLocalOrders.filter(order => 
@@ -177,18 +138,19 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
-          // Verificar pedidos online primeiro
-          if (clientOnlineOrders.length > 0) {
-            const hasPositive = clientOnlineOrders.some(order => 
+          if (clientLocalOrders.length > 0) {
+            const hasPositive = clientLocalOrders.some(order => 
               order.status === 'pending' || 
               order.status === 'processed' || 
               order.status === 'delivered'
             );
-            const hasNegative = clientOnlineOrders.some(order => order.status === 'cancelled');
+            const hasNegative = clientLocalOrders.some(order => 
+              order.status === 'negativado' || order.status === 'cancelled'
+            );
             
             if (hasPositive) {
               status = 'positivado';
-              orderTotal = clientOnlineOrders
+              orderTotal = clientLocalOrders
                 .filter(order => 
                   order.status === 'pending' || 
                   order.status === 'processed' || 
@@ -200,59 +162,8 @@ const ClientsList = () => {
             }
           }
           
-          // CORREÇÃO: Verificar TODOS os pedidos locais (pendentes + transmitidos + pending_import)
-          if (status === 'pendente' && clientLocalOrders.length > 0) {
-            const hasPositiveLocal = clientLocalOrders.some(order => 
-              order.status === 'pending' || 
-              order.status === 'processed' || 
-              order.status === 'delivered'
-            );
-            const hasNegativeLocal = clientLocalOrders.some(order => 
-              order.status === 'negativado' || order.status === 'cancelled'
-            );
-            
-            if (hasPositiveLocal) {
-              status = 'positivado';
-              // CORREÇÃO: Somar TODOS os pedidos locais positivos
-              orderTotal += clientLocalOrders
-                .filter(order => 
-                  order.status === 'pending' || 
-                  order.status === 'processed' || 
-                  order.status === 'delivered'
-                )
-                .reduce((sum, order) => sum + (order.total || 0), 0);
-            } else if (hasNegativeLocal) {
-              status = 'negativado';
-            }
-          } else if (status === 'positivado') {
-            // Se já foi positivado por pedidos online, adicionar também os locais
-            orderTotal += clientLocalOrders
-              .filter(order => 
-                order.status === 'pending' || 
-                order.status === 'processed' || 
-                order.status === 'delivered'
-              )
-              .reduce((sum, order) => sum + (order.total || 0), 0);
-          }
-          
-          // DEBUG específico para mymymy - mostrar resultado final
-          if (client.name.toLowerCase().includes('mymymy') || client.company_name?.toLowerCase().includes('mymymy')) {
-            console.log(`🔍 DEBUG mymymy - Status final:`, status);
-            console.log(`🔍 DEBUG mymymy - Total final:`, orderTotal);
-            console.log(`🔍 DEBUG mymymy - Condições:`, {
-              hasOnlineOrders: clientOnlineOrders.length > 0,
-              hasLocalOrders: clientLocalOrders.length > 0,
-              localOrdersWithValidStatus: clientLocalOrders.filter(order => 
-                order.status === 'pending' || 
-                order.status === 'processed' || 
-                order.status === 'delivered'
-              ).length
-            });
-          }
-          
           console.log(`🔍 Client ${client.name}:`, {
-            onlineOrders: clientOnlineOrders.length,
-            allLocalOrders: clientLocalOrders.length,
+            localOrders: clientLocalOrders.length,
             pendingLocal: pendingLocalOrders.length,
             transmittedLocal: transmittedLocalOrders.length,
             status,
@@ -270,7 +181,7 @@ const ClientsList = () => {
           };
         });
         
-        console.log(`✅ Clients with corrected status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
+        console.log(`✅ Clients with status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
         setClients(clientsWithStatus);
         
       } catch (error) {
@@ -323,7 +234,7 @@ const ClientsList = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-500">
             <div className="text-lg">Vendedor não autenticado</div>
-            <div className="text-sm mt-2">Faça login para ver os clientes</div>
+            <div className="text-sm mt-2">Faça a primeira sincronização para continuar</div>
           </div>
         </div>
       </div>

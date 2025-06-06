@@ -1,9 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/integrations/supabase/client';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -61,7 +61,6 @@ const VisitRoutes = () => {
   const [loading, setLoading] = useState(true);
   const [clientsData, setClientsData] = useState<{ [key: string]: Client[] }>({});
   
-  // Mapeamento dos dias da semana
   const dayMapping: { [key: string]: string } = {
     'monday': 'Segunda',
     'tuesday': 'Terça', 
@@ -77,54 +76,50 @@ const VisitRoutes = () => {
       try {
         setLoading(true);
         
-        // Verificar se há vendedor logado
         if (!salesRep?.id) {
           console.log('❌ No sales rep logged in');
           return;
         }
         
-        console.log('🔍 Fetching customers from Supabase and local orders for sales rep:', salesRep.id);
+        console.log('🔍 Fetching customers from local database for sales rep:', salesRep.id);
         
-        // Buscar clientes ativos com dias de visita definidos do Supabase FILTRADOS pelo vendedor logado
-        const { data: customers, error: customersError } = await supabase
-          .from('customers')
-          .select('id, name, company_name, code, active, phone, address, city, state, visit_days')
-          .eq('active', true)
-          .eq('sales_rep_id', salesRep.id) // ✅ FILTRAR pelo vendedor logado
-          .not('visit_days', 'is', null);
-        
-        if (customersError) {
-          console.error('❌ Error fetching customers:', customersError);
-          throw customersError;
-        }
-        
-        // Buscar pedidos locais (incluindo transmitidos)
+        // Buscar clientes do banco local
         const db = getDatabaseAdapter();
+        const allCustomers = await db.getCustomers();
+        
+        // Filtrar clientes ativos do vendedor com dias de visita definidos
+        const customers = allCustomers.filter(customer => 
+          customer.active && 
+          customer.sales_rep_id === salesRep.id &&
+          customer.visit_days && 
+          Array.isArray(customer.visit_days) &&
+          customer.visit_days.length > 0
+        );
+        
+        // Buscar pedidos locais
         const localOrders = await db.getOrders();
         
-        // Filtrar pedidos válidos do dia atual (pending_sync OU transmitted)
+        // Filtrar pedidos válidos do dia atual
         const today = new Date().toISOString().split('T')[0];
         const todayValidOrders = localOrders.filter(order => {
           const orderDate = new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0];
-          // Incluir pedidos pendentes E transmitidos (excluir apenas deleted e error)
           const isValidOrder = order.sync_status === 'pending_sync' || 
                               order.sync_status === 'transmitted' || 
                               order.sync_status === 'synced';
-          return isValidOrder && orderDate === today;
+          return isValidOrder && orderDate === today && order.sales_rep_id === salesRep.id;
         });
         
         console.log('👥 Loaded customers for sales rep:', customers);
-        console.log('📋 Valid local orders for today (including transmitted):', todayValidOrders);
+        console.log('📋 Valid local orders for today:', todayValidOrders);
         
-        // PRIMEIRO: Calcular totais únicos por cliente (incluindo pedidos transmitidos)
+        // Calcular totais únicos por cliente
         const uniqueClientStats = new Map<string, {
           hasPositive: boolean;
           hasNegative: boolean;
           totalSales: number;
         }>();
         
-        // Processar cada cliente único uma vez
-        customers?.forEach(customer => {
+        customers.forEach(customer => {
           const clientOrders = todayValidOrders.filter(order => order.customer_id === customer.id);
           
           if (clientOrders.length > 0) {
@@ -151,7 +146,7 @@ const VisitRoutes = () => {
           }
         });
         
-        // Calcular totais gerais únicos (incluindo pedidos transmitidos)
+        // Calcular totais gerais
         let totalSales = 0;
         let totalPositivados = 0;
         let totalNegativados = 0;
@@ -167,24 +162,21 @@ const VisitRoutes = () => {
           }
         });
         
-        // Calcular pendentes (clientes sem pedidos válidos)
         const clientsWithValidOrders = new Set(todayValidOrders.map(order => order.customer_id));
-        const totalPendentes = (customers?.length || 0) - clientsWithValidOrders.size;
+        const totalPendentes = customers.length - clientsWithValidOrders.size;
         
-        console.log('💰 Unique client stats (including transmitted):', {
+        console.log('💰 Unique client stats:', {
           totalSales,
           totalPositivados,
           totalNegativados,
-          totalPendentes,
-          uniqueClientStats: Array.from(uniqueClientStats.entries())
+          totalPendentes
         });
         
-        // SEGUNDO: Processar dados das rotas por dia (para exibição na tabela)
+        // Processar rotas por dia
         const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         const dayClientsData: { [key: string]: Client[] } = {};
         
         const processedRoutes: RouteData[] = weekDays.map(day => {
-          // Encontrar a chave em inglês correspondente ao dia em português
           const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
           
           if (!englishDay) {
@@ -202,14 +194,12 @@ const VisitRoutes = () => {
             };
           }
           
-          // Filtrar clientes que têm esse dia nas suas visit_days
-          const dayClients = customers?.filter(customer => 
+          const dayClients = customers.filter(customer => 
             customer.visit_days && 
             Array.isArray(customer.visit_days) && 
             customer.visit_days.includes(englishDay)
-          ) || [];
+          );
           
-          // Processar clientes com status para o dia
           const clientsWithStatus = dayClients.map(client => {
             const clientStats = uniqueClientStats.get(client.id);
             
@@ -256,7 +246,6 @@ const VisitRoutes = () => {
           const clientNames = dayClients.map(client => client.name);
           const total = clientNames.length;
           
-          // Calcular status dos clientes baseado nos pedidos válidos (incluindo transmitidos)
           let positivados = 0;
           let negativados = 0;
           let pendentes = 0;
@@ -273,7 +262,6 @@ const VisitRoutes = () => {
                 negativados++;
               }
             } else {
-              // Cliente sem pedidos válidos = pendente
               pendentes++;
             }
           });
@@ -310,80 +298,52 @@ const VisitRoutes = () => {
           positivadosValue
         });
         
-        console.log('📋 Processed routes by day (including transmitted orders):', processedRoutes);
-        console.log('💰 Final unique sales data (including transmitted):', {
-          totalSales,
-          totalPositivados,
-          totalNegativados,
-          totalPendentes,
-          positivadosValue
-        });
-        
       } catch (error) {
         console.error('❌ Error loading routes data:', error);
-        
-        // Fallback para dados vazios
-        const weekDays = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-        setRoutes(weekDays.map(day => ({
-          day,
-          visited: 0,
-          remaining: 0,
-          total: 0,
-          clients: [],
-          positivados: 0,
-          negativados: 0,
-          pendentes: 0,
-          totalSales: 0
-        })));
+        toast.error('Erro ao carregar dados das rotas');
       } finally {
         setLoading(false);
       }
     };
     
     loadRoutesData();
-  }, [salesRep?.id]); // ✅ Adicionar salesRep.id como dependência
+  }, [salesRep]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
+  const handleVisitDay = (day: string) => {
+    navigate('/clients-list', {
+      state: { day }
+    });
   };
 
-  const handleDaySelect = (day: string) => {
-    console.log(`🗓️ Selected day: ${day}`);
-    
-    const dayClients = clientsData[day] || [];
-    
-    if (dayClients.length === 0) {
-      toast.error(`Nenhum cliente encontrado para ${day}`);
-      return;
-    }
-    
-    console.log(`📊 Navigating to client-fullscreen with ${dayClients.length} clients for ${day}`);
-    
-    // Navegar diretamente para a visualização full-screen com o dia correto
-    navigate('/client-fullscreen', {
-      state: {
-        clients: dayClients,
-        initialIndex: 0,
-        day: day
-      }
-    });
+  const getRouteColor = (visited: number, total: number) => {
+    if (total === 0) return 'bg-gray-200';
+    const percentage = (visited / total) * 100;
+    if (percentage === 100) return 'bg-green-500';
+    if (percentage >= 50) return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
-        <Header 
-          title="Rotas de Visitas" 
-          backgroundColor="blue" 
-          showBackButton={true}
-        />
-        
+        <Header title="Rotas de Visita" showBackButton backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-lg text-gray-600">Carregando rotas...</div>
+          <div className="text-center text-gray-500">
+            <div className="text-lg">Carregando rotas...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salesRep) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title="Rotas de Visita" showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-lg">Vendedor não autenticado</div>
+            <div className="text-sm mt-2">Faça a primeira sincronização para continuar</div>
           </div>
         </div>
       </div>
@@ -392,71 +352,74 @@ const VisitRoutes = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        title="Rotas de Visitas" 
-        backgroundColor="blue" 
-        showBackButton={true}
-      />
+      <Header title="Rotas de Visita" showBackButton backgroundColor="blue" />
       
-      <div className="p-3 flex-1">
-        {/* Cards de resumo */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1 text-sm">Total de Vendas (Local)</h3>
-            <div className="text-lg font-bold text-green-600">{formatCurrency(salesData.totalSales)}</div>
+      <div className="p-4 flex-1">
+        {/* Resumo de Vendas */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <h2 className="text-lg font-semibold mb-4">Resumo do Dia</h2>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">
+                {salesData.totalPositivados}
+              </div>
+              <div className="text-sm text-gray-600">Positivados</div>
+              <div className="text-lg font-semibold text-green-700">
+                R$ {salesData.positivadosValue.toFixed(2)}
+              </div>
+            </div>
+            
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <div className="text-2xl font-bold text-red-600">
+                {salesData.totalNegativados}
+              </div>
+              <div className="text-sm text-gray-600">Negativados</div>
+            </div>
           </div>
           
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1 text-sm">Positivados</h3>
-            <div className="text-lg font-bold text-green-600">{salesData.totalPositivados}</div>
-            <div className="text-xs text-gray-500">{formatCurrency(salesData.positivadosValue)}</div>
-          </div>
-          
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1 text-sm">Negativados</h3>
-            <div className="text-lg font-bold text-red-500">{salesData.totalNegativados}</div>
-          </div>
-          
-          <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100">
-            <h3 className="text-gray-700 font-medium mb-1 text-sm">Pendentes</h3>
-            <div className="text-lg font-bold text-gray-600">{salesData.totalPendentes}</div>
+          <div className="mt-4 text-center p-3 bg-gray-50 rounded-lg">
+            <div className="text-2xl font-bold text-gray-600">
+              {salesData.totalPendentes}
+            </div>
+            <div className="text-sm text-gray-600">Pendentes</div>
           </div>
         </div>
 
-        {/* Cabeçalho da tabela */}
-        <div className="grid grid-cols-5 gap-2 mb-1 font-medium text-center text-sm bg-app-blue text-white p-2 rounded-t-lg shadow-sm">
-          <div className="text-left">Dia</div>
-          <div>Positivo</div>
-          <div>Negativo</div>
-          <div>Pendente</div>
-          <div>Total</div>
-        </div>
-        
-        {/* Linhas da tabela */}
-        <div className="space-y-1">
-          {routes.map((route, index) => (
-            <div 
-              key={index} 
-              className={`grid grid-cols-5 gap-2 py-3 px-3 bg-white rounded-lg font-medium text-center shadow-sm border border-slate-100 ${
-                route.total > 0 
-                  ? 'cursor-pointer hover:bg-slate-100 transition-colors' 
-                  : 'opacity-60'
-              }`}
-              onClick={() => route.total > 0 && handleDaySelect(route.day)}
+        {/* Lista de Rotas */}
+        <div className="space-y-3">
+          {routes.map((route) => (
+            <AppButton
+              key={route.day}
+              variant="white"
+              fullWidth
+              onClick={() => handleVisitDay(route.day)}
+              className="text-left p-4 h-auto"
             >
-              <div className="text-left">
-                <span>{route.day}</span>
-                {route.total > 0 && (
-                  <div className="text-xs text-blue-600 mt-0.5">
-                    {route.clients.length} cliente{route.clients.length !== 1 ? 's' : ''}
+              <div className="flex justify-between items-center">
+                <div className="flex-1">
+                  <div className="font-semibold text-lg">{route.day}</div>
+                  <div className="text-sm text-gray-600">
+                    {route.total} cliente(s) • {route.positivados} positivados • {route.negativados} negativados
                   </div>
-                )}
+                  <div className="text-sm text-green-600 font-medium">
+                    R$ {route.totalSales.toFixed(2)}
+                  </div>
+                </div>
+                
+                <div className="text-right ml-4">
+                  <div className="text-sm font-medium mb-1">
+                    {route.visited}/{route.total}
+                  </div>
+                  <div className="w-16">
+                    <Progress 
+                      value={route.total > 0 ? (route.visited / route.total) * 100 : 0} 
+                      className="h-2"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="text-green-600">{route.positivados}</div>
-              <div className="text-red-600">{route.negativados}</div>
-              <div className="text-gray-600">{route.pendentes}</div>
-              <div className="text-gray-800 font-bold">{route.total}</div>
-            </div>
+            </AppButton>
           ))}
         </div>
       </div>

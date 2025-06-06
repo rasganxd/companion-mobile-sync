@@ -2,7 +2,11 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { ArrowUp, ArrowDown } from 'lucide-react';
-import { SyncProgress } from '@/services/SyncService';
+
+interface LocalSyncProgress {
+  processed: number;
+  total: number;
+}
 
 interface SyncStatusBadgeProps {
   connected: boolean;
@@ -14,13 +18,13 @@ export const SyncStatusBadge: React.FC<SyncStatusBadgeProps> = ({ connected }) =
       connected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
     }`}>
       <span className={`w-2 h-2 mr-1 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></span>
-      <span>{connected ? 'Online' : 'Offline'}</span>
+      <span>{connected ? 'Local' : 'Offline'}</span>
     </div>
   );
 };
 
 interface ProgressIndicatorProps {
-  progress: SyncProgress;
+  progress: LocalSyncProgress;
   type: string;
 }
 

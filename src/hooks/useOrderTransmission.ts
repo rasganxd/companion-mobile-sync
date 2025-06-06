@@ -1,7 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import ApiService from '@/services/ApiService';
 import { LocalOrder } from '@/types/order';
 import { logOrderAction } from '@/utils/orderAuditLogger';
 import { useAuth } from '@/hooks/useAuth';
@@ -61,7 +61,7 @@ export const useOrderTransmission = () => {
       return;
     }
 
-    if (!confirm(`Transmitir ${pendingOrders.length} pedido(s)?`)) {
+    if (!confirm(`Preparar ${pendingOrders.length} pedido(s) para transmissão ao desktop?`)) {
       return;
     }
 
@@ -69,39 +69,26 @@ export const useOrderTransmission = () => {
       validateSalesRep();
       setTransmissionError(null);
     } catch (error) {
-      return; // Erro já foi definido no estado
+      return;
     }
 
     setIsTransmitting(true);
     let successCount = 0;
     let errorCount = 0;
-    let lastError = '';
 
     try {
-      const apiService = ApiService.getInstance();
       const db = getDatabaseAdapter();
 
       for (const order of pendingOrders) {
         try {
-          console.log('🚀 Transmitting order:', order.id);
+          console.log('📦 Preparing order for transmission:', order.id);
 
-          const orderData = {
-            customer_id: order.customer_id,
-            customer_name: order.customer_name,
-            date: order.date,
-            status: order.status as 'pending' | 'processed' | 'cancelled' | 'delivered',
-            total: order.total,
-            notes: order.notes || '',
-            payment_method: order.payment_method || '',
-            source_project: 'mobile'
-          };
-
-          await apiService.createOrderWithItems(orderData, order.items || []);
+          // Marcar como pronto para transmissão
           await db.markOrderAsTransmitted(order.id);
           
-          // Log da transmissão
+          // Log da preparação
           logOrderAction({
-            action: 'ORDER_TRANSMITTED',
+            action: 'ORDER_PREPARED_FOR_TRANSMISSION',
             orderId: order.id,
             salesRepId: salesRep?.id,
             salesRepName: salesRep?.name,
@@ -111,16 +98,15 @@ export const useOrderTransmission = () => {
           });
           
           successCount++;
-          console.log('✅ Order transmitted successfully:', order.id);
+          console.log('✅ Order prepared for transmission:', order.id);
           
         } catch (error) {
-          console.error('❌ Error transmitting order:', order.id, error);
-          lastError = error instanceof Error ? error.message : 'Erro desconhecido';
+          console.error('❌ Error preparing order:', order.id, error);
+          const lastError = error instanceof Error ? error.message : 'Erro desconhecido';
           await db.updateSyncStatus('orders', order.id, 'error');
           
-          // Log do erro
           logOrderAction({
-            action: 'ORDER_TRANSMISSION_FAILED',
+            action: 'ORDER_PREPARATION_FAILED',
             orderId: order.id,
             salesRepId: salesRep?.id,
             salesRepName: salesRep?.name,
@@ -134,21 +120,20 @@ export const useOrderTransmission = () => {
       }
 
       if (successCount > 0) {
-        toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
+        toast.success(`${successCount} pedido(s) preparado(s) para transmissão ao desktop!`);
       }
       
       if (errorCount > 0) {
-        toast.error(`${errorCount} pedido(s) falharam na transmissão`);
-        setTransmissionError(lastError);
+        toast.error(`${errorCount} pedido(s) falharam na preparação`);
       }
 
       await loadOrders();
 
     } catch (error) {
-      console.error('Error in transmission process:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de transmissão';
+      console.error('Error in transmission preparation process:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de preparação';
       setTransmissionError(errorMsg);
-      toast.error('Erro no processo de transmissão');
+      toast.error('Erro no processo de preparação para transmissão');
     } finally {
       setIsTransmitting(false);
     }
@@ -164,7 +149,6 @@ export const useOrderTransmission = () => {
       const db = getDatabaseAdapter();
       await db.updateSyncStatus('orders', orderId, 'pending_sync');
       
-      // Log da tentativa
       logOrderAction({
         action: 'ORDER_RETRY_QUEUED',
         orderId,
@@ -197,7 +181,6 @@ export const useOrderTransmission = () => {
       for (const order of errorOrders) {
         await db.updateSyncStatus('orders', order.id, 'pending_sync');
         
-        // Log da tentativa
         logOrderAction({
           action: 'ORDER_RETRY_QUEUED',
           orderId: order.id,
@@ -217,7 +200,6 @@ export const useOrderTransmission = () => {
   };
 
   const deleteTransmittedOrder = async (orderId: string) => {
-    // Buscar dados do pedido antes de deletar para log
     const orderToDelete = transmittedOrders.find(order => order.id === orderId);
     
     if (!confirm('Tem certeza que deseja excluir este pedido transmitido permanentemente? Esta ação não pode ser desfeita.')) {
@@ -228,7 +210,6 @@ export const useOrderTransmission = () => {
       const db = getDatabaseAdapter();
       await db.deleteOrder(orderId);
       
-      // Log da exclusão
       logOrderAction({
         action: 'ORDER_DELETED_TRANSMITTED',
         orderId,
