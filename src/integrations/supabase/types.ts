@@ -9,53 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      api_tokens: {
-        Row: {
-          created_at: string | null
-          expires_at: string | null
-          id: string
-          is_active: boolean | null
-          last_used_at: string | null
-          name: string
-          permissions: Json | null
-          sales_rep_id: string | null
-          token: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_used_at?: string | null
-          name: string
-          permissions?: Json | null
-          sales_rep_id?: string | null
-          token: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string | null
-          id?: string
-          is_active?: boolean | null
-          last_used_at?: string | null
-          name?: string
-          permissions?: Json | null
-          sales_rep_id?: string | null
-          token?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "api_tokens_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "sales_reps"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       app_settings: {
         Row: {
           company: Json | null
@@ -291,37 +244,76 @@ export type Database = {
           code: number
           created_at: string
           date: string
+          delivery_date: string | null
+          departure_date: string | null
+          description: string | null
+          driver_id: string | null
+          driver_name: string | null
           id: string
+          locked: boolean
+          name: string
           notes: string | null
+          order_ids: Json | null
+          return_date: string | null
+          route_id: string | null
+          route_name: string | null
           sales_rep_id: string | null
+          sales_rep_name: string | null
           status: string
-          total_value: number | null
+          total: number | null
           updated_at: string
           vehicle_id: string | null
+          vehicle_name: string | null
         }
         Insert: {
           code?: number
           created_at?: string
           date?: string
+          delivery_date?: string | null
+          departure_date?: string | null
+          description?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           id?: string
+          locked?: boolean
+          name?: string
           notes?: string | null
+          order_ids?: Json | null
+          return_date?: string | null
+          route_id?: string | null
+          route_name?: string | null
           sales_rep_id?: string | null
+          sales_rep_name?: string | null
           status?: string
-          total_value?: number | null
+          total?: number | null
           updated_at?: string
           vehicle_id?: string | null
+          vehicle_name?: string | null
         }
         Update: {
           code?: number
           created_at?: string
           date?: string
+          delivery_date?: string | null
+          departure_date?: string | null
+          description?: string | null
+          driver_id?: string | null
+          driver_name?: string | null
           id?: string
+          locked?: boolean
+          name?: string
           notes?: string | null
+          order_ids?: Json | null
+          return_date?: string | null
+          route_id?: string | null
+          route_name?: string | null
           sales_rep_id?: string | null
+          sales_rep_name?: string | null
           status?: string
-          total_value?: number | null
+          total?: number | null
           updated_at?: string
           vehicle_id?: string | null
+          vehicle_name?: string | null
         }
         Relationships: [
           {
@@ -389,59 +381,6 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      order_items_mobile: {
-        Row: {
-          created_at: string
-          discount: number | null
-          id: string
-          order_id: string | null
-          price: number
-          product_code: number | null
-          product_name: string | null
-          quantity: number
-          total: number
-          unit: string | null
-          unit_price: number | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          discount?: number | null
-          id?: string
-          order_id?: string | null
-          price: number
-          product_code?: number | null
-          product_name?: string | null
-          quantity: number
-          total: number
-          unit?: string | null
-          unit_price?: number | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          discount?: number | null
-          id?: string
-          order_id?: string | null
-          price?: number
-          product_code?: number | null
-          product_name?: string | null
-          quantity?: number
-          total?: number
-          unit?: string | null
-          unit_price?: number | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "order_items_mobile_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders_mobile"
             referencedColumns: ["id"]
           },
         ]
@@ -559,108 +498,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      orders_mobile: {
-        Row: {
-          code: number
-          created_at: string
-          customer_id: string | null
-          customer_name: string | null
-          date: string
-          delivery_address: string | null
-          delivery_city: string | null
-          delivery_date: string | null
-          delivery_state: string | null
-          delivery_zip: string | null
-          discount: number | null
-          due_date: string | null
-          id: string
-          imported: boolean
-          imported_at: string | null
-          imported_by: string | null
-          mobile_order_id: string | null
-          notes: string | null
-          payment_method: string | null
-          payment_method_id: string | null
-          payment_status: string | null
-          payment_table: string | null
-          payment_table_id: string | null
-          payments: Json | null
-          sales_rep_id: string | null
-          sales_rep_name: string | null
-          source_project: string
-          status: string
-          sync_status: string | null
-          total: number
-          updated_at: string
-        }
-        Insert: {
-          code?: number
-          created_at?: string
-          customer_id?: string | null
-          customer_name?: string | null
-          date?: string
-          delivery_address?: string | null
-          delivery_city?: string | null
-          delivery_date?: string | null
-          delivery_state?: string | null
-          delivery_zip?: string | null
-          discount?: number | null
-          due_date?: string | null
-          id?: string
-          imported?: boolean
-          imported_at?: string | null
-          imported_by?: string | null
-          mobile_order_id?: string | null
-          notes?: string | null
-          payment_method?: string | null
-          payment_method_id?: string | null
-          payment_status?: string | null
-          payment_table?: string | null
-          payment_table_id?: string | null
-          payments?: Json | null
-          sales_rep_id?: string | null
-          sales_rep_name?: string | null
-          source_project?: string
-          status?: string
-          sync_status?: string | null
-          total?: number
-          updated_at?: string
-        }
-        Update: {
-          code?: number
-          created_at?: string
-          customer_id?: string | null
-          customer_name?: string | null
-          date?: string
-          delivery_address?: string | null
-          delivery_city?: string | null
-          delivery_date?: string | null
-          delivery_state?: string | null
-          delivery_zip?: string | null
-          discount?: number | null
-          due_date?: string | null
-          id?: string
-          imported?: boolean
-          imported_at?: string | null
-          imported_by?: string | null
-          mobile_order_id?: string | null
-          notes?: string | null
-          payment_method?: string | null
-          payment_method_id?: string | null
-          payment_status?: string | null
-          payment_table?: string | null
-          payment_table_id?: string | null
-          payments?: Json | null
-          sales_rep_id?: string | null
-          sales_rep_name?: string | null
-          source_project?: string
-          status?: string
-          sync_status?: string | null
-          total?: number
-          updated_at?: string
-        }
-        Relationships: []
       }
       payment_methods: {
         Row: {
@@ -1047,182 +884,6 @@ export type Database = {
         }
         Relationships: []
       }
-      sync_logs: {
-        Row: {
-          created_at: string
-          data_type: string | null
-          device_id: string | null
-          device_ip: string | null
-          error_message: string | null
-          event_type: string
-          id: string
-          metadata: Json | null
-          records_count: number | null
-          sales_rep_id: string | null
-          status: string
-          sync_token_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          data_type?: string | null
-          device_id?: string | null
-          device_ip?: string | null
-          error_message?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          records_count?: number | null
-          sales_rep_id?: string | null
-          status: string
-          sync_token_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          data_type?: string | null
-          device_id?: string | null
-          device_ip?: string | null
-          error_message?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          records_count?: number | null
-          sales_rep_id?: string | null
-          status?: string
-          sync_token_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sync_logs_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "sales_reps"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sync_logs_sync_token_id_fkey"
-            columns: ["sync_token_id"]
-            isOneToOne: false
-            referencedRelation: "sync_tokens"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sync_settings: {
-        Row: {
-          allowed_data_types: string[]
-          auto_sync_enabled: boolean
-          created_at: string
-          id: string
-          max_offline_days: number
-          require_admin_approval: boolean
-          sync_interval_minutes: number
-          updated_at: string
-        }
-        Insert: {
-          allowed_data_types?: string[]
-          auto_sync_enabled?: boolean
-          created_at?: string
-          id?: string
-          max_offline_days?: number
-          require_admin_approval?: boolean
-          sync_interval_minutes?: number
-          updated_at?: string
-        }
-        Update: {
-          allowed_data_types?: string[]
-          auto_sync_enabled?: boolean
-          created_at?: string
-          id?: string
-          max_offline_days?: number
-          require_admin_approval?: boolean
-          sync_interval_minutes?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      sync_tokens: {
-        Row: {
-          active: boolean
-          created_at: string
-          device_id: string | null
-          device_ip: string | null
-          expires_at: string
-          id: string
-          project_type: string
-          sales_rep_id: string | null
-          token: string
-          updated_at: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          device_id?: string | null
-          device_ip?: string | null
-          expires_at: string
-          id?: string
-          project_type: string
-          sales_rep_id?: string | null
-          token: string
-          updated_at?: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          device_id?: string | null
-          device_ip?: string | null
-          expires_at?: string
-          id?: string
-          project_type?: string
-          sales_rep_id?: string | null
-          token?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sync_tokens_sales_rep_id_fkey"
-            columns: ["sales_rep_id"]
-            isOneToOne: false
-            referencedRelation: "sales_reps"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sync_updates: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          created_by_user: string | null
-          data_types: string[]
-          description: string | null
-          id: string
-          is_active: boolean
-          metadata: Json | null
-          updated_at: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          created_by_user?: string | null
-          data_types?: string[]
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          created_by_user?: string | null
-          data_types?: string[]
-          description?: string | null
-          id?: string
-          is_active?: boolean
-          metadata?: Json | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       units: {
         Row: {
           code: string
@@ -1306,31 +967,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      generate_api_token: {
-        Args: {
-          p_sales_rep_id: string
-          p_name: string
-          p_expires_days?: number
-        }
-        Returns: string
-      }
-      generate_sync_token: {
-        Args: {
-          p_sales_rep_id: string
-          p_project_type?: string
-          p_device_id?: string
-          p_device_ip?: string
-          p_expires_minutes?: number
-        }
-        Returns: {
-          token: string
-          expires_at: string
-        }[]
-      }
       get_next_customer_code: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -1374,56 +1010,13 @@ export type Database = {
           customer_phone: string
         }[]
       }
-      get_sync_data_for_sales_rep: {
-        Args: { p_sales_rep_id: string; p_last_sync?: string }
-        Returns: {
-          products_updated: Json
-          customers_updated: Json
-          sync_timestamp: string
-        }[]
-      }
-      get_sync_statistics: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          sales_rep_id: string
-          sales_rep_name: string
-          pending_orders: number
-          last_sync: string
-          total_orders: number
-        }[]
-      }
       hash_password: {
         Args: { password: string }
         Returns: string
       }
-      import_mobile_orders: {
-        Args: { p_sales_rep_id?: string; p_imported_by?: string }
-        Returns: {
-          imported_count: number
-          failed_count: number
-          error_messages: string[]
-        }[]
-      }
-      import_mobile_orders_enhanced: {
-        Args: { p_sales_rep_id?: string; p_imported_by?: string }
-        Returns: {
-          imported_count: number
-          failed_count: number
-          error_messages: string[]
-          imported_order_ids: string[]
-        }[]
-      }
-      mark_orders_as_synced: {
-        Args: { p_sales_rep_id: string; p_order_ids: string[] }
-        Returns: number
-      }
       sync_customers_to_route: {
         Args: { p_route_id: string; p_sales_rep_id: string }
         Returns: number
-      }
-      validate_api_token: {
-        Args: { token_value: string }
-        Returns: string
       }
       verify_password: {
         Args: { password: string; hash: string }
