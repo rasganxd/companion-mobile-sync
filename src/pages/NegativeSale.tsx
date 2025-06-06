@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -132,7 +131,7 @@ const NegativeSale = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header 
         title="Negativar Venda" 
-        backgroundColor="orange"
+        backgroundColor="red"
         showBackButton
       />
       

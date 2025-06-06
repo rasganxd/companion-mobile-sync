@@ -17,6 +17,7 @@ interface AuthContextType {
   salesRep: SalesRep | null;
   isLoading: boolean;
   isOnline: boolean;
+  lastSyncDate: Date | null;
   login: (salesRep: SalesRep) => void;
   loginWithCredentials: (code: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -155,6 +156,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     salesRep,
     isLoading,
     isOnline: connected,
+    lastSyncDate,
     login,
     loginWithCredentials,
     logout,
