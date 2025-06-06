@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -391,7 +390,7 @@ const VisitRoutes = () => {
           {routes.map((route) => (
             <AppButton
               key={route.day}
-              variant="white"
+              variant="gray"
               fullWidth
               onClick={() => handleVisitDay(route.day)}
               className="text-left p-4 h-auto"

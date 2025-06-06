@@ -40,6 +40,9 @@ interface DatabaseAdapter {
   canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }>;
   // ✅ NOVO: Método específico para verificar pedido ativo único
   getActivePendingOrder(clientId: string): Promise<any | null>;
+  // ✅ NOVOS métodos adicionados para corrigir os erros
+  getCustomers(): Promise<any[]>;
+  getPaymentTables(): Promise<any[]>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
