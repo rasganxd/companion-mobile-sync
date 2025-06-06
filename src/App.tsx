@@ -16,6 +16,7 @@ import TransmitOrders from '@/pages/TransmitOrders';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
+import { NavigationProvider } from '@/contexts/NavigationContext';
 
 // Protected Route Component
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -27,69 +28,71 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
-          <div className="App">
-            <Routes>
-              {/* Login Route - não protegida */}
-              <Route path="/login" element={<Login />} />
+          <NavigationProvider>
+            <div className="App">
+              <Routes>
+                {/* Login Route - não protegida */}
+                <Route path="/login" element={<Login />} />
+                
+                {/* Protected Routes */}
+                <Route path="/home" element={
+                  <ProtectedRoute>
+                    <Home />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/rotas" element={
+                  <ProtectedRoute>
+                    <VisitRoutes />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/clients-list" element={
+                  <ProtectedRoute>
+                    <ClientsList />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/client-activities" element={
+                  <ProtectedRoute>
+                    <ClientActivities />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/my-orders" element={
+                  <ProtectedRoute>
+                    <MyOrders />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <Reports />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/sync-settings" element={
+                  <ProtectedRoute>
+                    <SyncSettings />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/transmit-orders" element={
+                  <ProtectedRoute>
+                    <TransmitOrders />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Default redirect */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                
+                {/* Catch all route */}
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
               
-              {/* Protected Routes */}
-              <Route path="/home" element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/rotas" element={
-                <ProtectedRoute>
-                  <VisitRoutes />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/clients-list" element={
-                <ProtectedRoute>
-                  <ClientsList />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/client-activities" element={
-                <ProtectedRoute>
-                  <ClientActivities />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/my-orders" element={
-                <ProtectedRoute>
-                  <MyOrders />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/sync-settings" element={
-                <ProtectedRoute>
-                  <SyncSettings />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/transmit-orders" element={
-                <ProtectedRoute>
-                  <TransmitOrders />
-                </ProtectedRoute>
-              } />
-              
-              {/* Default redirect */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-              
-              {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-            
-            <Toaster richColors position="top-center" />
-          </div>
+              <Toaster richColors position="top-center" />
+            </div>
+          </NavigationProvider>
         </Router>
       </AuthProvider>
     </QueryClientProvider>
