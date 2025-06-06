@@ -105,9 +105,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       setIsLoading(true);
+      console.log('🔐 Attempting login with code:', code);
       
       // Authenticate with Supabase
       const authResult = await supabaseService.authenticateSalesRep(code, password);
+      console.log('🔐 Auth result received:', authResult);
       
       if (authResult.success && authResult.salesRep) {
         const salesRepData: SalesRep = {
@@ -115,10 +117,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sessionToken: authResult.sessionToken
         };
         
+        console.log('✅ Login successful, saving sales rep data');
         login(salesRepData);
         
         // Perform initial sync if needed
         if (!lastSyncDate) {
+          console.log('🔄 Starting initial sync...');
           toast.success('Login realizado! Iniciando sincronização de dados...');
           
           const syncResult = await performFullSync(salesRepData.id, authResult.sessionToken);
@@ -126,6 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setNeedsInitialSync(false);
             toast.success('Sincronização concluída com sucesso!');
           } else {
+            console.error('❌ Sync failed:', syncResult.error);
             toast.error('Falha na sincronização: ' + syncResult.error);
             setNeedsInitialSync(true);
           }
@@ -134,9 +139,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
+      console.log('❌ Login failed - invalid credentials or response');
       return false;
     } catch (error) {
-      console.error('Error during login:', error);
+      console.error('❌ Error during login:', error);
       toast.error(error instanceof Error ? error.message : 'Erro durante o login');
       return false;
     } finally {
