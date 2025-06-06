@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -353,67 +354,69 @@ const VisitRoutes = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Rotas de Visita" showBackButton backgroundColor="blue" />
       
-      <div className="p-4 flex-1">
-        {/* Resumo de Vendas */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
-          <h2 className="text-lg font-semibold mb-4">Resumo do Dia</h2>
+      <div className="p-3 flex-1">
+        {/* Resumo Compacto de Vendas */}
+        <div className="bg-white rounded-lg shadow p-3 mb-3">
+          <h2 className="text-base font-semibold mb-2">Resumo do Dia</h2>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center p-3 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="text-center p-2 bg-green-50 rounded">
+              <div className="text-lg font-bold text-green-600">
                 {salesData.totalPositivados}
               </div>
-              <div className="text-sm text-gray-600">Positivados</div>
-              <div className="text-lg font-semibold text-green-700">
-                R$ {salesData.positivadosValue.toFixed(2)}
+              <div className="text-xs text-gray-600">Positivados</div>
+              <div className="text-sm font-semibold text-green-700">
+                R$ {salesData.positivadosValue.toFixed(0)}
               </div>
             </div>
             
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <div className="text-2xl font-bold text-red-600">
+            <div className="text-center p-2 bg-red-50 rounded">
+              <div className="text-lg font-bold text-red-600">
                 {salesData.totalNegativados}
               </div>
-              <div className="text-sm text-gray-600">Negativados</div>
+              <div className="text-xs text-gray-600">Negativados</div>
             </div>
-          </div>
-          
-          <div className="mt-4 text-center p-3 bg-gray-50 rounded-lg">
-            <div className="text-2xl font-bold text-gray-600">
-              {salesData.totalPendentes}
+            
+            <div className="text-center p-2 bg-gray-50 rounded">
+              <div className="text-lg font-bold text-gray-600">
+                {salesData.totalPendentes}
+              </div>
+              <div className="text-xs text-gray-600">Pendentes</div>
             </div>
-            <div className="text-sm text-gray-600">Pendentes</div>
           </div>
         </div>
 
-        {/* Lista de Rotas */}
-        <div className="space-y-3">
+        {/* Lista Compacta de Rotas */}
+        <div className="space-y-2">
           {routes.map((route) => (
             <AppButton
               key={route.day}
               variant="gray"
               fullWidth
               onClick={() => handleVisitDay(route.day)}
-              className="text-left p-4 h-auto"
+              className="text-left p-3 h-auto"
             >
               <div className="flex justify-between items-center">
-                <div className="flex-1">
-                  <div className="font-semibold text-lg">{route.day}</div>
-                  <div className="text-sm text-gray-600">
-                    {route.total} cliente(s) • {route.positivados} positivados • {route.negativados} negativados
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold text-base">{route.day}</div>
+                    <div className="text-xs text-gray-500">
+                      ({route.total})
+                    </div>
                   </div>
-                  <div className="text-sm text-green-600 font-medium">
-                    R$ {route.totalSales.toFixed(2)}
+                  <div className="text-xs text-gray-600 mt-0.5">
+                    {route.positivados}P • {route.negativados}N • R$ {route.totalSales.toFixed(0)}
                   </div>
                 </div>
                 
-                <div className="text-right ml-4">
-                  <div className="text-sm font-medium mb-1">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-xs font-medium">
                     {route.visited}/{route.total}
                   </div>
-                  <div className="w-16">
+                  <div className="w-12">
                     <Progress 
                       value={route.total > 0 ? (route.visited / route.total) * 100 : 0} 
-                      className="h-2"
+                      className="h-1.5"
                     />
                   </div>
                 </div>
