@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Route, Package, BarChart3, Settings, Send, LogOut } from 'lucide-react';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { Badge } from '@/components/ui/badge';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -24,31 +23,12 @@ import {
 
 const Home = () => {
   const navigate = useNavigate();
-  const [salesRepName, setSalesRepName] = useState('');
+  const { salesRep, logout } = useAuth();
   const { syncStatus } = useLocalSyncStatus();
-  const { logout } = useAuth();
-
-  useEffect(() => {
-    loadSalesRepInfo();
-  }, []);
-
-  const loadSalesRepInfo = () => {
-    try {
-      const salesRepCode = localStorage.getItem('sales_rep_code');
-      if (salesRepCode) {
-        setSalesRepName(`Vendedor ${salesRepCode}`);
-      } else {
-        setSalesRepName('Vendedor');
-      }
-    } catch (error) {
-      console.error('Error loading sales rep info:', error);
-      setSalesRepName('Vendedor');
-    }
-  };
 
   const formatLastSync = () => {
     if (!syncStatus.lastSync) {
-      return 'Nunca sincronizado';
+      return 'Sem sincronização';
     }
     
     try {
@@ -70,7 +50,12 @@ const Home = () => {
       <div className="bg-white border-b border-gray-200 px-4 py-3 space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-900">Vendedor: {salesRepName}</p>
+            <p className="text-sm font-medium text-gray-900">
+              Vendedor: {salesRep?.name || 'Usuário'}
+            </p>
+            {salesRep?.code && (
+              <p className="text-xs text-gray-600">Código: {salesRep.code}</p>
+            )}
           </div>
           <div className="flex items-center space-x-3">
             <div className="flex items-center px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
@@ -89,7 +74,7 @@ const Home = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirmar Logout</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tem certeza que deseja sair do sistema? Você será redirecionado para a tela de configuração inicial.
+                    Tem certeza que deseja sair do sistema? Você será redirecionado para a tela de login.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface SalesRep {
   id: string;
@@ -13,6 +12,7 @@ interface AuthContextType {
   salesRep: SalesRep | null;
   isLoading: boolean;
   login: (salesRep: SalesRep) => void;
+  loginWithCredentials: (code: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -25,6 +25,31 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Mock vendors data for testing
+const mockVendors = [
+  {
+    id: '001',
+    code: '001',
+    name: 'João Silva',
+    email: 'joao@empresa.com',
+    password: '123456'
+  },
+  {
+    id: '002',
+    code: '002',
+    name: 'Maria Santos',
+    email: 'maria@empresa.com',
+    password: '123456'
+  },
+  {
+    id: '003',
+    code: '003',
+    name: 'Pedro Oliveira',
+    email: 'pedro@empresa.com',
+    password: '123456'
+  }
+];
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -58,6 +83,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     localStorage.setItem('salesRep', JSON.stringify(salesRepData));
   };
 
+  const loginWithCredentials = async (code: string, password: string): Promise<boolean> => {
+    try {
+      // Find vendor in mock data
+      const vendor = mockVendors.find(v => v.code === code && v.password === password);
+      
+      if (vendor) {
+        const salesRepData: SalesRep = {
+          id: vendor.id,
+          name: vendor.name,
+          code: vendor.code,
+          email: vendor.email
+        };
+        
+        login(salesRepData);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error during login:', error);
+      return false;
+    }
+  };
+
   const logout = () => {
     setSalesRep(null);
     localStorage.removeItem('salesRep');
@@ -67,6 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     salesRep,
     isLoading,
     login,
+    loginWithCredentials,
     logout
   };
 

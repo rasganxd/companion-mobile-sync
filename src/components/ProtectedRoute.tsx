@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!salesRep) {
-    return <Navigate to="/initial-sync" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;

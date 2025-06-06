@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Pages
 import Home from '@/pages/Home';
-import InitialSync from '@/pages/InitialSync';
+import Login from '@/pages/Login';
 import VisitRoutes from '@/pages/VisitRoutes';
 import ClientsList from '@/pages/ClientsList';
 import ClientActivities from '@/pages/ClientActivities';
@@ -29,8 +29,8 @@ function App() {
         <Router>
           <div className="App">
             <Routes>
-              {/* Initial Sync Route - não protegida */}
-              <Route path="/initial-sync" element={<InitialSync />} />
+              {/* Login Route - não protegida */}
+              <Route path="/login" element={<Login />} />
               
               {/* Protected Routes */}
               <Route path="/home" element={
@@ -82,10 +82,10 @@ function App() {
               } />
               
               {/* Default redirect */}
-              <Route path="/" element={<Navigate to="/initial-sync" replace />} />
+              <Route path="/" element={<Navigate to="/login" replace />} />
               
               {/* Catch all route */}
-              <Route path="*" element={<Navigate to="/initial-sync" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             
             <Toaster richColors position="top-center" />
