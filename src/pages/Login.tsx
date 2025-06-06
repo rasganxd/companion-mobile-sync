@@ -91,13 +91,7 @@ const Login = () => {
               </Button>
             </form>
 
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-sm text-blue-800">
-                <p className="font-medium">Credenciais de Teste:</p>
-                <p className="mt-1">Código: <span className="font-mono">001</span></p>
-                <p>Senha: <span className="font-mono">123456</span></p>
-              </div>
-            </div>
+            
           </CardContent>
         </Card>
       </div>
