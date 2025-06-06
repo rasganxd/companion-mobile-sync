@@ -107,6 +107,21 @@ class WebDatabaseService implements DatabaseAdapter {
     return this.db!.getAll('clients');
   }
 
+  async getCustomers(): Promise<any[]> {
+    // Alias for getClients to match the interface
+    return this.getClients();
+  }
+
+  async getPaymentTables(): Promise<any[]> {
+    // Return default payment tables for web version
+    return [
+      { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
+      { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
+      { id: '3', name: 'Prazo 60', description: 'Pagamento em 60 dias' },
+      { id: '4', name: 'Prazo 90', description: 'Pagamento em 90 dias' }
+    ];
+  }
+
   async getVisitRoutes(): Promise<any[]> {
     await this.ensureInitialized();
     return this.db!.getAll('visit_routes');

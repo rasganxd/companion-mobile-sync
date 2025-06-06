@@ -143,6 +143,21 @@ class SQLiteDatabaseService {
     }
   }
 
+  async getCustomers(): Promise<any[]> {
+    // Alias for getClients to match the interface
+    return this.getClients();
+  }
+
+  async getPaymentTables(): Promise<any[]> {
+    // Return default payment tables for SQLite version
+    return [
+      { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
+      { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
+      { id: '3', name: 'Prazo 60', description: 'Pagamento em 60 dias' },
+      { id: '4', name: 'Prazo 90', description: 'Pagamento em 90 dias' }
+    ];
+  }
+
   async saveClient(client: any): Promise<void> {
     if (!this.db) await this.initDatabase();
     try {
