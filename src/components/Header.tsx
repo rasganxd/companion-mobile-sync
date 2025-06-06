@@ -1,46 +1,64 @@
+
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigation } from '@/contexts/NavigationContext';
+import { useNavigate } from 'react-router-dom';
+import NetworkStatusIndicator from './NetworkStatusIndicator';
+
 interface HeaderProps {
   title: string;
   showBackButton?: boolean;
-  backgroundColor?: 'orange' | 'gray' | 'blue' | 'green' | 'purple';
+  backgroundColor?: 'blue' | 'green' | 'red' | 'gray';
+  rightComponent?: React.ReactNode;
+  showNetworkStatus?: boolean;
 }
-const Header = ({
-  title,
-  showBackButton = false,
-  backgroundColor = 'blue'
-}: HeaderProps) => {
-  const {
-    goBack,
-    canGoBack
-  } = useNavigation();
-  const getBgColor = () => {
+
+const Header: React.FC<HeaderProps> = ({ 
+  title, 
+  showBackButton = false, 
+  backgroundColor = 'blue',
+  rightComponent,
+  showNetworkStatus = true
+}) => {
+  const navigate = useNavigate();
+
+  const getBackgroundClasses = () => {
     switch (backgroundColor) {
-      case 'orange':
-        return 'bg-app-orange';
-      case 'gray':
-        return 'bg-slate-200';
       case 'green':
-        return 'bg-green-600';
-      case 'purple':
-        return 'bg-purple-600';
-      case 'blue':
+        return 'bg-gradient-to-r from-green-500 to-green-600';
+      case 'red':
+        return 'bg-gradient-to-r from-red-500 to-red-600';
+      case 'gray':
+        return 'bg-gradient-to-r from-gray-500 to-gray-600';
       default:
         return 'bg-gradient-to-r from-app-blue to-app-blue-dark';
     }
   };
-  const handleBackClick = () => {
-    console.log('🔙 Header back button clicked');
-    goBack();
-  };
-  return <div className={`w-full ${getBgColor()} py-4 px-4 flex items-center shadow-md`}>
-      {showBackButton && canGoBack && <button className="mr-2 bg-white bg-opacity-20 rounded-full p-1 transition-all hover:bg-opacity-30" onClick={handleBackClick}>
-          <ArrowLeft size={24} color="white" />
-        </button>}
-      <h1 className="text-white flex-1 text-center text-lg font-medium">
-        {title}
-      </h1>
-    </div>;
+
+  return (
+    <div className={`${getBackgroundClasses()} shadow-md py-3 px-4`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {showBackButton && (
+            <button
+              onClick={() => navigate(-1)}
+              className="text-white hover:bg-white/10 rounded-lg p-2 transition-colors flex-shrink-0"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          
+          <h1 className="font-bold text-white text-base truncate">
+            {title}
+          </h1>
+        </div>
+        
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          {rightComponent}
+          {showNetworkStatus && <NetworkStatusIndicator />}
+        </div>
+      </div>
+    </div>
+  );
 };
+
 export default Header;

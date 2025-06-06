@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +20,9 @@ import { NavigationProvider } from '@/contexts/NavigationContext';
 // Protected Route Component
 import ProtectedRoute from '@/components/ProtectedRoute';
 
+// Initial Sync Screen
+import InitialSyncScreen from '@/components/InitialSyncScreen';
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -33,6 +35,13 @@ function App() {
               <Routes>
                 {/* Login Route - não protegida */}
                 <Route path="/login" element={<Login />} />
+                
+                {/* Initial Sync Route - protegida mas não precisa verificar sync */}
+                <Route path="/initial-sync" element={
+                  <ProtectedRoute>
+                    <InitialSyncScreen />
+                  </ProtectedRoute>
+                } />
                 
                 {/* Protected Routes */}
                 <Route path="/home" element={

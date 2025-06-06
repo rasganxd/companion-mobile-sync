@@ -1,13 +1,15 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { LocalOrder } from '@/types/order';
 import { logOrderAction } from '@/utils/orderAuditLogger';
 import { useAuth } from '@/hooks/useAuth';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { supabaseService } from '@/services/SupabaseService';
 
 export const useOrderTransmission = () => {
-  const { salesRep } = useAuth();
+  const { salesRep, isOnline } = useAuth();
+  const { connected } = useNetworkStatus();
   const [pendingOrders, setPendingOrders] = useState<LocalOrder[]>([]);
   const [transmittedOrders, setTransmittedOrders] = useState<LocalOrder[]>([]);
   const [errorOrders, setErrorOrders] = useState<LocalOrder[]>([]);
@@ -22,17 +24,14 @@ export const useOrderTransmission = () => {
       
       console.log('🔄 Loading orders for transmission page...');
       
-      // Carregar pedidos pendentes
       const pending = await db.getPendingOrders();
       console.log(`📋 Loaded ${pending.length} pending orders`);
       setPendingOrders(pending);
       
-      // Carregar pedidos transmitidos
       const transmitted = await db.getTransmittedOrders();
       console.log(`📤 Loaded ${transmitted.length} transmitted orders`);
       setTransmittedOrders(transmitted);
       
-      // Carregar pedidos com erro
       const allOrders = await db.getAllOrders();
       const errorOrdersList = allOrders.filter(order => order.sync_status === 'error');
       console.log(`❌ Loaded ${errorOrdersList.length} error orders`);
@@ -61,13 +60,22 @@ export const useOrderTransmission = () => {
       return;
     }
 
-    if (!confirm(`Preparar ${pendingOrders.length} pedido(s) para transmissão ao desktop?`)) {
+    if (!connected || !isOnline) {
+      toast.error('Sem conexão com a internet. Conecte-se para transmitir pedidos.');
+      return;
+    }
+
+    if (!confirm(`Transmitir ${pendingOrders.length} pedido(s) para o servidor?`)) {
       return;
     }
 
     try {
       validateSalesRep();
       setTransmissionError(null);
+
+      if (!salesRep?.sessionToken) {
+        throw new Error('Token de sessão não encontrado. Faça login novamente.');
+      }
     } catch (error) {
       return;
     }
@@ -79,61 +87,65 @@ export const useOrderTransmission = () => {
     try {
       const db = getDatabaseAdapter();
 
-      for (const order of pendingOrders) {
-        try {
-          console.log('📦 Preparing order for transmission:', order.id);
-
-          // Marcar como pronto para transmissão
-          await db.markOrderAsTransmitted(order.id);
-          
-          // Log da preparação
-          logOrderAction({
-            action: 'ORDER_PREPARED_FOR_TRANSMISSION',
-            orderId: order.id,
-            salesRepId: salesRep?.id,
-            salesRepName: salesRep?.name,
-            customerName: order.customer_name,
-            syncStatus: 'transmitted',
-            details: { total: order.total, itemsCount: order.items?.length || 0 }
-          });
-          
-          successCount++;
-          console.log('✅ Order prepared for transmission:', order.id);
-          
-        } catch (error) {
-          console.error('❌ Error preparing order:', order.id, error);
-          const lastError = error instanceof Error ? error.message : 'Erro desconhecido';
-          await db.updateSyncStatus('orders', order.id, 'error');
-          
-          logOrderAction({
-            action: 'ORDER_PREPARATION_FAILED',
-            orderId: order.id,
-            salesRepId: salesRep?.id,
-            salesRepName: salesRep?.name,
-            customerName: order.customer_name,
-            syncStatus: 'error',
-            details: { error: lastError }
-          });
-          
-          errorCount++;
-        }
-      }
-
-      if (successCount > 0) {
-        toast.success(`${successCount} pedido(s) preparado(s) para transmissão ao desktop!`);
-      }
+      // Transmit orders to Supabase
+      console.log('📤 Transmitting orders to Supabase...');
       
-      if (errorCount > 0) {
-        toast.error(`${errorCount} pedido(s) falharam na preparação`);
+      const transmissionResult = await supabaseService.transmitOrders(
+        pendingOrders, 
+        salesRep.sessionToken!
+      );
+
+      if (transmissionResult.success) {
+        // Mark all orders as transmitted
+        for (const order of pendingOrders) {
+          try {
+            await db.markOrderAsTransmitted(order.id);
+            
+            logOrderAction({
+              action: 'ORDER_TRANSMITTED_TO_SUPABASE',
+              orderId: order.id,
+              salesRepId: salesRep?.id,
+              salesRepName: salesRep?.name,
+              customerName: order.customer_name,
+              syncStatus: 'transmitted',
+              details: { total: order.total, itemsCount: order.items?.length || 0 }
+            });
+            
+            successCount++;
+            console.log('✅ Order transmitted:', order.id);
+            
+          } catch (error) {
+            console.error('❌ Error marking order as transmitted:', order.id, error);
+            await db.updateSyncStatus('orders', order.id, 'error');
+            errorCount++;
+          }
+        }
+
+        if (successCount > 0) {
+          toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
+        }
+        
+        if (errorCount > 0) {
+          toast.error(`${errorCount} pedido(s) falharam na transmissão`);
+        }
+      } else {
+        throw new Error('Falha na transmissão para o servidor');
       }
 
       await loadOrders();
 
     } catch (error) {
-      console.error('Error in transmission preparation process:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de preparação';
+      console.error('Error in transmission process:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de transmissão';
       setTransmissionError(errorMsg);
-      toast.error('Erro no processo de preparação para transmissão');
+      toast.error('Erro na transmissão: ' + errorMsg);
+      
+      // Mark all orders as error if transmission failed
+      const db = getDatabaseAdapter();
+      for (const order of pendingOrders) {
+        await db.updateSyncStatus('orders', order.id, 'error');
+      }
+      await loadOrders();
     } finally {
       setIsTransmitting(false);
     }
@@ -242,6 +254,7 @@ export const useOrderTransmission = () => {
     isTransmitting,
     isLoading,
     transmissionError,
+    canTransmit: connected && isOnline,
     loadOrders,
     transmitAllOrders,
     retryOrder,
