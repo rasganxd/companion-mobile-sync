@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Wifi, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLocalSync } from '@/hooks/useLocalSync';
-
 const InitialSync = () => {
   const [salesRepCode, setSalesRepCode] = useState('');
   const [desktopIP, setDesktopIP] = useState('');
@@ -17,7 +15,6 @@ const InitialSync = () => {
     performInitialSync,
     discoverDesktop
   } = useLocalSync();
-
   const handleSync = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!salesRepCode.trim()) {
@@ -28,7 +25,6 @@ const InitialSync = () => {
       toast.error('IP do desktop é obrigatório');
       return;
     }
-
     setIsLoading(true);
     try {
       const result = await performInitialSync(salesRepCode, desktopIP);
@@ -45,7 +41,6 @@ const InitialSync = () => {
       setIsLoading(false);
     }
   };
-
   const handleDiscoverDesktop = async () => {
     setIsLoading(true);
     try {
@@ -62,11 +57,9 @@ const InitialSync = () => {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
-      <div className="bg-gradient-to-r from-app-blue to-app-blue-dark shadow-md py-[26px]">
-        <h1 className="font-bold text-center text-white text-xl">
+  return <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
+      <div className="bg-gradient-to-r from-app-blue to-app-blue-dark shadow-md py-[20px]">
+        <h1 className="font-bold text-center text-white text-base">
           SalesTrack Mobile - Primeira Sincronização
         </h1>
       </div>
@@ -74,7 +67,7 @@ const InitialSync = () => {
       <div className="flex-1 flex flex-col justify-center items-center p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Download size={24} className="text-app-blue" />
               Configurar Sistema
             </CardTitle>
@@ -88,14 +81,7 @@ const InitialSync = () => {
                 <label className="text-sm font-medium text-gray-700">
                   Código do Vendedor <span className="text-red-500">*</span>
                 </label>
-                <Input
-                  type="number"
-                  value={salesRepCode}
-                  onChange={(e) => setSalesRepCode(e.target.value)}
-                  placeholder="Digite seu código"
-                  disabled={isLoading}
-                  className="text-center text-lg font-medium"
-                />
+                <Input type="number" value={salesRepCode} onChange={e => setSalesRepCode(e.target.value)} placeholder="Digite seu código" disabled={isLoading} className="text-center text-lg font-medium" />
               </div>
 
               <div className="space-y-2">
@@ -103,21 +89,8 @@ const InitialSync = () => {
                   IP do Sistema Desktop <span className="text-red-500">*</span>
                 </label>
                 <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={desktopIP}
-                    onChange={(e) => setDesktopIP(e.target.value)}
-                    placeholder="192.168.0.100"
-                    disabled={isLoading}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleDiscoverDesktop}
-                    disabled={isLoading}
-                    className="px-3"
-                  >
+                  <Input type="text" value={desktopIP} onChange={e => setDesktopIP(e.target.value)} placeholder="192.168.0.100" disabled={isLoading} className="flex-1" />
+                  <Button type="button" variant="outline" onClick={handleDiscoverDesktop} disabled={isLoading} className="px-3">
                     <Wifi size={16} />
                   </Button>
                 </div>
@@ -126,22 +99,14 @@ const InitialSync = () => {
                 </p>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full bg-app-blue hover:bg-app-blue-dark"
-                disabled={isLoading || !salesRepCode.trim() || !desktopIP.trim()}
-              >
-                {isLoading ? (
-                  <>
+              <Button type="submit" className="w-full bg-app-blue hover:bg-app-blue-dark" disabled={isLoading || !salesRepCode.trim() || !desktopIP.trim()}>
+                {isLoading ? <>
                     <Download size={16} className="animate-bounce mr-2" />
                     Baixando dados...
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <Download size={16} className="mr-2" />
                     Baixar Dados
-                  </>
-                )}
+                  </>}
               </Button>
             </form>
 
@@ -164,8 +129,6 @@ const InitialSync = () => {
       <div className="py-4 text-center text-gray-600 text-sm bg-white border-t">
         © 2025 SalesTrack Mobile - Modo Offline
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default InitialSync;
