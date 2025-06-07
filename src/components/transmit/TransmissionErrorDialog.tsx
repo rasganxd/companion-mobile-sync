@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, LogIn } from 'lucide-react';
 
 interface TransmissionErrorDialogProps {
   isOpen: boolean;
@@ -26,38 +26,55 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
   isRetrying
 }) => {
   const getErrorMessage = (error: string) => {
-    if (error.includes('Sales representative not found')) {
+    if (error.includes('Vendedor não identificado') || error.includes('Token de sessão expirado') || error.includes('Sessão expirada')) {
       return {
-        title: 'Erro de Autenticação',
-        message: 'Sua conta não está vinculada a um vendedor válido. Entre em contato com o administrador do sistema.',
-        canRetry: false
+        title: 'Sessão Expirada',
+        message: 'Sua sessão expirou. Faça login novamente para continuar.',
+        canRetry: false,
+        needsLogin: true
       };
     }
     
-    if (error.includes('Network Error') || error.includes('Failed to fetch')) {
+    if (error.includes('Invalid authentication') || error.includes('Erro de autenticação')) {
+      return {
+        title: 'Erro de Autenticação',
+        message: 'Sua autenticação não é válida. Faça login novamente.',
+        canRetry: false,
+        needsLogin: true
+      };
+    }
+    
+    if (error.includes('Sales representative not found')) {
+      return {
+        title: 'Erro de Conta',
+        message: 'Sua conta não está vinculada a um vendedor válido. Entre em contato com o administrador do sistema.',
+        canRetry: false,
+        needsLogin: false
+      };
+    }
+    
+    if (error.includes('Network Error') || error.includes('Failed to fetch') || error.includes('Erro de conexão')) {
       return {
         title: 'Erro de Conexão',
         message: 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.',
-        canRetry: true
-      };
-    }
-    
-    if (error.includes('Invalid authentication')) {
-      return {
-        title: 'Erro de Autenticação',
-        message: 'Sua sessão expirou. Faça login novamente.',
-        canRetry: false
+        canRetry: true,
+        needsLogin: false
       };
     }
     
     return {
       title: 'Erro na Transmissão',
       message: error || 'Ocorreu um erro inesperado durante a transmissão dos pedidos.',
-      canRetry: true
+      canRetry: true,
+      needsLogin: false
     };
   };
 
   const errorInfo = getErrorMessage(error);
+
+  const handleLoginRedirect = () => {
+    window.location.href = '/login';
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -77,7 +94,15 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
             Fechar
           </Button>
           
-          {errorInfo.canRetry && (
+          {errorInfo.needsLogin ? (
+            <Button 
+              onClick={handleLoginRedirect} 
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              <LogIn className="w-4 h-4 mr-2" />
+              Fazer Login
+            </Button>
+          ) : errorInfo.canRetry ? (
             <Button 
               onClick={onRetry} 
               disabled={isRetrying}
@@ -92,7 +117,7 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
                 'Tentar Novamente'
               )}
             </Button>
-          )}
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

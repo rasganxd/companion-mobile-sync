@@ -51,6 +51,29 @@ export const useOrderTransmission = () => {
       setTransmissionError(errorMsg);
       throw new Error(errorMsg);
     }
+    
+    if (!salesRep.sessionToken) {
+      const errorMsg = 'Token de sessão expirado. Faça login novamente.';
+      setTransmissionError(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    // Verificar se o token não é muito antigo (para tokens mobile)
+    if (salesRep.sessionToken.startsWith('mobile_')) {
+      const tokenParts = salesRep.sessionToken.split('_');
+      if (tokenParts.length >= 3) {
+        const timestamp = parseInt(tokenParts[2]);
+        const tokenAge = Date.now() - timestamp;
+        const maxAge = 20 * 60 * 60 * 1000; // 20 horas (menos que o limite de 24h do servidor)
+        
+        if (tokenAge > maxAge) {
+          const errorMsg = 'Sessão expirada. Faça login novamente.';
+          setTransmissionError(errorMsg);
+          throw new Error(errorMsg);
+        }
+      }
+    }
+    
     return true;
   };
 
@@ -72,11 +95,8 @@ export const useOrderTransmission = () => {
     try {
       validateSalesRep();
       setTransmissionError(null);
-
-      if (!salesRep?.sessionToken) {
-        throw new Error('Token de sessão não encontrado. Faça login novamente.');
-      }
     } catch (error) {
+      console.error('❌ Sales rep validation failed:', error);
       return;
     }
 
@@ -87,15 +107,18 @@ export const useOrderTransmission = () => {
     try {
       const db = getDatabaseAdapter();
 
-      // Transmit orders to Supabase
-      console.log('📤 Transmitting orders to Supabase...');
+      console.log('📤 Starting transmission to Supabase...');
+      console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
       
+      // Transmit orders to Supabase
       const transmissionResult = await supabaseService.transmitOrders(
         pendingOrders, 
         salesRep.sessionToken!
       );
 
       if (transmissionResult.success) {
+        console.log('✅ Transmission successful, marking orders as transmitted...');
+        
         // Mark all orders as transmitted
         for (const order of pendingOrders) {
           try {
@@ -129,14 +152,29 @@ export const useOrderTransmission = () => {
           toast.error(`${errorCount} pedido(s) falharam na transmissão`);
         }
       } else {
-        throw new Error('Falha na transmissão para o servidor');
+        console.error('❌ Transmission failed:', transmissionResult.error);
+        throw new Error(transmissionResult.error || 'Falha na transmissão para o servidor');
       }
 
       await loadOrders();
 
     } catch (error) {
-      console.error('Error in transmission process:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Erro no processo de transmissão';
+      console.error('❌ Error in transmission process:', error);
+      
+      let errorMsg = 'Erro no processo de transmissão';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Invalid authentication')) {
+          errorMsg = 'Erro de autenticação. Faça login novamente.';
+        } else if (error.message.includes('session token expired')) {
+          errorMsg = 'Sessão expirada. Faça login novamente.';
+        } else if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
+          errorMsg = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        } else {
+          errorMsg = error.message;
+        }
+      }
+      
       setTransmissionError(errorMsg);
       toast.error('Erro na transmissão: ' + errorMsg);
       
