@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -5,26 +6,30 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Lock, LogIn } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+
 const Login = () => {
   const [salesRepCode, setSalesRepCode] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const {
-    loginWithCredentials
-  } = useAuth();
+  const { loginWithCredentials } = useAuthContext();
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!salesRepCode.trim()) {
       toast.error('Código do vendedor é obrigatório');
       return;
     }
+    
     if (!password.trim()) {
       toast.error('Senha é obrigatória');
       return;
     }
+
     setIsLoading(true);
+    
     try {
       const success = await loginWithCredentials(salesRepCode, password);
       if (success) {
@@ -40,7 +45,9 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
       <div className="bg-gradient-to-r from-app-blue to-app-blue-dark shadow-md py-[12px]">
         <h1 className="font-bold text-center text-white text-base py-[10px]">
           SalesTrack Mobile - Login
@@ -66,7 +73,14 @@ const Login = () => {
                 </label>
                 <div className="relative">
                   <User size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input type="text" value={salesRepCode} onChange={e => setSalesRepCode(e.target.value)} placeholder="Digite seu código" disabled={isLoading} className="pl-10 text-center text-lg font-medium" />
+                  <Input 
+                    type="text" 
+                    value={salesRepCode} 
+                    onChange={(e) => setSalesRepCode(e.target.value)} 
+                    placeholder="Digite seu código" 
+                    disabled={isLoading} 
+                    className="pl-10 text-center text-lg font-medium" 
+                  />
                 </div>
               </div>
 
@@ -76,22 +90,35 @@ const Login = () => {
                 </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Digite sua senha" disabled={isLoading} className="pl-10" />
+                  <Input 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="Digite sua senha" 
+                    disabled={isLoading} 
+                    className="pl-10" 
+                  />
                 </div>
               </div>
 
-              <Button type="submit" className="w-full bg-app-blue hover:bg-app-blue-dark" disabled={isLoading || !salesRepCode.trim() || !password.trim()}>
-                {isLoading ? <>
+              <Button 
+                type="submit" 
+                className="w-full bg-app-blue hover:bg-app-blue-dark" 
+                disabled={isLoading || !salesRepCode.trim() || !password.trim()}
+              >
+                {isLoading ? (
+                  <>
                     <LogIn size={16} className="animate-pulse mr-2" />
                     Entrando...
-                  </> : <>
+                  </>
+                ) : (
+                  <>
                     <LogIn size={16} className="mr-2" />
                     Entrar
-                  </>}
+                  </>
+                )}
               </Button>
             </form>
-
-            
           </CardContent>
         </Card>
       </div>
@@ -99,6 +126,8 @@ const Login = () => {
       <div className="py-4 text-center text-gray-600 text-sm bg-white border-t">
         © 2025 SalesTrack Mobile
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Login;

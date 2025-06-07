@@ -2,7 +2,15 @@
 import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 
 export const useAuth = () => {
-  const { salesRep, isLoading, logout, needsInitialSync, isOnline, lastSyncDate } = useAuthContext();
+  const { 
+    salesRep, 
+    isLoading, 
+    logout, 
+    loginWithCredentials,
+    needsInitialSync, 
+    isOnline, 
+    lastSyncDate 
+  } = useAuthContext();
 
   const isAuthenticated = () => {
     return salesRep !== null;
@@ -13,6 +21,7 @@ export const useAuth = () => {
     isLoading,
     isAuthenticated,
     logout,
+    loginWithCredentials,
     needsInitialSync,
     isOnline,
     lastSyncDate
