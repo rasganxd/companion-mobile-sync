@@ -77,7 +77,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
 
         {/* Nome da empresa/cliente - mais compacto */}
         <div className="text-center mb-4">
-          <h2 className="font-bold text-gray-900 mb-1 text-base">
+          <h2 className="font-bold text-gray-900 mb-1 text-sm">
             {client.company_name || client.name}
           </h2>
           {client.company_name && client.name && <p className="text-xs text-gray-600">
