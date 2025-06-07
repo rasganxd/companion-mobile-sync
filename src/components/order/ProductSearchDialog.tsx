@@ -76,7 +76,7 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
                           Código: {product.code} • Estoque: {product.stock} {product.unit || 'UN'}
                         </div>
                         <div className="text-sm font-semibold text-green-600">
-                          R$ {product.price.toFixed(2)}
+                          R$ {product.price?.toFixed(2) || '0.00'}
                         </div>
                       </div>
                     </div>
