@@ -48,6 +48,27 @@ export const useDataSync = () => {
     }
   }, []);
 
+  const validateSyncedData = (clients: any[], products: any[], paymentTables: any[]) => {
+    console.log('🔍 Validating synced data:', {
+      clients: clients.length,
+      products: products.length,
+      paymentTables: paymentTables.length,
+      clientsSample: clients.slice(0, 2).map(c => ({ id: c.id, name: c.name })),
+      productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name }))
+    });
+
+    // Check if we have at least some data
+    const hasValidData = clients.length > 0 || products.length > 0;
+    
+    if (!hasValidData) {
+      console.warn('⚠️ No valid data received during sync');
+      return false;
+    }
+
+    console.log('✅ Sync data validation passed');
+    return true;
+  };
+
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
     try {
       setIsSyncing(true);
@@ -64,17 +85,20 @@ export const useDataSync = () => {
       let syncedClients = 0;
       let syncedProducts = 0;
       let syncedPaymentTables = 0;
+      let clientsData: any[] = [];
+      let productsData: any[] = [];
+      let paymentTablesData: any[] = [];
 
       // Stage 1: Fetch clients
       updateProgress('Carregando clientes...', 0, 3);
       try {
         console.log('📥 Fetching clients from Supabase for sales rep:', salesRepId);
-        const clients = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
-        console.log(`📥 Received ${clients.length} clients from sync service`);
+        clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
+        console.log(`📥 Received ${clientsData.length} clients from sync service`);
         
-        if (clients.length > 0) {
-          await db.saveClients(clients);
-          syncedClients = clients.length;
+        if (clientsData.length > 0) {
+          await db.saveClients(clientsData);
+          syncedClients = clientsData.length;
           console.log(`✅ Saved ${syncedClients} clients to local database`);
         } else {
           console.log('ℹ️ No clients found for this sales rep');
@@ -88,12 +112,12 @@ export const useDataSync = () => {
       updateProgress('Carregando produtos...', 1, 3);
       try {
         console.log('📥 Fetching products from Supabase');
-        const products = await supabaseService.getProducts(sessionToken);
-        console.log(`📥 Received ${products.length} products from sync service`);
+        productsData = await supabaseService.getProducts(sessionToken);
+        console.log(`📥 Received ${productsData.length} products from sync service`);
         
-        if (products.length > 0) {
-          await db.saveProducts(products);
-          syncedProducts = products.length;
+        if (productsData.length > 0) {
+          await db.saveProducts(productsData);
+          syncedProducts = productsData.length;
           console.log(`✅ Saved ${syncedProducts} products to local database`);
         } else {
           console.log('ℹ️ No products found');
@@ -107,18 +131,20 @@ export const useDataSync = () => {
       updateProgress('Carregando tabelas de pagamento...', 2, 3);
       try {
         console.log('📥 Fetching payment tables from Supabase');
-        const paymentTables = await supabaseService.getPaymentTables(sessionToken);
-        console.log(`📥 Received ${paymentTables.length} payment tables from sync service`);
-        syncedPaymentTables = paymentTables.length;
+        paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
+        console.log(`📥 Received ${paymentTablesData.length} payment tables from sync service`);
+        syncedPaymentTables = paymentTablesData.length;
         console.log(`✅ Found ${syncedPaymentTables} payment tables`);
       } catch (error) {
         console.warn('⚠️ Failed to sync payment tables:', error);
         // Continue even if payment tables fail
       }
 
+      // Validate synced data
+      updateProgress('Validando dados sincronizados...', 3, 3);
+      const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
+
       // Save sync metadata
-      updateProgress('Salvando dados localmente...', 3, 3);
-      
       const syncDate = new Date();
       localStorage.setItem('last_sync_date', syncDate.toISOString());
       localStorage.setItem('sales_rep_id', salesRepId);
@@ -128,7 +154,8 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts + syncedPaymentTables
+        total: syncedClients + syncedProducts + syncedPaymentTables,
+        dataValid: isDataValid
       });
 
       // Check if at least some data was synced

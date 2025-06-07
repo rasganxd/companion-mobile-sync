@@ -18,111 +18,15 @@ serve(async (req) => {
     
     console.log('📱 Mobile data sync request - Type:', type, 'Sales Rep ID:', sales_rep_id);
 
-    // Get authorization header
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.log('❌ Missing or invalid authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Token de autorização necessário' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    console.log('🔑 Received token type:', token.startsWith('local_') ? 'LOCAL' : 'SUPABASE_JWT');
-
-    // Initialize Supabase client
+    // Initialize Supabase client with service role key for direct data access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if it's a local session token
-    if (token.startsWith('local_')) {
-      console.log('🔄 Processing local token, returning real data from database');
-      
-      // For local tokens, fetch real data from database using service role key
-      if (type === 'clients' && sales_rep_id) {
-        console.log('📥 Fetching real clients for local session');
-        
-        const { data: clients, error } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('sales_rep_id', sales_rep_id)
-          .eq('active', true);
-
-        if (error) {
-          console.error('❌ Error fetching clients for local session:', error);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao buscar clientes' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log(`✅ Returning ${clients?.length || 0} real clients for local session`);
-        return new Response(
-          JSON.stringify({ clients: clients || [] }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (type === 'products') {
-        console.log('📥 Fetching real products for local session');
-        
-        const { data: products, error } = await supabase
-          .from('products')
-          .select('*')
-          .eq('active', true);
-
-        if (error) {
-          console.error('❌ Error fetching products for local session:', error);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao buscar produtos' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log(`✅ Returning ${products?.length || 0} real products for local session`);
-        return new Response(
-          JSON.stringify({ products: products || [] }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (type === 'payment_tables') {
-        console.log('📥 Fetching real payment tables for local session');
-        
-        const { data: paymentTables, error } = await supabase
-          .from('payment_tables')
-          .select('*')
-          .eq('active', true);
-
-        if (error) {
-          console.error('❌ Error fetching payment tables for local session:', error);
-          return new Response(
-            JSON.stringify({ error: 'Erro ao buscar tabelas de pagamento' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-
-        console.log(`✅ Returning ${paymentTables?.length || 0} real payment tables for local session`);
-        return new Response(
-          JSON.stringify({ payment_tables: paymentTables || [] }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log('❌ Invalid sync type for local session:', type);
-      return new Response(
-        JSON.stringify({ error: 'Tipo de sincronização inválido' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // For non-local tokens, proceed with Supabase authentication
-    console.log('🔑 Processing Supabase JWT token');
+    console.log('🔄 Using service role key to fetch real data from database');
 
     if (type === 'clients' && sales_rep_id) {
-      console.log('📥 Fetching clients for sales rep:', sales_rep_id);
+      console.log('📥 Fetching real clients for sales rep:', sales_rep_id);
       
       const { data: clients, error } = await supabase
         .from('customers')
@@ -138,7 +42,7 @@ serve(async (req) => {
         );
       }
 
-      console.log(`✅ Found ${clients?.length || 0} clients`);
+      console.log(`✅ Returning ${clients?.length || 0} real clients`);
       return new Response(
         JSON.stringify({ clients: clients || [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -146,7 +50,7 @@ serve(async (req) => {
     }
 
     if (type === 'products') {
-      console.log('📥 Fetching products');
+      console.log('📥 Fetching real products from database');
       
       const { data: products, error } = await supabase
         .from('products')
@@ -161,7 +65,7 @@ serve(async (req) => {
         );
       }
 
-      console.log(`✅ Found ${products?.length || 0} products`);
+      console.log(`✅ Returning ${products?.length || 0} real products`);
       return new Response(
         JSON.stringify({ products: products || [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -169,7 +73,7 @@ serve(async (req) => {
     }
 
     if (type === 'payment_tables') {
-      console.log('📥 Fetching payment tables');
+      console.log('📥 Fetching real payment tables from database');
       
       const { data: paymentTables, error } = await supabase
         .from('payment_tables')
@@ -184,7 +88,7 @@ serve(async (req) => {
         );
       }
 
-      console.log(`✅ Found ${paymentTables?.length || 0} payment tables`);
+      console.log(`✅ Returning ${paymentTables?.length || 0} real payment tables`);
       return new Response(
         JSON.stringify({ payment_tables: paymentTables || [] }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
