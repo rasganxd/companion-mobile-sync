@@ -98,33 +98,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sessionToken: 'local_dev_token_' + Date.now()
         };
         
-        console.log('✅ Login local bem-sucedido, salvando dados do vendedor');
+        console.log('✅ Login local bem-sucedido, iniciando sincronização');
         login(salesRepData);
         
-        // Realizar sincronização inicial SEMPRE, mesmo offline
+        // Realizar sincronização inicial com melhor tratamento de erros
         console.log('🔄 Iniciando sincronização inicial...');
-        toast.success('Login realizado! Carregando dados...');
+        toast.success('Login realizado! Carregando dados do banco...');
         
         try {
           const syncResult = await performFullSync(salesRepData.id, salesRepData.sessionToken!);
           if (syncResult.success) {
             setNeedsInitialSync(false);
             console.log('✅ Sincronização concluída com sucesso');
-            const { clients = 0, products = 0 } = syncResult.syncedData || {};
+            const { clients = 0, products = 0, paymentTables = 0 } = syncResult.syncedData || {};
+            
             if (clients > 0 || products > 0) {
-              toast.success(`Dados carregados! ${clients} clientes, ${products} produtos`);
+              toast.success(`Dados carregados! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
             } else {
-              toast.warning('Login realizado, mas nenhum dado foi carregado.');
+              toast.warning('Login realizado, mas nenhum dado foi encontrado no banco para este vendedor.');
+              console.log('ℹ️ Nenhum dado encontrado no banco para o vendedor');
             }
           } else {
-            console.warn('⚠️ Sincronização falhou:', syncResult.error);
-            toast.warning('Login realizado. ' + (syncResult.error || 'Alguns dados podem não estar disponíveis.'));
-            setNeedsInitialSync(false); // Considerar como sucesso se o login funcionou
+            console.error('❌ Sincronização falhou:', syncResult.error);
+            toast.error('Erro na sincronização: ' + (syncResult.error || 'Erro desconhecido'));
+            setNeedsInitialSync(true);
           }
         } catch (syncError) {
           console.error('❌ Erro durante sincronização:', syncError);
-          toast.warning('Login realizado, mas houve problemas na sincronização.');
-          setNeedsInitialSync(false);
+          toast.error('Erro durante a sincronização. Verifique a conexão e tente novamente.');
+          setNeedsInitialSync(true);
         }
         
         return true;
@@ -171,7 +173,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const syncResult = await performFullSync(salesRepData.id, authResult.sessionToken);
           if (syncResult.success) {
             setNeedsInitialSync(false);
-            toast.success('Sincronização concluída com sucesso!');
+            const { clients = 0, products = 0, paymentTables = 0 } = syncResult.syncedData || {};
+            toast.success(`Sincronização concluída! ${clients} clientes, ${products} produtos`);
           } else {
             console.error('❌ Sincronização falhou:', syncResult.error);
             toast.error('Falha na sincronização: ' + syncResult.error);
@@ -182,7 +185,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
-      console.log('❌ Login falhou - credenciais inválidas ou resposta inválida');
+      console.log('❌ Login falhou - credenciais inválidas');
+      toast.error('Código ou senha incorretos');
       return false;
     } catch (error) {
       console.error('❌ Erro durante login:', error);

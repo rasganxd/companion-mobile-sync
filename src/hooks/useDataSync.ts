@@ -50,14 +50,16 @@ export const useDataSync = () => {
 
   const clearMockData = useCallback(async () => {
     try {
-      console.log('🗑️ Iniciando limpeza forçada de dados mock...');
+      console.log('🗑️ Iniciando limpeza FORÇADA de dados mock...');
       const db = getDatabaseAdapter();
       
-      // Usar o método forceClearMockData se disponível, senão usar clearMockData
+      // Forçar limpeza de dados mock
       if ('forceClearMockData' in db && typeof db.forceClearMockData === 'function') {
         await db.forceClearMockData();
+        console.log('✅ Dados mock limpos via forceClearMockData');
       } else if ('clearMockData' in db && typeof db.clearMockData === 'function') {
         await db.clearMockData();
+        console.log('✅ Dados mock limpos via clearMockData');
       }
       
       console.log('✅ Limpeza forçada de dados mock concluída');
@@ -75,19 +77,37 @@ export const useDataSync = () => {
       productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name }))
     });
 
-    return true; // Sempre retornar true para permitir sincronização
+    // Verificar se há dados mock ainda presentes
+    const hasMockClients = clients.some(c => 
+      c.name?.toLowerCase().includes('mykaela') || 
+      c.company_name?.toLowerCase().includes('mykaela')
+    );
+    const hasMockProducts = products.some(p => 
+      p.name?.toLowerCase().includes('produto premium') || 
+      p.name?.toLowerCase().includes('produto standard')
+    );
+
+    if (hasMockClients) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de clientes ainda presentes!');
+    }
+    if (hasMockProducts) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de produtos ainda presentes!');
+    }
+
+    return !hasMockClients && !hasMockProducts;
   };
 
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
     try {
       setIsSyncing(true);
-      console.log('🔄 Iniciando sincronização COMPLETA para vendedor:', salesRepId);
+      console.log('🔄 Iniciando sincronização COMPLETA - APENAS DADOS REAIS');
+      console.log('🔑 Sales Rep ID:', salesRepId);
       console.log('🔑 Tipo do token:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
 
       const db = getDatabaseAdapter();
       await db.initDatabase();
 
-      // SEMPRE executar limpeza de dados mock no início
+      // SEMPRE executar limpeza de dados mock primeiro
       await clearMockData();
 
       if (forceClear) {
@@ -101,50 +121,50 @@ export const useDataSync = () => {
       let productsData: any[] = [];
       let paymentTablesData: any[] = [];
 
-      // Etapa 1: Buscar clientes REAIS do Supabase
+      // Etapa 1: Buscar clientes REAIS
       updateProgress('Carregando clientes...', 0, 3);
       try {
-        console.log('📥 Buscando clientes REAIS do Supabase para vendedor:', salesRepId);
+        console.log('📥 Buscando clientes REAIS do Supabase');
         clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
-        console.log(`📥 Recebidos ${clientsData.length} clientes do serviço de sincronização`);
+        console.log(`📥 Recebidos ${clientsData.length} clientes do serviço`);
         
         if (clientsData.length > 0) {
           await db.saveClients(clientsData);
           syncedClients = clientsData.length;
-          console.log(`✅ Salvos ${syncedClients} clientes REAIS no banco local`);
+          console.log(`✅ Salvos ${syncedClients} clientes REAIS`);
         } else {
-          console.log('ℹ️ Nenhum cliente REAL do sync');
+          console.log('ℹ️ Nenhum cliente encontrado no banco de dados');
           syncedClients = 0;
         }
       } catch (error) {
-        console.warn('⚠️ Falha ao sincronizar clientes:', error);
-        syncedClients = 0;
+        console.error('❌ Falha ao sincronizar clientes:', error);
+        throw new Error(`Erro ao carregar clientes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       }
 
-      // Etapa 2: Buscar produtos REAIS do Supabase
+      // Etapa 2: Buscar produtos REAIS
       updateProgress('Carregando produtos...', 1, 3);
       try {
         console.log('📥 Buscando produtos REAIS do Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
-        console.log(`📥 Recebidos ${productsData.length} produtos do serviço de sincronização`);
+        console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
         
         if (productsData.length > 0) {
           await db.saveProducts(productsData);
           syncedProducts = productsData.length;
-          console.log(`✅ Salvos ${syncedProducts} produtos REAIS no banco local`);
+          console.log(`✅ Salvos ${syncedProducts} produtos REAIS`);
         } else {
-          console.log('ℹ️ Nenhum produto REAL do sync');
+          console.log('ℹ️ Nenhum produto encontrado no banco de dados');
           syncedProducts = 0;
         }
       } catch (error) {
-        console.warn('⚠️ Falha ao sincronizar produtos:', error);
-        syncedProducts = 0;
+        console.error('❌ Falha ao sincronizar produtos:', error);
+        throw new Error(`Erro ao carregar produtos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
       }
 
       // Etapa 3: Buscar tabelas de pagamento
       updateProgress('Carregando tabelas de pagamento...', 2, 3);
       try {
-        console.log('📥 Buscando tabelas de pagamento do Supabase');
+        console.log('📥 Buscando tabelas de pagamento REAIS');
         paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
         console.log(`📥 Recebidas ${paymentTablesData.length} tabelas de pagamento`);
         syncedPaymentTables = paymentTablesData.length;
@@ -154,11 +174,14 @@ export const useDataSync = () => {
       }
 
       // Validar dados sincronizados
-      updateProgress('Validando dados sincronizados...', 3, 3);
+      updateProgress('Validando dados...', 3, 3);
       const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
 
-      // Executar limpeza final para garantir que nenhum dado mock permaneceu
-      await clearMockData();
+      if (!isDataValid) {
+        console.warn('⚠️ Dados mock detectados após sincronização!');
+        // Executar segunda limpeza
+        await clearMockData();
+      }
 
       // Salvar metadata de sincronização
       const syncDate = new Date();
@@ -177,15 +200,13 @@ export const useDataSync = () => {
       const totalSynced = syncedClients + syncedProducts;
       
       if (totalSynced === 0) {
-        console.log('❌ Nenhum dado REAL foi sincronizado');
-        
         return {
           success: false,
-          error: 'Nenhum dado foi sincronizado. Verifique sua conexão e tente novamente.'
+          error: 'Nenhum dado encontrado no banco de dados. Verifique se há clientes e produtos cadastrados para este vendedor.'
         };
       }
 
-      console.log('✅ Sincronização concluída com sucesso - apenas dados REAIS');
+      console.log('✅ Sincronização concluída - APENAS dados REAIS carregados');
       
       return {
         success: true,
@@ -197,11 +218,11 @@ export const useDataSync = () => {
       };
 
     } catch (error) {
-      console.error('❌ Falha na sincronização completa:', error);
+      console.error('❌ Falha na sincronização:', error);
       
       return {
         success: false,
-        error: 'Erro durante a sincronização. Tente novamente.'
+        error: error instanceof Error ? error.message : 'Erro durante a sincronização. Tente novamente.'
       };
     } finally {
       setIsSyncing(false);
@@ -217,7 +238,7 @@ export const useDataSync = () => {
   }, []);
 
   const forceResync = useCallback(async (salesRepId: string, sessionToken: string): Promise<SyncResult> => {
-    console.log('🔄 Forçando ressincronização completa com limpeza de dados mock');
+    console.log('🔄 Forçando ressincronização COMPLETA com limpeza total');
     return await performFullSync(salesRepId, sessionToken, true);
   }, [performFullSync]);
 

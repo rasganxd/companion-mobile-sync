@@ -1,1 +1,11 @@
+
 project_id = "ufvnubabpcyimahbubkd"
+
+[functions.mobile-data-sync]
+verify_jwt = false
+
+[functions.mobile-auth]
+verify_jwt = false
+
+[functions.mobile-orders-import]
+verify_jwt = false
