@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Database, Clock, CheckCircle, RefreshCw, Sync, Wifi, WifiOff } from 'lucide-react';
+import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
@@ -221,7 +220,7 @@ const SyncSettings = () => {
                 </>
               ) : (
                 <>
-                  <Sync className="w-4 h-4 mr-2" />
+                  <RefreshCw className="w-4 h-4 mr-2" />
                   Sincronização Rápida
                 </>
               )}
