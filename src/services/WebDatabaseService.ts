@@ -93,6 +93,10 @@ class WebDatabaseService implements DatabaseAdapter {
           }
         },
       });
+      
+      // Automaticamente limpar dados mock após inicialização
+      await this.forceClearMockData();
+      
       console.log('✅ Database initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing database:', error);
@@ -102,55 +106,92 @@ class WebDatabaseService implements DatabaseAdapter {
     }
   }
 
-  async clearMockData(): Promise<void> {
+  private isMockClient(client: any): boolean {
+    if (!client) return false;
+    
+    const mockPatterns = [
+      'Mykaela',
+      'Cliente Principal',
+      'Empresa Mykaela',
+      'Mock',
+      'Test',
+      'Teste'
+    ];
+    
+    const clientName = client.name?.toLowerCase() || '';
+    const companyName = client.company_name?.toLowerCase() || '';
+    
+    return mockPatterns.some(pattern => 
+      clientName.includes(pattern.toLowerCase()) || 
+      companyName.includes(pattern.toLowerCase())
+    );
+  }
+
+  private isMockProduct(product: any): boolean {
+    if (!product) return false;
+    
+    const mockPatterns = [
+      'Produto Premium',
+      'Produto Standard', 
+      'Premium A',
+      'Standard B',
+      'Mock',
+      'Test',
+      'Teste'
+    ];
+    
+    const productName = product.name?.toLowerCase() || '';
+    
+    return mockPatterns.some(pattern => 
+      productName.includes(pattern.toLowerCase())
+    );
+  }
+
+  async forceClearMockData(): Promise<void> {
     await this.ensureInitialized();
     
     try {
-      console.log('🗑️ Iniciando limpeza de dados mock...');
+      console.log('🗑️ Forçando limpeza de dados mock do IndexedDB...');
+      
+      const tx = this.db!.transaction(['clients', 'products'], 'readwrite');
       
       // Limpar clientes mock
-      const allClients = await this.db!.getAll('clients');
-      const mockClientIds: string[] = [];
+      const clientStore = tx.objectStore('clients');
+      const allClients = await clientStore.getAll();
+      let removedClientsCount = 0;
       
       for (const client of allClients) {
-        if (client.name?.includes('Mykaela') || 
-            client.company_name?.includes('Mykaela') ||
-            client.name?.includes('Cliente Principal') ||
-            client.company_name?.includes('Empresa Mykaela')) {
-          mockClientIds.push(client.id);
+        if (this.isMockClient(client)) {
+          await clientStore.delete(client.id);
+          removedClientsCount++;
+          console.log('🗑️ Cliente mock removido:', client.name || client.company_name);
         }
-      }
-      
-      // Remover clientes mock
-      for (const id of mockClientIds) {
-        await this.db!.delete('clients', id);
-        console.log('🗑️ Cliente mock removido:', id);
       }
       
       // Limpar produtos mock
-      const allProducts = await this.db!.getAll('products');
-      const mockProductIds: string[] = [];
+      const productStore = tx.objectStore('products');
+      const allProducts = await productStore.getAll();
+      let removedProductsCount = 0;
       
       for (const product of allProducts) {
-        if (product.name?.includes('Produto Premium') || 
-            product.name?.includes('Produto Standard') ||
-            product.name?.includes('Premium A') ||
-            product.name?.includes('Standard B')) {
-          mockProductIds.push(product.id);
+        if (this.isMockProduct(product)) {
+          await productStore.delete(product.id);
+          removedProductsCount++;
+          console.log('🗑️ Produto mock removido:', product.name);
         }
       }
       
-      // Remover produtos mock
-      for (const id of mockProductIds) {
-        await this.db!.delete('products', id);
-        console.log('🗑️ Produto mock removido:', id);
-      }
+      await tx.done;
       
-      console.log(`✅ Limpeza concluída: ${mockClientIds.length} clientes e ${mockProductIds.length} produtos mock removidos`);
+      console.log(`✅ Limpeza forçada concluída: ${removedClientsCount} clientes e ${removedProductsCount} produtos mock removidos`);
       
     } catch (error) {
-      console.error('❌ Erro ao limpar dados mock:', error);
+      console.error('❌ Erro ao forçar limpeza de dados mock:', error);
     }
+  }
+
+  async clearMockData(): Promise<void> {
+    return this.forceClearMockData();
   }
 
   async getClients(): Promise<any[]> {
@@ -158,12 +199,7 @@ class WebDatabaseService implements DatabaseAdapter {
     const allClients = await this.db!.getAll('clients');
     
     // Filtrar dados mock e remover duplicatas baseadas no ID
-    const realClients = allClients.filter(client => 
-      !client.name?.includes('Mykaela') && 
-      !client.company_name?.includes('Mykaela') &&
-      !client.name?.includes('Cliente Principal') &&
-      !client.company_name?.includes('Empresa Mykaela')
-    );
+    const realClients = allClients.filter(client => !this.isMockClient(client));
     
     const uniqueClients = realClients.reduce((acc: any[], current: any) => {
       const existingClient = acc.find(client => client.id === current.id);
@@ -217,12 +253,7 @@ class WebDatabaseService implements DatabaseAdapter {
     const allProducts = await this.db!.getAll('products');
     
     // Filtrar dados mock e remover duplicatas baseadas no ID
-    const realProducts = allProducts.filter(product => 
-      !product.name?.includes('Produto Premium') && 
-      !product.name?.includes('Produto Standard') &&
-      !product.name?.includes('Premium A') &&
-      !product.name?.includes('Standard B')
-    );
+    const realProducts = allProducts.filter(product => !this.isMockProduct(product));
     
     const uniqueProducts = realProducts.reduce((acc: any[], current: any) => {
       const existingProduct = acc.find(product => product.id === current.id);
@@ -375,34 +406,64 @@ class WebDatabaseService implements DatabaseAdapter {
   // ✅ NOVO: Métodos para salvar dados em batch
   async saveClients(clientsArray: any[]): Promise<void> {
     await this.ensureInitialized();
+    
+    // Filtrar apenas dados reais antes de salvar
+    const realClients = clientsArray.filter(client => !this.isMockClient(client));
+    
+    if (realClients.length === 0) {
+      console.log('ℹ️ Nenhum cliente real para salvar');
+      return;
+    }
+    
     const tx = this.db!.transaction('clients', 'readwrite');
-    clientsArray.forEach(client => {
+    realClients.forEach(client => {
       tx.store.put(client);
     });
     await tx.done;
-    console.log(`✅ Saved ${clientsArray.length} clients in batch`);
+    console.log(`✅ Saved ${realClients.length} real clients in batch (filtered from ${clientsArray.length} total)`);
   }
 
   async saveProducts(productsArray: any[]): Promise<void> {
     await this.ensureInitialized();
+    
+    // Filtrar apenas dados reais antes de salvar
+    const realProducts = productsArray.filter(product => !this.isMockProduct(product));
+    
+    if (realProducts.length === 0) {
+      console.log('ℹ️ Nenhum produto real para salvar');
+      return;
+    }
+    
     const tx = this.db!.transaction('products', 'readwrite');
-    productsArray.forEach(product => {
+    realProducts.forEach(product => {
       tx.store.put(product);
     });
     await tx.done;
-    console.log(`✅ Saved ${productsArray.length} products in batch`);
+    console.log(`✅ Saved ${realProducts.length} real products in batch (filtered from ${productsArray.length} total)`);
   }
 
   async saveClient(client: any): Promise<void> {
     await this.ensureInitialized();
+    
+    if (this.isMockClient(client)) {
+      console.log('🚫 Cliente mock rejeitado:', client.name || client.company_name);
+      return;
+    }
+    
     await this.db!.put('clients', client);
-    console.log('✅ Client saved:', client);
+    console.log('✅ Real client saved:', client);
   }
 
   async saveProduct(product: any): Promise<void> {
     await this.ensureInitialized();
+    
+    if (this.isMockProduct(product)) {
+      console.log('🚫 Produto mock rejeitado:', product.name);
+      return;
+    }
+    
     await this.db!.put('products', product);
-    console.log('✅ Product saved:', product);
+    console.log('✅ Real product saved:', product);
   }
 
   async isClientNegated(clientId: string): Promise<boolean> {

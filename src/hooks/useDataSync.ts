@@ -50,41 +50,17 @@ export const useDataSync = () => {
 
   const clearMockData = useCallback(async () => {
     try {
-      console.log('🗑️ Limpando dados mock do IndexedDB...');
+      console.log('🗑️ Iniciando limpeza forçada de dados mock...');
       const db = getDatabaseAdapter();
       
-      // Obter todos os clientes e remover os que são mock/teste
-      const allClients = await db.getClients();
-      console.log('📦 Clientes encontrados:', allClients);
-      
-      // Identificar e remover clientes mock (como "Mykaela")
-      for (const client of allClients) {
-        if (client.name?.includes('Mykaela') || 
-            client.company_name?.includes('Mykaela') ||
-            client.name?.includes('Cliente Principal') ||
-            client.company_name?.includes('Empresa Mykaela')) {
-          console.log('🗑️ Removendo cliente mock:', client);
-          // Note: Como não temos um método deleteClient, vamos marcar como inativo
-          // ou implementar limpeza via reinicialização do banco
-        }
+      // Usar o método forceClearMockData se disponível, senão usar clearMockData
+      if ('forceClearMockData' in db && typeof db.forceClearMockData === 'function') {
+        await db.forceClearMockData();
+      } else if ('clearMockData' in db && typeof db.clearMockData === 'function') {
+        await db.clearMockData();
       }
       
-      // Obter todos os produtos e remover os que são mock/teste
-      const allProducts = await db.getProducts();
-      console.log('📦 Produtos encontrados:', allProducts);
-      
-      for (const product of allProducts) {
-        if (product.name?.includes('Produto Premium') || 
-            product.name?.includes('Produto Standard') ||
-            product.name?.includes('Premium A') ||
-            product.name?.includes('Standard B')) {
-          console.log('🗑️ Removendo produto mock:', product);
-          // Note: Como não temos um método deleteProduct, vamos marcar como inativo
-          // ou implementar limpeza via reinicialização do banco
-        }
-      }
-      
-      console.log('✅ Limpeza de dados mock concluída');
+      console.log('✅ Limpeza forçada de dados mock concluída');
     } catch (error) {
       console.error('❌ Erro ao limpar dados mock:', error);
     }
@@ -99,23 +75,6 @@ export const useDataSync = () => {
       productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name }))
     });
 
-    // Verificar se temos pelo menos alguns dados REAIS (não mock)
-    const realClients = clients.filter(c => 
-      !c.name?.includes('Mykaela') && 
-      !c.company_name?.includes('Mykaela') &&
-      !c.name?.includes('Cliente Principal')
-    );
-    
-    const realProducts = products.filter(p => 
-      !p.name?.includes('Produto Premium') && 
-      !p.name?.includes('Produto Standard')
-    );
-    
-    console.log('🔍 Dados reais encontrados:', {
-      realClients: realClients.length,
-      realProducts: realProducts.length
-    });
-
     return true; // Sempre retornar true para permitir sincronização
   };
 
@@ -125,13 +84,15 @@ export const useDataSync = () => {
       console.log('🔄 Iniciando sincronização COMPLETA para vendedor:', salesRepId);
       console.log('🔑 Tipo do token:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
 
-      if (forceClear) {
-        await clearLocalData();
-        await clearMockData();
-      }
-
       const db = getDatabaseAdapter();
       await db.initDatabase();
+
+      // SEMPRE executar limpeza de dados mock no início
+      await clearMockData();
+
+      if (forceClear) {
+        await clearLocalData();
+      }
 
       let syncedClients = 0;
       let syncedProducts = 0;
@@ -196,6 +157,9 @@ export const useDataSync = () => {
       updateProgress('Validando dados sincronizados...', 3, 3);
       const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
 
+      // Executar limpeza final para garantir que nenhum dado mock permaneceu
+      await clearMockData();
+
       // Salvar metadata de sincronização
       const syncDate = new Date();
       localStorage.setItem('last_sync_date', syncDate.toISOString());
@@ -206,7 +170,7 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts + syncedPaymentTables,
+        total: syncedClients + syncedProducts,
         dataValid: isDataValid
       });
 
