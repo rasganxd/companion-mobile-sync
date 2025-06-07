@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -31,7 +30,7 @@ interface Client {
 }
 
 const ClientsList = () => {
-  const { goBack } = useAppNavigation();
+  const { goBack, navigateToClientFullScreen } = useAppNavigation();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -208,6 +207,16 @@ const ClientsList = () => {
       }
     });
   };
+
+  const handleClientViewDetails = (filteredClients: Client[], initialIndex: number) => {
+    console.log('👁️ Opening client full screen view:', {
+      clientsCount: filteredClients.length,
+      initialIndex,
+      day
+    });
+    
+    navigateToClientFullScreen(filteredClients, initialIndex, day);
+  };
   
   const handleGoBack = () => {
     console.log('🔙 Going back to visit routes');
@@ -253,6 +262,7 @@ const ClientsList = () => {
             day={day}
             salesRep={salesRep}
             onClientSelect={handleClientSelect}
+            onClientViewDetails={handleClientViewDetails}
           />
         </ScrollArea>
       </div>
