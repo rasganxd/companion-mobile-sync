@@ -1,4 +1,3 @@
-
 import DatabaseAdapter from './DatabaseAdapter';
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { MockDataCleaner } from './database/MockDataCleaner';
@@ -121,7 +120,58 @@ class WebDatabaseService implements DatabaseAdapter {
     console.log('📊 Total de produtos no banco:', allProducts.length);
     console.log('📊 Produtos reais únicos retornados:', uniqueProducts.length);
     
-    return uniqueProducts;
+    // Ensure products have correct price mapping
+    const normalizedProducts = uniqueProducts.map(product => ({
+      ...product,
+      // Ensure price field exists for compatibility
+      price: product.sale_price || product.price || 0
+    }));
+    
+    return normalizedProducts;
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    await this.ensureInitialized();
+    if (this.mockDataCleaner) {
+      // Normalize product data before saving
+      const normalizedProduct = {
+        ...product,
+        // Ensure both price and sale_price are available
+        price: product.sale_price || product.price || 0,
+        sale_price: product.sale_price || product.price || 0,
+        cost_price: product.cost_price || product.cost || 0,
+        // Ensure unit information is preserved
+        unit: product.unit || 'UN',
+        has_subunit: product.has_subunit || false,
+        subunit: product.subunit || null,
+        subunit_ratio: product.subunit_ratio || 1
+      };
+      
+      console.log('💾 Salvando produto normalizado:', normalizedProduct);
+      await this.mockDataCleaner.saveRealProduct(normalizedProduct);
+    }
+  }
+
+  async saveProducts(productsArray: any[]): Promise<void> {
+    await this.ensureInitialized();
+    if (this.mockDataCleaner) {
+      // Normalize all products before saving
+      const normalizedProducts = productsArray.map(product => ({
+        ...product,
+        // Ensure both price and sale_price are available
+        price: product.sale_price || product.price || 0,
+        sale_price: product.sale_price || product.price || 0,
+        cost_price: product.cost_price || product.cost || 0,
+        // Ensure unit information is preserved
+        unit: product.unit || 'UN',
+        has_subunit: product.has_subunit || false,
+        subunit: product.subunit || null,
+        subunit_ratio: product.subunit_ratio || 1
+      }));
+      
+      console.log('💾 Salvando produtos normalizados em lote:', normalizedProducts.length);
+      await this.mockDataCleaner.saveRealProducts(normalizedProducts);
+    }
   }
 
   async getPendingSyncItems(tableName: string): Promise<any[]> {
@@ -262,24 +312,10 @@ class WebDatabaseService implements DatabaseAdapter {
     }
   }
 
-  async saveProducts(productsArray: any[]): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.saveRealProducts(productsArray);
-    }
-  }
-
   async saveClient(client: any): Promise<void> {
     await this.ensureInitialized();
     if (this.mockDataCleaner) {
       await this.mockDataCleaner.saveRealClient(client);
-    }
-  }
-
-  async saveProduct(product: any): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.saveRealProduct(product);
     }
   }
 

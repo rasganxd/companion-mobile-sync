@@ -148,8 +148,16 @@ const PlaceOrder = () => {
                 <div className="p-3 bg-gray-50 rounded-lg border mb-4">
                   <p className="font-medium text-gray-900 mb-2">{selectedProduct.name}</p>
                   <p className="text-sm text-gray-600 mb-2">Código: {selectedProduct.code}</p>
+                  <p className="text-sm text-gray-600 mb-2">
+                    Estoque: {selectedProduct.stock} {selectedProduct.unit || 'UN'}
+                  </p>
                   <p className="text-sm text-gray-600 mb-3">
-                    Preço: R$ {selectedProduct.price?.toFixed(2) || '0.00'}
+                    Preço: R$ {(selectedProduct.sale_price || selectedProduct.price || 0).toFixed(2)}
+                    {selectedProduct.has_subunit && selectedProduct.subunit && selectedProduct.subunit_ratio && (
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({selectedProduct.subunit}: R$ {((selectedProduct.sale_price || selectedProduct.price || 0) / selectedProduct.subunit_ratio).toFixed(2)})
+                      </span>
+                    )}
                   </p>
                   
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -172,7 +180,7 @@ const PlaceOrder = () => {
                       <input
                         type="number"
                         value={unitPrice}
-                        onChange={(e) => setUnitPrice(parseFloat(e.target.value) || selectedProduct.price || 0)}
+                        onChange={(e) => setUnitPrice(parseFloat(e.target.value) || selectedProduct.sale_price || selectedProduct.price || 0)}
                         min="0"
                         step="0.01"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"

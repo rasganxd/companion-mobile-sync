@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     if (type === 'products') {
-      console.log('📥 Fetching REAL products from database');
+      console.log('📥 Fetching REAL products with units from database');
       
       const { data: products, error } = await supabase
         .from('products')
@@ -119,7 +119,11 @@ serve(async (req) => {
           stock,
           active,
           created_at,
-          updated_at
+          updated_at,
+          main_unit_id,
+          sub_unit_id,
+          main_unit:units!main_unit_id(code, description, package_quantity),
+          sub_unit:units!sub_unit_id(code, description, package_quantity)
         `)
         .eq('active', true);
 
@@ -142,9 +146,39 @@ serve(async (req) => {
         );
       }
 
-      console.log(`✅ Returning ${products.length} REAL products from database`);
+      // Transform products to include proper unit information
+      const transformedProducts = products.map(product => {
+        const hasSubunit = product.sub_unit_id && product.sub_unit;
+        let subunitRatio = 1;
+        
+        // Calculate subunit ratio if both units exist
+        if (hasSubunit && product.main_unit?.package_quantity && product.sub_unit?.package_quantity) {
+          subunitRatio = product.main_unit.package_quantity / product.sub_unit.package_quantity;
+        }
+        
+        return {
+          id: product.id,
+          code: product.code,
+          name: product.name,
+          price: product.sale_price, // Map sale_price to price for compatibility
+          sale_price: product.sale_price,
+          cost_price: product.cost_price,
+          stock: product.stock,
+          active: product.active,
+          created_at: product.created_at,
+          updated_at: product.updated_at,
+          unit: product.main_unit?.code || 'UN',
+          has_subunit: hasSubunit,
+          subunit: hasSubunit ? product.sub_unit?.code : null,
+          subunit_ratio: hasSubunit ? subunitRatio : 1,
+          main_unit_id: product.main_unit_id,
+          sub_unit_id: product.sub_unit_id
+        };
+      });
+
+      console.log(`✅ Returning ${transformedProducts.length} REAL products with unit information`);
       return new Response(
-        JSON.stringify({ products }),
+        JSON.stringify({ products: transformedProducts }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

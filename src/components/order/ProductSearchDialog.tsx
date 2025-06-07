@@ -15,10 +15,15 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  sale_price?: number;
+  cost_price?: number;
   code: number;
   stock: number;
   unit?: string;
   cost?: number;
+  has_subunit?: boolean;
+  subunit?: string;
+  subunit_ratio?: number;
 }
 
 interface ProductSearchDialogProps {
@@ -38,6 +43,20 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
   products,
   onSelectProduct
 }) => {
+  const getDisplayPrice = (product: Product) => {
+    // Use sale_price if available, otherwise use price
+    const basePrice = product.sale_price || product.price || 0;
+    return basePrice;
+  };
+
+  const getUnitInfo = (product: Product) => {
+    if (product.has_subunit && product.subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+      const subunitPrice = getDisplayPrice(product) / product.subunit_ratio;
+      return `${product.unit || 'UN'} (R$ ${getDisplayPrice(product).toFixed(2)}) • ${product.subunit} (R$ ${subunitPrice.toFixed(2)})`;
+    }
+    return product.unit || 'UN';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md max-h-[80vh]">
@@ -73,10 +92,13 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">{product.name}</div>
                         <div className="text-sm text-gray-600">
-                          Código: {product.code} • Estoque: {product.stock} {product.unit || 'UN'}
+                          Código: {product.code} • Estoque: {product.stock}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Unidade: {getUnitInfo(product)}
                         </div>
                         <div className="text-sm font-semibold text-green-600">
-                          R$ {product.price?.toFixed(2) || '0.00'}
+                          Preço: R$ {getDisplayPrice(product).toFixed(2)}
                         </div>
                       </div>
                     </div>
