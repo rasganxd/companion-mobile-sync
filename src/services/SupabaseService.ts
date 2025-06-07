@@ -110,13 +110,15 @@ class SupabaseService {
 
   async getClientsForSalesRep(salesRepId: string, sessionToken: string) {
     console.log('📥 Fetching clients for sales rep:', salesRepId);
+    console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
     try {
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`
+          'Authorization': `Bearer ${sessionToken}`,
+          'apikey': this.anonKey
         },
         body: JSON.stringify({ 
           type: 'clients',
@@ -129,13 +131,28 @@ class SupabaseService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar clientes' }));
         console.error('❌ Clients sync error:', errorData);
+        
+        // For local tokens, return empty array instead of throwing error
+        if (sessionToken.startsWith('local_')) {
+          console.log('🔄 Local token detected, returning empty array for graceful degradation');
+          return [];
+        }
+        
         throw new Error(errorData.error || 'Erro ao buscar clientes');
       }
 
       const data = await response.json();
+      console.log(`✅ Successfully fetched ${data.clients?.length || 0} clients`);
       return data.clients || [];
     } catch (error) {
       console.error('❌ Network error fetching clients:', error);
+      
+      // For local tokens, return empty array instead of throwing error
+      if (sessionToken.startsWith('local_')) {
+        console.log('🔄 Local token with network error, returning empty array');
+        return [];
+      }
+      
       if (error instanceof TypeError && error.message.includes('fetch')) {
         throw new Error('Erro de conexão ao buscar clientes.');
       }
@@ -145,42 +162,94 @@ class SupabaseService {
 
   async getProducts(sessionToken: string) {
     console.log('📥 Fetching products from Supabase');
+    console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
-    const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({ type: 'products' })
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+          'apikey': this.anonKey
+        },
+        body: JSON.stringify({ type: 'products' })
+      });
 
-    if (!response.ok) {
-      throw new Error('Erro ao buscar produtos');
+      console.log('📡 Products sync response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar produtos' }));
+        console.error('❌ Products sync error:', errorData);
+        
+        // For local tokens, return empty array instead of throwing error
+        if (sessionToken.startsWith('local_')) {
+          console.log('🔄 Local token detected, returning empty array for graceful degradation');
+          return [];
+        }
+        
+        throw new Error(errorData.error || 'Erro ao buscar produtos');
+      }
+
+      const data = await response.json();
+      console.log(`✅ Successfully fetched ${data.products?.length || 0} products`);
+      return data.products || [];
+    } catch (error) {
+      console.error('❌ Network error fetching products:', error);
+      
+      // For local tokens, return empty array instead of throwing error
+      if (sessionToken.startsWith('local_')) {
+        console.log('🔄 Local token with network error, returning empty array');
+        return [];
+      }
+      
+      throw error;
     }
-
-    const data = await response.json();
-    return data.products || [];
   }
 
   async getPaymentTables(sessionToken: string) {
     console.log('📥 Fetching payment tables from Supabase');
+    console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
-    const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({ type: 'payment_tables' })
-    });
+    try {
+      const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+          'apikey': this.anonKey
+        },
+        body: JSON.stringify({ type: 'payment_tables' })
+      });
 
-    if (!response.ok) {
-      throw new Error('Erro ao buscar tabelas de pagamento');
+      console.log('📡 Payment tables sync response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar tabelas de pagamento' }));
+        console.error('❌ Payment tables sync error:', errorData);
+        
+        // For local tokens, return empty array instead of throwing error
+        if (sessionToken.startsWith('local_')) {
+          console.log('🔄 Local token detected, returning empty array for graceful degradation');
+          return [];
+        }
+        
+        throw new Error(errorData.error || 'Erro ao buscar tabelas de pagamento');
+      }
+
+      const data = await response.json();
+      console.log(`✅ Successfully fetched ${data.payment_tables?.length || 0} payment tables`);
+      return data.payment_tables || [];
+    } catch (error) {
+      console.error('❌ Network error fetching payment tables:', error);
+      
+      // For local tokens, return empty array instead of throwing error
+      if (sessionToken.startsWith('local_')) {
+        console.log('🔄 Local token with network error, returning empty array');
+        return [];
+      }
+      
+      throw error;
     }
-
-    const data = await response.json();
-    return data.payment_tables || [];
   }
 
   async transmitOrders(orders: any[], sessionToken: string) {
