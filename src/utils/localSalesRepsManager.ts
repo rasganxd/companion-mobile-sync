@@ -31,13 +31,13 @@ export class LocalSalesRepsManager {
       console.error('❌ Error loading local sales reps:', error);
     }
 
-    // Return default test data if nothing is stored
+    // Return real sales rep data for Candatti
     return [
       {
         id: '1',
         code: '1',
-        name: 'Vendedor Teste',
-        email: 'teste@email.com',
+        name: 'Candatti',
+        email: 'candatti@empresa.com',
         phone: '(11) 99999-9999',
         password: 'senha123',
         active: true

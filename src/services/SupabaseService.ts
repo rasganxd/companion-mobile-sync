@@ -1,3 +1,4 @@
+
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -43,7 +44,7 @@ class SupabaseService {
     console.log('🔄 Attempting local authentication for code:', code);
     
     try {
-      // Buscar dados locais de vendedores
+      // Buscar dados locais de vendedores com dados reais
       const salesReps = this.getLocalSalesReps();
       const salesRep = salesReps.find(rep => rep.code === code);
       
@@ -84,7 +85,7 @@ class SupabaseService {
   }
 
   private getLocalSalesReps() {
-    // Dados de exemplo para teste local (normalmente viriam do localStorage/AsyncStorage)
+    // Dados de exemplo para teste local com dados reais
     const localData = localStorage.getItem('local_sales_reps');
     if (localData) {
       try {
@@ -94,13 +95,13 @@ class SupabaseService {
       }
     }
 
-    // Dados de fallback para teste
+    // Dados reais do vendedor Candatti para fallback
     return [
       {
         id: '1',
         code: '1',
-        name: 'Vendedor Teste',
-        email: 'teste@email.com',
+        name: 'Candatti',
+        email: 'candatti@empresa.com',
         phone: '(11) 99999-9999',
         password: 'senha123',
         active: true

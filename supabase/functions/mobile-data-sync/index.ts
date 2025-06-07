@@ -31,118 +31,82 @@ serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     console.log('🔑 Received token type:', token.startsWith('local_') ? 'LOCAL' : 'SUPABASE_JWT');
 
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     // Check if it's a local session token
     if (token.startsWith('local_')) {
-      console.log('🔄 Processing local token, returning mock data for development');
+      console.log('🔄 Processing local token, returning real data from database');
       
-      // For local tokens, return mock data to allow offline development
+      // For local tokens, fetch real data from database using service role key
       if (type === 'clients' && sales_rep_id) {
-        console.log('📥 Returning mock clients for local session');
+        console.log('📥 Fetching real clients for local session');
         
-        const mockClients = [
-          {
-            id: 'mock-client-1',
-            name: 'Cliente Teste 1',
-            company_name: 'Empresa Teste 1',
-            code: 1001,
-            active: true,
-            sales_rep_id: sales_rep_id,
-            visit_days: ['monday', 'wednesday', 'friday'],
-            phone: '(11) 99999-9999',
-            email: 'cliente1@teste.com',
-            address: 'Rua Teste, 123',
-            city: 'São Paulo',
-            state: 'SP',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'mock-client-2',
-            name: 'Cliente Teste 2',
-            company_name: 'Empresa Teste 2',
-            code: 1002,
-            active: true,
-            sales_rep_id: sales_rep_id,
-            visit_days: ['tuesday', 'thursday'],
-            phone: '(11) 88888-8888',
-            email: 'cliente2@teste.com',
-            address: 'Avenida Teste, 456',
-            city: 'Rio de Janeiro',
-            state: 'RJ',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
+        const { data: clients, error } = await supabase
+          .from('customers')
+          .select('*')
+          .eq('sales_rep_id', sales_rep_id)
+          .eq('active', true);
 
-        console.log(`✅ Returning ${mockClients.length} mock clients`);
+        if (error) {
+          console.error('❌ Error fetching clients for local session:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao buscar clientes' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`✅ Returning ${clients?.length || 0} real clients for local session`);
         return new Response(
-          JSON.stringify({ clients: mockClients }),
+          JSON.stringify({ clients: clients || [] }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       if (type === 'products') {
-        console.log('📥 Returning mock products for local session');
+        console.log('📥 Fetching real products for local session');
         
-        const mockProducts = [
-          {
-            id: 'mock-product-1',
-            code: 2001,
-            name: 'Produto Teste 1',
-            sale_price: 25.50,
-            cost_price: 15.00,
-            stock: 100,
-            active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'mock-product-2',
-            code: 2002,
-            name: 'Produto Teste 2',
-            sale_price: 45.00,
-            cost_price: 30.00,
-            stock: 50,
-            active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
+        const { data: products, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('active', true);
 
-        console.log(`✅ Returning ${mockProducts.length} mock products`);
+        if (error) {
+          console.error('❌ Error fetching products for local session:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao buscar produtos' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`✅ Returning ${products?.length || 0} real products for local session`);
         return new Response(
-          JSON.stringify({ products: mockProducts }),
+          JSON.stringify({ products: products || [] }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       if (type === 'payment_tables') {
-        console.log('📥 Returning mock payment tables for local session');
+        console.log('📥 Fetching real payment tables for local session');
         
-        const mockPaymentTables = [
-          {
-            id: 'mock-payment-1',
-            name: 'À Vista',
-            description: 'Pagamento à vista com desconto',
-            type: 'cash',
-            active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'mock-payment-2',
-            name: '30 Dias',
-            description: 'Pagamento em 30 dias',
-            type: 'term',
-            active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
+        const { data: paymentTables, error } = await supabase
+          .from('payment_tables')
+          .select('*')
+          .eq('active', true);
 
-        console.log(`✅ Returning ${mockPaymentTables.length} mock payment tables`);
+        if (error) {
+          console.error('❌ Error fetching payment tables for local session:', error);
+          return new Response(
+            JSON.stringify({ error: 'Erro ao buscar tabelas de pagamento' }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`✅ Returning ${paymentTables?.length || 0} real payment tables for local session`);
         return new Response(
-          JSON.stringify({ payment_tables: mockPaymentTables }),
+          JSON.stringify({ payment_tables: paymentTables || [] }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -156,11 +120,6 @@ serve(async (req) => {
 
     // For non-local tokens, proceed with Supabase authentication
     console.log('🔑 Processing Supabase JWT token');
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (type === 'clients' && sales_rep_id) {
       console.log('📥 Fetching clients for sales rep:', sales_rep_id);

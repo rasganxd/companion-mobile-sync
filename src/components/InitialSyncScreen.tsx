@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { RefreshCw, CheckCircle, AlertCircle, Wifi } from 'lucide-react';
+import { RefreshCw, CheckCircle, AlertCircle, Wifi, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDataSync } from '@/hooks/useDataSync';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 
 const InitialSyncScreen: React.FC = () => {
   const { salesRep, needsInitialSync } = useAuth();
-  const { isSyncing, syncProgress, performFullSync } = useDataSync();
+  const { isSyncing, syncProgress, performFullSync, forceResync } = useDataSync();
   const { connected } = useNetworkStatus();
   const [syncCompleted, setSyncCompleted] = useState(false);
 
@@ -31,13 +31,41 @@ const InitialSyncScreen: React.FC = () => {
       
       if (result.success) {
         setSyncCompleted(true);
-        toast.success('Sincronização concluída com sucesso!');
+        const { syncedData } = result;
+        toast.success(`Sincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
       } else {
         toast.error('Falha na sincronização: ' + result.error);
       }
     } catch (error) {
       console.error('Sync error:', error);
       toast.error('Erro durante a sincronização');
+    }
+  };
+
+  const handleForceResync = async () => {
+    if (!salesRep || !salesRep.sessionToken) {
+      toast.error('Sessão expirada. Faça login novamente.');
+      return;
+    }
+
+    if (!connected) {
+      toast.error('Sem conexão com a internet');
+      return;
+    }
+
+    try {
+      const result = await forceResync(salesRep.id, salesRep.sessionToken);
+      
+      if (result.success) {
+        setSyncCompleted(true);
+        const { syncedData } = result;
+        toast.success(`Ressincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
+      } else {
+        toast.error('Falha na ressincronização: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Force resync error:', error);
+      toast.error('Erro durante a ressincronização');
     }
   };
 
@@ -113,29 +141,41 @@ const InitialSyncScreen: React.FC = () => {
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2">
             {!syncCompleted && (
-              <Button
-                onClick={handleSync}
-                disabled={isSyncing || !connected}
-                className="flex-1"
-              >
-                {isSyncing ? (
-                  <>
-                    <RefreshCw size={16} className="animate-spin mr-2" />
-                    Sincronizando...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw size={16} className="mr-2" />
-                    Iniciar Sincronização
-                  </>
-                )}
-              </Button>
+              <>
+                <Button
+                  onClick={handleSync}
+                  disabled={isSyncing || !connected}
+                  className="w-full"
+                >
+                  {isSyncing ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin mr-2" />
+                      Sincronizando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw size={16} className="mr-2" />
+                      Iniciar Sincronização
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleForceResync}
+                  disabled={isSyncing || !connected}
+                  variant="outline"
+                  className="w-full"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Forçar Nova Sincronização
+                </Button>
+              </>
             )}
 
             {syncCompleted && (
-              <Button onClick={handleContinue} className="flex-1">
+              <Button onClick={handleContinue} className="w-full">
                 Continuar
               </Button>
             )}
