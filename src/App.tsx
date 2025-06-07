@@ -14,6 +14,9 @@ import Reports from '@/pages/Reports';
 import SyncSettings from '@/pages/SyncSettings';
 import TransmitOrders from '@/pages/TransmitOrders';
 import PlaceOrder from '@/pages/PlaceOrder';
+import NegativeSale from '@/pages/NegativeSale';
+import MessagePage from '@/pages/MessagePage';
+import LastPurchases from '@/pages/LastPurchases';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -85,6 +88,24 @@ function App() {
                 <Route path="/new-order" element={
                   <ProtectedRoute>
                     <PlaceOrder />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/negativar-venda" element={
+                  <ProtectedRoute>
+                    <NegativeSale />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/mensagem" element={
+                  <ProtectedRoute>
+                    <MessagePage />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/ultimas-compras" element={
+                  <ProtectedRoute>
+                    <LastPurchases />
                   </ProtectedRoute>
                 } />
                 

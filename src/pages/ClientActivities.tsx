@@ -1,8 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Package2, ThumbsDown, Box, Mail } from 'lucide-react';
 import Header from '@/components/Header';
+import MenuCard from '@/components/MenuCard';
 import AppButton from '@/components/AppButton';
 import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -17,33 +18,6 @@ const ClientActivities = () => {
   
   const { clientName, clientId, day } = location.state || {};
   const [loading, setLoading] = useState(false);
-
-  const handleCreateOrder = () => {
-    navigate('/place-order', {
-      state: {
-        clientId,
-        clientName,
-        day
-      }
-    });
-  };
-
-  const handleNegateClient = () => {
-    // Implementar negativação
-    toast.success('Cliente negativado');
-    goBack();
-  };
-
-  const handleViewOrders = () => {
-    navigate('/my-orders', {
-      state: {
-        clientId,
-        clientName,
-        day,
-        viewMode: true
-      }
-    });
-  };
 
   if (!clientId || !clientName) {
     return (
@@ -63,39 +37,31 @@ const ClientActivities = () => {
       <Header title={clientName} showBackButton backgroundColor="blue" />
       
       <div className="flex-1 p-4">
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-semibold mb-4">Ações Disponíveis</h2>
-            
-            <div className="space-y-3">
-              <AppButton 
-                variant="blue"
-                fullWidth
-                onClick={handleCreateOrder}
-                className="h-12"
-              >
-                Criar Novo Pedido
-              </AppButton>
-              
-              <AppButton 
-                variant="gray"
-                fullWidth
-                onClick={handleViewOrders}
-                className="h-12"
-              >
-                Ver Pedidos Existentes
-              </AppButton>
-              
-              <AppButton 
-                variant="orange"
-                fullWidth
-                onClick={handleNegateClient}
-                className="h-12"
-              >
-                Negativar Cliente
-              </AppButton>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+          <MenuCard
+            icon={<Package2 size={32} />}
+            title="Fazer Pedidos"
+            to="/place-order"
+            state={{ clientName, clientId, day }}
+          />
+          <MenuCard
+            icon={<ThumbsDown size={32} color="red" />}
+            title="Negativar Venda"
+            to="/negativar-venda"
+            state={{ clientName, clientId, day }}
+          />
+          <MenuCard
+            icon={<Box size={32} color="orange" />}
+            title="Últimas Compras"
+            to="/ultimas-compras"
+            state={{ clientName, clientId, day }}
+          />
+          <MenuCard
+            icon={<Mail size={32} color="gold" />}
+            title="Mensagem"
+            to="/mensagem"
+            state={{ clientName, clientId, day }}
+          />
         </div>
       </div>
       
