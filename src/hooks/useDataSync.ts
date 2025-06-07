@@ -68,6 +68,21 @@ export const useDataSync = () => {
     }
   }, []);
 
+  const validateSyncParams = (salesRepId: string, sessionToken: string) => {
+    if (!salesRepId || salesRepId.trim() === '') {
+      throw new Error('ID do vendedor é obrigatório para sincronização');
+    }
+    
+    if (!sessionToken || sessionToken.trim() === '') {
+      throw new Error('Token de sessão é obrigatório para sincronização');
+    }
+    
+    console.log('✅ Parâmetros de sincronização validados:', {
+      salesRepId: salesRepId.substring(0, 8) + '...',
+      tokenType: sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE'
+    });
+  };
+
   const validateSyncedData = (clients: any[], products: any[], paymentTables: any[]) => {
     console.log('🔍 Validando dados sincronizados:', {
       clients: clients.length,
@@ -101,8 +116,17 @@ export const useDataSync = () => {
     try {
       setIsSyncing(true);
       console.log('🔄 Iniciando sincronização COMPLETA - APENAS DADOS REAIS');
-      console.log('🔑 Sales Rep ID:', salesRepId);
-      console.log('🔑 Tipo do token:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
+      
+      // Validar parâmetros de entrada
+      try {
+        validateSyncParams(salesRepId, sessionToken);
+      } catch (validationError) {
+        console.error('❌ Falha na validação dos parâmetros:', validationError);
+        return {
+          success: false,
+          error: validationError instanceof Error ? validationError.message : 'Parâmetros inválidos'
+        };
+      }
 
       const db = getDatabaseAdapter();
       await db.initDatabase();
@@ -138,7 +162,8 @@ export const useDataSync = () => {
         }
       } catch (error) {
         console.error('❌ Falha ao sincronizar clientes:', error);
-        throw new Error(`Erro ao carregar clientes: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        throw new Error(`Erro ao carregar clientes: ${errorMessage}`);
       }
 
       // Etapa 2: Buscar produtos REAIS
@@ -158,7 +183,8 @@ export const useDataSync = () => {
         }
       } catch (error) {
         console.error('❌ Falha ao sincronizar produtos:', error);
-        throw new Error(`Erro ao carregar produtos: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        throw new Error(`Erro ao carregar produtos: ${errorMessage}`);
       }
 
       // Etapa 3: Buscar tabelas de pagamento

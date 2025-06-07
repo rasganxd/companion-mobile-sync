@@ -14,13 +14,54 @@ serve(async (req) => {
   }
 
   try {
-    const { type, sales_rep_id } = await req.json();
+    console.log('📱 Mobile data sync request started');
+    console.log('🔍 Request method:', req.method);
+    console.log('🔍 Request headers:', Object.fromEntries(req.headers.entries()));
+
+    let requestBody;
+    try {
+      const bodyText = await req.text();
+      console.log('📥 Raw request body:', bodyText);
+      
+      if (!bodyText || bodyText.trim() === '') {
+        throw new Error('Request body is empty');
+      }
+      
+      requestBody = JSON.parse(bodyText);
+      console.log('✅ Parsed request body:', requestBody);
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body: ' + parseError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { type, sales_rep_id } = requestBody;
     
     console.log('📱 Mobile data sync request - Type:', type, 'Sales Rep ID:', sales_rep_id);
+
+    // Validate required parameters
+    if (!type) {
+      console.error('❌ Missing type parameter');
+      return new Response(
+        JSON.stringify({ error: 'Tipo de sincronização é obrigatório' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Initialize Supabase client with service role key for direct data access
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('❌ Missing Supabase environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Configuração do servidor incompleta' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('🔄 Using service role key to fetch REAL data from database');
@@ -41,13 +82,13 @@ serve(async (req) => {
       if (error) {
         console.error('❌ Error fetching clients from DB:', error);
         return new Response(
-          JSON.stringify({ error: 'Erro ao buscar clientes do banco de dados' }),
+          JSON.stringify({ error: 'Erro ao buscar clientes do banco de dados: ' + error.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       console.log(`✅ Successfully fetched ${clients?.length || 0} clients from database`);
-      console.log('📊 Real clients data:', clients);
+      console.log('📊 Real clients data sample:', clients?.slice(0, 2));
 
       if (!clients || clients.length === 0) {
         console.log('ℹ️ No clients found in database for this sales rep');
@@ -85,13 +126,13 @@ serve(async (req) => {
       if (error) {
         console.error('❌ Error fetching products from DB:', error);
         return new Response(
-          JSON.stringify({ error: 'Erro ao buscar produtos do banco de dados' }),
+          JSON.stringify({ error: 'Erro ao buscar produtos do banco de dados: ' + error.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       console.log(`✅ Successfully fetched ${products?.length || 0} products from database`);
-      console.log('📊 Real products data:', products);
+      console.log('📊 Real products data sample:', products?.slice(0, 2));
 
       if (!products || products.length === 0) {
         console.log('ℹ️ No products found in database');
@@ -119,7 +160,7 @@ serve(async (req) => {
       if (error) {
         console.error('❌ Error fetching payment tables from DB:', error);
         return new Response(
-          JSON.stringify({ error: 'Erro ao buscar tabelas de pagamento do banco de dados' }),
+          JSON.stringify({ error: 'Erro ao buscar tabelas de pagamento do banco de dados: ' + error.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -143,7 +184,7 @@ serve(async (req) => {
 
     console.log('❌ Invalid sync type:', type);
     return new Response(
-      JSON.stringify({ error: 'Tipo de sincronização inválido' }),
+      JSON.stringify({ error: 'Tipo de sincronização inválido: ' + type }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

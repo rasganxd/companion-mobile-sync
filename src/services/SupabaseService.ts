@@ -113,7 +113,25 @@ class SupabaseService {
     console.log('📥 Fetching clients for sales rep:', salesRepId);
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
+    // Validar parâmetros antes de fazer a requisição
+    if (!salesRepId) {
+      console.error('❌ Sales rep ID is required');
+      throw new Error('ID do vendedor é obrigatório para buscar clientes');
+    }
+
+    if (!sessionToken) {
+      console.error('❌ Session token is required');
+      throw new Error('Token de sessão é obrigatório para buscar clientes');
+    }
+    
     try {
+      const requestBody = { 
+        type: 'clients',
+        sales_rep_id: salesRepId 
+      };
+      
+      console.log('📤 Sending request body:', requestBody);
+
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
         headers: {
@@ -121,17 +139,21 @@ class SupabaseService {
           'Authorization': `Bearer ${sessionToken}`,
           'apikey': this.anonKey
         },
-        body: JSON.stringify({ 
-          type: 'clients',
-          sales_rep_id: salesRepId 
-        })
+        body: JSON.stringify(requestBody)
       });
 
       console.log('📡 Clients sync response status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar clientes' }));
-        console.error('❌ Clients sync error:', errorData);
+        const errorText = await response.text();
+        console.error('❌ Clients sync error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: 'Erro ao buscar clientes: ' + errorText };
+        }
         
         // For local tokens, return empty array instead of throwing error
         if (sessionToken.startsWith('local_')) {
@@ -155,7 +177,7 @@ class SupabaseService {
       }
       
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erro de conexão ao buscar clientes.');
+        throw new Error('Erro de conexão ao buscar clientes. Verifique sua internet.');
       }
       throw error;
     }
@@ -165,7 +187,16 @@ class SupabaseService {
     console.log('📥 Fetching products from Supabase');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
+    // Validar parâmetros antes de fazer a requisição
+    if (!sessionToken) {
+      console.error('❌ Session token is required');
+      throw new Error('Token de sessão é obrigatório para buscar produtos');
+    }
+    
     try {
+      const requestBody = { type: 'products' };
+      console.log('📤 Sending request body:', requestBody);
+
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
         headers: {
@@ -173,14 +204,21 @@ class SupabaseService {
           'Authorization': `Bearer ${sessionToken}`,
           'apikey': this.anonKey
         },
-        body: JSON.stringify({ type: 'products' })
+        body: JSON.stringify(requestBody)
       });
 
       console.log('📡 Products sync response status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar produtos' }));
-        console.error('❌ Products sync error:', errorData);
+        const errorText = await response.text();
+        console.error('❌ Products sync error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: 'Erro ao buscar produtos: ' + errorText };
+        }
         
         // For local tokens, return empty array instead of throwing error
         if (sessionToken.startsWith('local_')) {
@@ -203,6 +241,9 @@ class SupabaseService {
         return [];
       }
       
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Erro de conexão ao buscar produtos. Verifique sua internet.');
+      }
       throw error;
     }
   }
@@ -211,7 +252,16 @@ class SupabaseService {
     console.log('📥 Fetching payment tables from Supabase');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
+    // Validar parâmetros antes de fazer a requisição
+    if (!sessionToken) {
+      console.error('❌ Session token is required');
+      throw new Error('Token de sessão é obrigatório para buscar tabelas de pagamento');
+    }
+    
     try {
+      const requestBody = { type: 'payment_tables' };
+      console.log('📤 Sending request body:', requestBody);
+
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
         headers: {
@@ -219,14 +269,21 @@ class SupabaseService {
           'Authorization': `Bearer ${sessionToken}`,
           'apikey': this.anonKey
         },
-        body: JSON.stringify({ type: 'payment_tables' })
+        body: JSON.stringify(requestBody)
       });
 
       console.log('📡 Payment tables sync response status:', response.status);
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erro ao buscar tabelas de pagamento' }));
-        console.error('❌ Payment tables sync error:', errorData);
+        const errorText = await response.text();
+        console.error('❌ Payment tables sync error response:', errorText);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: 'Erro ao buscar tabelas de pagamento: ' + errorText };
+        }
         
         // For local tokens, return empty array instead of throwing error
         if (sessionToken.startsWith('local_')) {
@@ -244,11 +301,14 @@ class SupabaseService {
       console.error('❌ Network error fetching payment tables:', error);
       
       // For local tokens, return empty array instead of throwing error
-      if (sessionToken.startsWith('local_')) {
+      if (sessionToken.startsWith('local_') ) {
         console.log('🔄 Local token with network error, returning empty array');
         return [];
       }
       
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Erro de conexão ao buscar tabelas de pagamento. Verifique sua internet.');
+      }
       throw error;
     }
   }
