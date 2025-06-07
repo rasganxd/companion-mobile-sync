@@ -14,16 +14,22 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔐 [DEBUG] Mobile auth request started');
+    console.log('🔐 [DEBUG] Request method:', req.method);
+    console.log('🔐 [DEBUG] Request headers:', Object.fromEntries(req.headers.entries()));
+
     const { code, password } = await req.json();
     
-    console.log('🔐 [DEBUG] Mobile auth attempt started');
     console.log('🔐 [DEBUG] Received code:', code, 'type:', typeof code);
     console.log('🔐 [DEBUG] Received password:', password ? '***PROVIDED***' : 'NOT_PROVIDED', 'length:', password?.length);
     
     if (!code || !password) {
       console.log('❌ [DEBUG] Missing credentials validation failed');
       return new Response(
-        JSON.stringify({ error: 'Código e senha são obrigatórios' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Código e senha são obrigatórios' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -40,7 +46,10 @@ serve(async (req) => {
     if (isNaN(codeNumber)) {
       console.log('❌ [DEBUG] Code parsing failed. Original:', code, 'Parsed:', codeNumber);
       return new Response(
-        JSON.stringify({ error: 'Código deve ser um número válido' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Código deve ser um número válido' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -74,7 +83,10 @@ serve(async (req) => {
       console.log('❌ [DEBUG] Data received:', salesRep);
       
       return new Response(
-        JSON.stringify({ error: 'Vendedor não encontrado ou inativo' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Vendedor não encontrado ou inativo' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -92,7 +104,10 @@ serve(async (req) => {
       });
       
       return new Response(
-        JSON.stringify({ error: 'Senha não configurada para este vendedor. Entre em contato com o administrador.' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Senha não configurada para este vendedor. Entre em contato com o administrador.' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -119,7 +134,10 @@ serve(async (req) => {
       console.log('❌ [DEBUG] Function error details:', passwordError);
       
       return new Response(
-        JSON.stringify({ error: 'Erro interno ao verificar senha' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Erro interno ao verificar senha' 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -131,7 +149,10 @@ serve(async (req) => {
       console.log('❌ [DEBUG] This is the 401 error source - password mismatch');
       
       return new Response(
-        JSON.stringify({ error: 'Código ou senha incorretos' }),
+        JSON.stringify({ 
+          success: false,
+          error: 'Código ou senha incorretos' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -142,7 +163,7 @@ serve(async (req) => {
     const sessionToken = `mobile_${salesRep.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log('🔐 [DEBUG] Session token generated');
 
-    // Return successful authentication
+    // Return successful authentication with consistent format
     const authResult = {
       success: true,
       sessionToken,
@@ -175,7 +196,10 @@ serve(async (req) => {
     console.error('❌ [DEBUG] Error stack:', error.stack);
     
     return new Response(
-      JSON.stringify({ error: 'Erro interno do servidor' }),
+      JSON.stringify({ 
+        success: false,
+        error: 'Erro interno do servidor' 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
