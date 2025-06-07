@@ -7,7 +7,7 @@ export class MockDataCleaner {
 
   async cleanMockData(): Promise<void> {
     try {
-      console.log('🗑️ Forçando limpeza de dados mock do IndexedDB...');
+      console.log('🗑️ Iniciando limpeza FORÇADA de dados mock do IndexedDB...');
       
       const tx = this.db.transaction(['clients', 'products'], 'readwrite');
       
@@ -24,25 +24,50 @@ export class MockDataCleaner {
         }
       }
       
-      // Clean mock products
+      // Clean mock products with enhanced detection
       const productStore = tx.objectStore('products');
       const allProducts = await productStore.getAll();
       let removedProductsCount = 0;
       
+      console.log('🔍 Analisando produtos para limpeza:', allProducts.length);
+      
       for (const product of allProducts) {
-        if (MockDataDetector.isMockProduct(product)) {
+        if (MockDataDetector.isMockProduct(product) || !MockDataDetector.isValidRealProduct(product)) {
           await productStore.delete(product.id);
           removedProductsCount++;
-          console.log('🗑️ Produto mock removido:', product.name);
+          console.log('🗑️ Produto mock/inválido removido:', {
+            id: product.id,
+            name: product.name,
+            code: product.code
+          });
         }
       }
       
       await tx.done;
       
-      console.log(`✅ Limpeza forçada concluída: ${removedClientsCount} clientes e ${removedProductsCount} produtos mock removidos`);
+      console.log(`✅ Limpeza FORÇADA concluída: ${removedClientsCount} clientes e ${removedProductsCount} produtos mock/inválidos removidos`);
       
     } catch (error) {
       console.error('❌ Erro ao forçar limpeza de dados mock:', error);
+    }
+  }
+
+  // Nova função para limpeza completa de produtos
+  async forceCleanAllProducts(): Promise<void> {
+    try {
+      console.log('🗑️ LIMPEZA COMPLETA: Removendo TODOS os produtos do IndexedDB...');
+      
+      const tx = this.db.transaction('products', 'readwrite');
+      const productStore = tx.objectStore('products');
+      
+      // Limpar completamente a tabela de produtos
+      await productStore.clear();
+      await tx.done;
+      
+      console.log('✅ LIMPEZA COMPLETA: Todos os produtos foram removidos do IndexedDB');
+      
+    } catch (error) {
+      console.error('❌ Erro na limpeza completa de produtos:', error);
     }
   }
 
@@ -63,7 +88,19 @@ export class MockDataCleaner {
   }
 
   filterRealProducts(products: any[]): any[] {
-    const realProducts = products.filter(product => !MockDataDetector.isMockProduct(product));
+    console.log('🔍 Filtrando produtos reais de', products.length, 'produtos total');
+    
+    const realProducts = products.filter(product => {
+      const isValid = MockDataDetector.isValidRealProduct(product);
+      if (!isValid) {
+        console.log('🚫 Produto filtrado:', {
+          id: product.id,
+          name: product.name,
+          reason: MockDataDetector.isMockProduct(product) ? 'mock' : 'estrutura inválida'
+        });
+      }
+      return isValid;
+    });
     
     const uniqueProducts = realProducts.reduce((acc: any[], current: any) => {
       const existingProduct = acc.find(product => product.id === current.id);
@@ -75,11 +112,12 @@ export class MockDataCleaner {
       return acc;
     }, []);
     
+    console.log(`✅ Produtos filtrados: ${uniqueProducts.length} produtos reais válidos`);
     return uniqueProducts;
   }
 
   async saveRealClients(clientsArray: any[]): Promise<void> {
-    const realClients = clientsArray.filter(client => !MockDataDetector.isMockClient(client));
+    const realClients = this.filterRealClients(clientsArray);
     
     if (realClients.length === 0) {
       console.log('ℹ️ Nenhum cliente real para salvar');
@@ -95,10 +133,12 @@ export class MockDataCleaner {
   }
 
   async saveRealProducts(productsArray: any[]): Promise<void> {
-    const realProducts = productsArray.filter(product => !MockDataDetector.isMockProduct(product));
+    console.log(`💾 Iniciando salvamento de ${productsArray.length} produtos...`);
+    
+    const realProducts = this.filterRealProducts(productsArray);
     
     if (realProducts.length === 0) {
-      console.log('ℹ️ Nenhum produto real para salvar');
+      console.log('ℹ️ Nenhum produto real válido para salvar');
       return;
     }
     
@@ -121,12 +161,21 @@ export class MockDataCleaner {
   }
 
   async saveRealProduct(product: any): Promise<void> {
-    if (MockDataDetector.isMockProduct(product)) {
-      console.log('🚫 Produto mock rejeitado:', product.name);
+    if (!MockDataDetector.isValidRealProduct(product)) {
+      console.log('🚫 Produto mock/inválido rejeitado:', {
+        id: product.id,
+        name: product.name,
+        reason: MockDataDetector.isMockProduct(product) ? 'mock' : 'estrutura inválida'
+      });
       return;
     }
     
     await this.db.put('products', product);
-    console.log('✅ Real product saved:', product);
+    console.log('✅ Real product saved:', {
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      sale_price: product.sale_price
+    });
   }
 }

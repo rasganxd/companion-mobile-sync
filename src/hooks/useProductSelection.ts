@@ -45,17 +45,45 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     try {
       const db = getDatabaseAdapter();
       const productsData = await db.getProducts();
-      console.log('📦 Produtos carregados:', productsData);
+      console.log('📦 Produtos carregados do banco local:', productsData);
+      
+      // Validar que apenas produtos reais são carregados
+      const validProducts = productsData.filter(product => {
+        const isValid = product.id && 
+                       product.name && 
+                       typeof product.sale_price === 'number' &&
+                       typeof product.code === 'number';
+        
+        if (!isValid) {
+          console.warn('⚠️ Produto inválido filtrado:', product);
+        }
+        
+        return isValid;
+      });
+      
+      console.log(`✅ ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
       
       // Ensure products have the correct price field
-      const normalizedProducts = productsData?.map(product => ({
+      const normalizedProducts = validProducts.map(product => ({
         ...product,
         // Use sale_price as the primary price, fallback to price field
         price: product.sale_price || product.price || 0,
         sale_price: product.sale_price || product.price || 0
-      })) || [];
+      }));
       
       setProducts(normalizedProducts);
+      
+      // Log final dos produtos para debug
+      normalizedProducts.forEach((product, index) => {
+        console.log(`📦 Produto final ${index + 1}:`, {
+          id: product.id,
+          name: product.name,
+          code: product.code,
+          sale_price: product.sale_price,
+          stock: product.stock
+        });
+      });
+      
     } catch (error) {
       console.error('❌ Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');

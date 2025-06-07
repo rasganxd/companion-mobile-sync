@@ -1,3 +1,4 @@
+
 import DatabaseAdapter from './DatabaseAdapter';
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { MockDataCleaner } from './database/MockDataCleaner';
@@ -62,6 +63,14 @@ class WebDatabaseService implements DatabaseAdapter {
     }
   }
 
+  // Nova função para limpeza completa de produtos
+  async forceCleanAllProducts(): Promise<void> {
+    await this.ensureInitialized();
+    if (this.mockDataCleaner) {
+      await this.mockDataCleaner.forceCleanAllProducts();
+    }
+  }
+
   async clearMockData(): Promise<void> {
     return this.forceClearMockData();
   }
@@ -113,12 +122,24 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.ensureInitialized();
     const allProducts = await this.db!.getAll('products');
     
+    console.log(`🔍 Total de produtos no IndexedDB: ${allProducts.length}`);
+    
     if (!this.mockDataCleaner) return allProducts;
     
     const uniqueProducts = this.mockDataCleaner.filterRealProducts(allProducts);
     
-    console.log('📊 Total de produtos no banco:', allProducts.length);
-    console.log('📊 Produtos reais únicos retornados:', uniqueProducts.length);
+    console.log(`📊 Produtos reais únicos retornados: ${uniqueProducts.length}`);
+    
+    // Log detalhado dos produtos para debug
+    uniqueProducts.forEach((product, index) => {
+      console.log(`📦 Produto ${index + 1}:`, {
+        id: product.id,
+        name: product.name,
+        code: product.code,
+        sale_price: product.sale_price,
+        stock: product.stock
+      });
+    });
     
     // Ensure products have correct price mapping
     const normalizedProducts = uniqueProducts.map(product => ({
@@ -154,6 +175,12 @@ class WebDatabaseService implements DatabaseAdapter {
 
   async saveProducts(productsArray: any[]): Promise<void> {
     await this.ensureInitialized();
+    
+    console.log(`💾 Iniciando salvamento de ${productsArray.length} produtos do Supabase`);
+    
+    // PRIMEIRO: Limpar completamente os produtos existentes
+    await this.forceCleanAllProducts();
+    
     if (this.mockDataCleaner) {
       // Normalize all products before saving
       const normalizedProducts = productsArray.map(product => ({
@@ -169,7 +196,7 @@ class WebDatabaseService implements DatabaseAdapter {
         subunit_ratio: product.subunit_ratio || 1
       }));
       
-      console.log('💾 Salvando produtos normalizados em lote:', normalizedProducts.length);
+      console.log('💾 Salvando produtos normalizados em lote após limpeza completa:', normalizedProducts.length);
       await this.mockDataCleaner.saveRealProducts(normalizedProducts);
     }
   }

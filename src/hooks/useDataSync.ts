@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -65,6 +64,20 @@ export const useDataSync = () => {
       console.log('✅ Limpeza forçada de dados mock concluída');
     } catch (error) {
       console.error('❌ Erro ao limpar dados mock:', error);
+    }
+  }, []);
+
+  const forceCleanAllProducts = useCallback(async () => {
+    try {
+      console.log('🗑️ Iniciando limpeza COMPLETA de todos os produtos...');
+      const db = getDatabaseAdapter();
+      
+      if ('forceCleanAllProducts' in db && typeof db.forceCleanAllProducts === 'function') {
+        await db.forceCleanAllProducts();
+        console.log('✅ Limpeza COMPLETA de produtos concluída');
+      }
+    } catch (error) {
+      console.error('❌ Erro na limpeza completa de produtos:', error);
     }
   }, []);
 
@@ -136,6 +149,8 @@ export const useDataSync = () => {
 
       if (forceClear) {
         await clearLocalData();
+        // NOVA: Limpeza completa de produtos
+        await forceCleanAllProducts();
       }
 
       let syncedClients = 0;
@@ -166,17 +181,28 @@ export const useDataSync = () => {
         throw new Error(`Erro ao carregar clientes: ${errorMessage}`);
       }
 
-      // Etapa 2: Buscar produtos REAIS
+      // Etapa 2: Buscar produtos REAIS com limpeza completa
       updateProgress('Carregando produtos...', 1, 3);
       try {
         console.log('📥 Buscando produtos REAIS do Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
         console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
         
+        // Log detalhado dos produtos recebidos
+        productsData.forEach((product, index) => {
+          console.log(`📦 Produto ${index + 1} do Supabase:`, {
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            sale_price: product.sale_price
+          });
+        });
+        
         if (productsData.length > 0) {
+          // O saveProducts já faz a limpeza completa antes de salvar
           await db.saveProducts(productsData);
           syncedProducts = productsData.length;
-          console.log(`✅ Salvos ${syncedProducts} produtos REAIS`);
+          console.log(`✅ Salvos ${syncedProducts} produtos REAIS após limpeza completa`);
         } else {
           console.log('ℹ️ Nenhum produto encontrado no banco de dados');
           syncedProducts = 0;
@@ -254,7 +280,7 @@ export const useDataSync = () => {
       setIsSyncing(false);
       setSyncProgress(null);
     }
-  }, [connected, clearLocalData, clearMockData]);
+  }, [connected, clearLocalData, clearMockData, forceCleanAllProducts]);
 
   const loadLastSyncDate = useCallback(() => {
     const saved = localStorage.getItem('last_sync_date');
@@ -277,6 +303,7 @@ export const useDataSync = () => {
     loadLastSyncDate,
     clearLocalData,
     clearMockData,
+    forceCleanAllProducts,
     canSync: connected
   };
 };
