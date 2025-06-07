@@ -43,6 +43,8 @@ interface DatabaseAdapter {
   // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
   getPaymentTables(): Promise<any[]>;
+  // ✅ NOVO: Método para limpar dados mock
+  clearMockData?(): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

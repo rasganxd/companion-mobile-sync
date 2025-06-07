@@ -102,12 +102,70 @@ class WebDatabaseService implements DatabaseAdapter {
     }
   }
 
+  async clearMockData(): Promise<void> {
+    await this.ensureInitialized();
+    
+    try {
+      console.log('🗑️ Iniciando limpeza de dados mock...');
+      
+      // Limpar clientes mock
+      const allClients = await this.db!.getAll('clients');
+      const mockClientIds: string[] = [];
+      
+      for (const client of allClients) {
+        if (client.name?.includes('Mykaela') || 
+            client.company_name?.includes('Mykaela') ||
+            client.name?.includes('Cliente Principal') ||
+            client.company_name?.includes('Empresa Mykaela')) {
+          mockClientIds.push(client.id);
+        }
+      }
+      
+      // Remover clientes mock
+      for (const id of mockClientIds) {
+        await this.db!.delete('clients', id);
+        console.log('🗑️ Cliente mock removido:', id);
+      }
+      
+      // Limpar produtos mock
+      const allProducts = await this.db!.getAll('products');
+      const mockProductIds: string[] = [];
+      
+      for (const product of allProducts) {
+        if (product.name?.includes('Produto Premium') || 
+            product.name?.includes('Produto Standard') ||
+            product.name?.includes('Premium A') ||
+            product.name?.includes('Standard B')) {
+          mockProductIds.push(product.id);
+        }
+      }
+      
+      // Remover produtos mock
+      for (const id of mockProductIds) {
+        await this.db!.delete('products', id);
+        console.log('🗑️ Produto mock removido:', id);
+      }
+      
+      console.log(`✅ Limpeza concluída: ${mockClientIds.length} clientes e ${mockProductIds.length} produtos mock removidos`);
+      
+    } catch (error) {
+      console.error('❌ Erro ao limpar dados mock:', error);
+    }
+  }
+
   async getClients(): Promise<any[]> {
     await this.ensureInitialized();
     const allClients = await this.db!.getAll('clients');
     
-    // Remover duplicatas baseadas no ID e logar para debug
-    const uniqueClients = allClients.reduce((acc: any[], current: any) => {
+    // Filtrar dados mock e remover duplicatas baseadas no ID
+    const realClients = allClients.filter(client => 
+      !client.name?.includes('Mykaela') && 
+      !client.company_name?.includes('Mykaela') &&
+      !client.name?.includes('Cliente Principal') &&
+      !client.company_name?.includes('Empresa Mykaela')
+    );
+    
+    const uniqueClients = realClients.reduce((acc: any[], current: any) => {
       const existingClient = acc.find(client => client.id === current.id);
       if (!existingClient) {
         acc.push(current);
@@ -118,7 +176,7 @@ class WebDatabaseService implements DatabaseAdapter {
     }, []);
     
     console.log('📊 Total de clientes no banco:', allClients.length);
-    console.log('📊 Clientes únicos retornados:', uniqueClients.length);
+    console.log('📊 Clientes reais únicos retornados:', uniqueClients.length);
     
     return uniqueClients;
   }
@@ -158,8 +216,15 @@ class WebDatabaseService implements DatabaseAdapter {
     await this.ensureInitialized();
     const allProducts = await this.db!.getAll('products');
     
-    // Remover duplicatas baseadas no ID e logar para debug
-    const uniqueProducts = allProducts.reduce((acc: any[], current: any) => {
+    // Filtrar dados mock e remover duplicatas baseadas no ID
+    const realProducts = allProducts.filter(product => 
+      !product.name?.includes('Produto Premium') && 
+      !product.name?.includes('Produto Standard') &&
+      !product.name?.includes('Premium A') &&
+      !product.name?.includes('Standard B')
+    );
+    
+    const uniqueProducts = realProducts.reduce((acc: any[], current: any) => {
       const existingProduct = acc.find(product => product.id === current.id);
       if (!existingProduct) {
         acc.push(current);
@@ -170,7 +235,7 @@ class WebDatabaseService implements DatabaseAdapter {
     }, []);
     
     console.log('📊 Total de produtos no banco:', allProducts.length);
-    console.log('📊 Produtos únicos retornados:', uniqueProducts.length);
+    console.log('📊 Produtos reais únicos retornados:', uniqueProducts.length);
     
     return uniqueProducts;
   }

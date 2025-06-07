@@ -53,6 +53,7 @@ const PlaceOrder = () => {
     setSelectedClient,
     setShowClientSelection,
     setClientSearchTerm,
+    setShowOrderChoice,
     selectClient,
     handleEditOrder,
     handleCreateNew,
