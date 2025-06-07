@@ -102,7 +102,7 @@ const PlaceOrder = () => {
   const checkExistingOrder = async (customerId: string) => {
     try {
       const db = getDatabaseAdapter();
-      const orders = await db.getOrdersByCustomer(customerId);
+      const orders = await db.getClientOrders(customerId);
       
       const pendingOrder = orders?.find((order: any) => 
         order.status === 'pending' || order.sync_status === 'pending_sync'

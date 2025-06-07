@@ -1,10 +1,20 @@
 
 import React from 'react';
-import { ArrowLeft, ShoppingCart, Eye, Trash2 } from 'lucide-react';
-import AppButton from '@/components/AppButton';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, ShoppingCart, Eye, Trash2, Check } from 'lucide-react';
+
+interface OrderItem {
+  id: number;
+  productId: string;
+  productName: string;
+  quantity: number;
+  price: number;
+  code: string;
+  unit: string;
+}
 
 interface ActionButtonsProps {
-  orderItems: any[];
+  orderItems: OrderItem[];
   onClearCart: () => void;
   onGoBack: () => void;
   onViewOrder: () => void;
@@ -22,59 +32,60 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   selectedClient,
   isSubmitting
 }) => {
+  const hasItems = orderItems.length > 0;
+  const canFinish = hasItems && selectedClient.id;
+
   return (
-    <div className="p-2 bg-gradient-to-r from-white to-gray-50 border-t-2 border-gray-200 shadow-lg flex-shrink-0">
-      {/* Clear cart button if there are items */}
-      {orderItems.length > 0 && (
-        <div className="mb-2">
-          <AppButton 
-            variant="gray" 
-            className="flex items-center justify-center h-8 text-sm w-full text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 transition-all duration-200 transform hover:scale-[1.02]"
-            onClick={onClearCart}
-          >
-            <Trash2 size={12} className="mr-2" />
-            Limpar Carrinho
-          </AppButton>
-        </div>
-      )}
-      
-      <div className="grid grid-cols-3 gap-2">
-        <AppButton 
-          variant="gray" 
-          className={`flex items-center justify-center h-8 text-sm border-2 transition-all duration-200 ${
-            orderItems.length > 0 
-              ? 'opacity-50 cursor-not-allowed' 
-              : 'hover:scale-[1.02] transform'
-          }`}
+    <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
+      <div className="grid grid-cols-2 gap-3">
+        {/* Primeira linha */}
+        <Button 
+          variant="outline" 
           onClick={onGoBack}
+          className="flex items-center justify-center gap-2"
         >
-          <ArrowLeft size={12} className="mr-2" />
+          <ArrowLeft size={16} />
           Voltar
-        </AppButton>
+        </Button>
         
-        <AppButton 
-          variant="blue" 
-          className="flex items-center justify-center h-8 text-sm border-2 border-app-blue hover:scale-[1.02] transform transition-all duration-200 shadow-sm hover:shadow-md"
+        <Button 
+          variant="outline" 
+          onClick={onClearCart}
+          disabled={!hasItems}
+          className="flex items-center justify-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+        >
+          <Trash2 size={16} />
+          Limpar
+        </Button>
+        
+        {/* Segunda linha */}
+        <Button 
+          variant="outline" 
           onClick={onViewOrder}
-          disabled={orderItems.length === 0}
+          disabled={!hasItems}
+          className="flex items-center justify-center gap-2"
         >
-          <Eye size={12} className="mr-2" />
-          Gravar
-        </AppButton>
+          <Eye size={16} />
+          Visualizar
+        </Button>
         
-        <AppButton 
-          variant="blue" 
-          className="flex items-center justify-center h-8 text-sm bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-2 border-green-600 hover:scale-[1.02] transform transition-all duration-200 shadow-sm hover:shadow-md"
+        <Button 
           onClick={onFinishOrder}
-          disabled={orderItems.length === 0 || !selectedClient.id || isSubmitting}
+          disabled={!canFinish || isSubmitting}
+          className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
         >
-          <ShoppingCart size={12} className="mr-2" />
           {isSubmitting ? (
-            <span className="animate-pulse">Salvando...</span>
+            <>
+              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+              Salvando...
+            </>
           ) : (
-            'Finalizar'
+            <>
+              <Check size={16} />
+              Finalizar
+            </>
           )}
-        </AppButton>
+        </Button>
       </div>
     </div>
   );
