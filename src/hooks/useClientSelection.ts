@@ -10,9 +10,9 @@ interface Client {
   sales_rep_id?: string;
 }
 
-export const useClientSelection = () => {
+export const useClientSelection = (initialClient: Client | null = null) => {
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(initialClient);
   const [showClientSelection, setShowClientSelection] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [showOrderChoice, setShowOrderChoice] = useState(false);
@@ -21,6 +21,16 @@ export const useClientSelection = () => {
   useEffect(() => {
     loadClients();
   }, []);
+
+  // Set initial client and check for existing orders
+  useEffect(() => {
+    if (initialClient && !selectedClient) {
+      console.log('🎯 Setting initial client from navigation:', initialClient);
+      setSelectedClient(initialClient);
+      // Check for existing orders for this client
+      checkExistingOrder(initialClient.id);
+    }
+  }, [initialClient, selectedClient]);
 
   const loadClients = async () => {
     try {
@@ -55,6 +65,7 @@ export const useClientSelection = () => {
       );
       
       if (pendingOrder) {
+        console.log('📋 Pedido pendente encontrado para cliente:', customerId, pendingOrder);
         setExistingOrder(pendingOrder);
         setShowOrderChoice(true);
       }
@@ -64,6 +75,7 @@ export const useClientSelection = () => {
   };
 
   const selectClient = (client: Client) => {
+    console.log('👤 Cliente selecionado:', client);
     setSelectedClient(client);
     setShowClientSelection(false);
     setClientSearchTerm('');

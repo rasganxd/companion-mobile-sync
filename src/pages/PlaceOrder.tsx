@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft, Search, ShoppingCart, Eye } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +17,22 @@ import ActionButtons from '@/components/order/ActionButtons';
 
 const PlaceOrder = () => {
   const { goBack } = useAppNavigation();
+  const location = useLocation();
+  
+  // Extract client data from navigation state
+  const { clientName, clientId } = location.state || {};
+  
+  // Create initial client object if data is available
+  const initialClient = React.useMemo(() => {
+    if (clientId && clientName) {
+      return {
+        id: clientId,
+        name: clientName,
+        company_name: clientName // Use clientName for both name and company_name
+      };
+    }
+    return null;
+  }, [clientId, clientName]);
   
   const {
     orderItems,
@@ -58,7 +75,7 @@ const PlaceOrder = () => {
     handleEditOrder,
     handleCreateNew,
     handleDeleteOrder
-  } = useClientSelection();
+  } = useClientSelection(initialClient);
 
   const [showProductSearch, setShowProductSearch] = React.useState(false);
 
@@ -80,9 +97,14 @@ const PlaceOrder = () => {
                       <p className="font-medium text-gray-900">
                         {selectedClient.company_name || selectedClient.name}
                       </p>
-                      {selectedClient.company_name && selectedClient.name && (
+                      {selectedClient.company_name && selectedClient.name && selectedClient.company_name !== selectedClient.name && (
                         <p className="text-sm text-gray-600">
                           Razão Social: {selectedClient.name}
+                        </p>
+                      )}
+                      {initialClient && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Cliente selecionado automaticamente
                         </p>
                       )}
                     </div>
@@ -127,7 +149,7 @@ const PlaceOrder = () => {
                   <p className="font-medium text-gray-900 mb-2">{selectedProduct.name}</p>
                   <p className="text-sm text-gray-600 mb-2">Código: {selectedProduct.code}</p>
                   <p className="text-sm text-gray-600 mb-3">
-                    Preço: R$ {selectedProduct.price.toFixed(2)}
+                    Preço: R$ {selectedProduct.price?.toFixed(2) || '0.00'}
                   </p>
                   
                   <div className="grid grid-cols-2 gap-3 mb-3">
@@ -150,7 +172,7 @@ const PlaceOrder = () => {
                       <input
                         type="number"
                         value={unitPrice}
-                        onChange={(e) => setUnitPrice(parseFloat(e.target.value) || selectedProduct.price)}
+                        onChange={(e) => setUnitPrice(parseFloat(e.target.value) || selectedProduct.price || 0)}
                         min="0"
                         step="0.01"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
