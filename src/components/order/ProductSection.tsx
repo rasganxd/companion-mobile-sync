@@ -1,106 +1,161 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Search } from 'lucide-react';
-import QuantityInput from '@/components/order/QuantityInput';
+import { Button } from '@/components/ui/button';
+import { Search, Package, Plus } from 'lucide-react';
+import ProductSearchDialog from '@/components/order/ProductSearchDialog';
+
 interface Product {
   id: string;
   name: string;
-  code: number;
   price: number;
-  unit: string;
+  code: number;
   stock: number;
-  has_subunit?: boolean;
-  subunit?: string;
-  subunit_ratio?: number;
-  min_price?: number;
-  max_price?: number;
+  unit?: string;
+  cost?: number;
 }
+
 interface ProductSectionProps {
   products: Product[];
-  currentProductIndex: number;
-  currentProduct: Product | null;
-  quantity: string;
-  selectedUnit: 'main' | 'sub';
-  showProductSearch: boolean;
-  productSearchTerm: string;
-  onNavigateProduct: (direction: 'prev' | 'next') => void;
-  onProductSearch: () => void;
-  onProductSearchChange: (value: string) => void;
-  onSelectProduct: (product: Product) => void;
-  onQuantityChange: (value: string) => void;
-  onUnitChange: (unit: 'main' | 'sub') => void;
-  onAddItem: () => void;
+  selectedProduct: Product | null;
+  quantity: number;
+  unitPrice: number;
+  onSelectProduct: (product: Product | null) => void;
+  onQuantityChange: (quantity: number) => void;
+  onUnitPriceChange: (price: number) => void;
+  onAddProduct: () => void;
 }
+
 const ProductSection: React.FC<ProductSectionProps> = ({
   products,
-  currentProductIndex,
-  currentProduct,
+  selectedProduct,
   quantity,
-  selectedUnit,
-  showProductSearch,
-  productSearchTerm,
-  onNavigateProduct,
-  onProductSearch,
-  onProductSearchChange,
+  unitPrice,
   onSelectProduct,
   onQuantityChange,
-  onUnitChange,
-  onAddItem
+  onUnitPriceChange,
+  onAddProduct
 }) => {
-  const filteredProducts = products.filter(product => product.name.toLowerCase().includes(productSearchTerm.toLowerCase()));
-  if (products.length === 0) return null;
-  return <Card className="bg-white shadow-sm">
-      <CardContent className="p-3 space-y-3">
-        {/* Navegação e Busca de Produto */}
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium text-gray-600">Produto:</Label>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onProductSearch} className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100">
-              <Search size={16} />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigateProduct('prev')} disabled={currentProductIndex === 0}>
-              <ArrowLeft size={16} />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigateProduct('next')} disabled={currentProductIndex === products.length - 1}>
-              <ArrowRight size={16} />
-            </Button>
-          </div>
-        </div>
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
 
-        {/* Busca de Produto */}
-        {showProductSearch && <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <Input placeholder="Digite o nome do produto..." value={productSearchTerm} onChange={e => onProductSearchChange(e.target.value)} className="mb-3" autoFocus />
-            {productSearchTerm && <div className="max-h-40 overflow-y-auto space-y-1">
-                {filteredProducts.slice(0, 8).map(product => <div key={product.id} className="p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer" onClick={() => onSelectProduct(product)}>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-sm">{product.name}</p>
-                        <p className="text-xs text-gray-600">Código: {product.code}</p>
-                      </div>
-                      <p className="text-sm font-semibold text-blue-600">
-                        R$ {product.price.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>)}
-                {filteredProducts.length === 0 && <p className="text-center text-gray-500 py-2">Nenhum produto encontrado</p>}
-              </div>}
-          </div>}
-        
-        {/* Informações do Produto Atual */}
-        {currentProduct && <div className="bg-gray-50 p-3 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="bg-gray-200 px-2 py-1 rounded text-xs font-mono">
-                {currentProduct.code}
-              </span>
-              <h3 className="font-semibold text-gray-900 text-sm">{currentProduct.name}</h3>
+  const handleSelectProduct = (product: Product) => {
+    onSelectProduct(product);
+    onUnitPriceChange(product.price);
+    setShowProductSearch(false);
+    setProductSearchTerm('');
+  };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    product.code.toString().includes(productSearchTerm)
+  );
+
+  return (
+    <>
+      <Card className="bg-white shadow-sm">
+        <CardContent className="p-4">
+          <Label className="text-sm font-medium text-gray-600 block mb-3">Produto:</Label>
+          
+          {/* Seleção de Produto */}
+          {selectedProduct ? (
+            <div 
+              className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg p-3 cursor-pointer hover:bg-green-100 transition-colors mb-4"
+              onClick={() => setShowProductSearch(true)}
+            >
+              <div className="flex items-center gap-3">
+                <Package size={20} className="text-green-600" />
+                <div>
+                  <p className="font-medium text-green-900">{selectedProduct.name}</p>
+                  <p className="text-sm text-green-700">
+                    Código: {selectedProduct.code} • R$ {selectedProduct.price.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-green-600 hover:bg-green-200"
+              >
+                Alterar
+              </Button>
             </div>
-            
-            <QuantityInput quantity={quantity} onQuantityChange={onQuantityChange} onAddItem={onAddItem} product={currentProduct} selectedUnit={selectedUnit} onUnitChange={onUnitChange} />
-          </div>}
-      </CardContent>
-    </Card>;
+          ) : (
+            <Button 
+              onClick={() => setShowProductSearch(true)}
+              variant="outline"
+              className="w-full h-12 border-dashed border-2 border-gray-300 text-gray-500 hover:border-green-400 hover:text-green-600 mb-4"
+            >
+              <Search size={20} className="mr-2" />
+              Selecionar Produto
+            </Button>
+          )}
+
+          {/* Campos de Quantidade e Preço */}
+          {selectedProduct && (
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <Label className="text-xs text-gray-600 mb-1 block">Quantidade</Label>
+                <Input
+                  type="number"
+                  value={quantity}
+                  onChange={(e) => onQuantityChange(Number(e.target.value))}
+                  min="1"
+                  step="1"
+                  className="text-center"
+                />
+              </div>
+              <div>
+                <Label className="text-xs text-gray-600 mb-1 block">Preço Unit.</Label>
+                <Input
+                  type="number"
+                  value={unitPrice}
+                  onChange={(e) => onUnitPriceChange(Number(e.target.value))}
+                  min="0"
+                  step="0.01"
+                  className="text-center"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Total do Item */}
+          {selectedProduct && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-blue-900">Total do Item:</span>
+                <span className="font-bold text-blue-600">
+                  R$ {(quantity * unitPrice).toFixed(2)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Botão Adicionar */}
+          <Button 
+            onClick={onAddProduct}
+            disabled={!selectedProduct || quantity <= 0}
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Plus size={16} className="mr-2" />
+            Adicionar ao Pedido
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Busca de Produtos */}
+      <ProductSearchDialog
+        isOpen={showProductSearch}
+        onClose={() => setShowProductSearch(false)}
+        searchTerm={productSearchTerm}
+        onSearchChange={setProductSearchTerm}
+        products={filteredProducts}
+        onSelectProduct={handleSelectProduct}
+      />
+    </>
+  );
 };
+
 export default ProductSection;

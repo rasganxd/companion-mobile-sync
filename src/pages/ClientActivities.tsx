@@ -19,7 +19,7 @@ const ClientActivities = () => {
   const [loading, setLoading] = useState(false);
 
   const handleCreateOrder = () => {
-    navigate('/my-orders', {
+    navigate('/place-order', {
       state: {
         clientId,
         clientName,

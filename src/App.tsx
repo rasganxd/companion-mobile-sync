@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,6 +13,7 @@ import MyOrders from '@/pages/MyOrders';
 import Reports from '@/pages/Reports';
 import SyncSettings from '@/pages/SyncSettings';
 import TransmitOrders from '@/pages/TransmitOrders';
+import PlaceOrder from '@/pages/PlaceOrder';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -71,6 +73,18 @@ function App() {
                 <Route path="/my-orders" element={
                   <ProtectedRoute>
                     <MyOrders />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/place-order" element={
+                  <ProtectedRoute>
+                    <PlaceOrder />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/new-order" element={
+                  <ProtectedRoute>
+                    <PlaceOrder />
                   </ProtectedRoute>
                 } />
                 
