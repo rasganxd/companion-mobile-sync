@@ -1,8 +1,9 @@
-
 import React, { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import ClientCard from './ClientCard';
 import ClientsListHeader from './ClientsListHeader';
+import ClientPaginatedView from './ClientPaginatedView';
+import AppButton from '@/components/AppButton';
 
 interface Client {
   id: string;
@@ -46,6 +47,8 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
   onClientViewDetails
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'paginated'>('paginated');
+  const [currentPage, setCurrentPage] = useState(0);
 
   const filteredClients = clients.filter(client => {
     const searchLower = searchTerm.toLowerCase();
@@ -59,9 +62,19 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
     );
   });
 
+  // Reset da página quando a busca muda
+  React.useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm]);
+
   const handleViewDetails = (client: Client) => {
     const clientIndex = filteredClients.findIndex(c => c.id === client.id);
     onClientViewDetails(filteredClients, clientIndex);
+  };
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'list' ? 'paginated' : 'list');
+    setCurrentPage(0);
   };
 
   if (loading) {
@@ -98,16 +111,38 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
         </div>
         
         {filteredClients.length > 0 ? (
-          <div className="space-y-3">
-            {filteredClients.map(client => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                onSelect={onClientSelect}
-                onViewDetails={handleViewDetails}
+          <>
+            {viewMode === 'paginated' ? (
+              <ClientPaginatedView
+                clients={filteredClients}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                onClientSelect={onClientSelect}
+                onToggleView={toggleViewMode}
               />
-            ))}
-          </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Botão para alternar para modo paginado */}
+                <div className="flex justify-end">
+                  <AppButton variant="gray" onClick={toggleViewMode} className="flex items-center gap-2">
+                    <User size={16} />
+                    <span className="text-sm">Ver Páginas</span>
+                  </AppButton>
+                </div>
+                
+                <div className="space-y-3">
+                  {filteredClients.map(client => (
+                    <ClientCard
+                      key={client.id}
+                      client={client}
+                      onSelect={onClientSelect}
+                      onViewDetails={handleViewDetails}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center text-gray-500 py-8">
             <div className="text-lg mb-2">Nenhum cliente encontrado</div>
