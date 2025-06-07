@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
@@ -82,33 +83,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const loginWithCredentials = async (code: string, password: string): Promise<boolean> => {
-    if (!connected) {
-      // Try offline login with stored credentials
-      const storedRep = localStorage.getItem('salesRep');
-      if (storedRep) {
-        try {
-          const parsedRep = JSON.parse(storedRep);
-          if (parsedRep.code === code) {
-            setSalesRep(parsedRep);
-            toast.success('Login offline realizado com sucesso');
-            return true;
-          }
-        } catch (error) {
-          console.error('Error with offline login:', error);
-        }
-      }
-      
-      toast.error('Sem conexão. Não foi possível fazer login.');
-      return false;
-    }
-
     try {
       setIsLoading(true);
-      console.log('🔐 Attempting login with code:', code);
+      console.log('🔐 Tentando login com código:', code);
       
       // Para desenvolvimento, aceitar login local com código "1"
       if (code === '1' && password === 'senha123') {
-        console.log('🔐 Using local development login');
+        console.log('🔐 Usando login de desenvolvimento local');
         const salesRepData: SalesRep = {
           id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
           name: 'Candatti',
@@ -117,29 +98,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sessionToken: 'local_dev_token_' + Date.now()
         };
         
-        console.log('✅ Local login successful, saving sales rep data');
+        console.log('✅ Login local bem-sucedido, salvando dados do vendedor');
         login(salesRepData);
         
-        // Perform initial sync
-        console.log('🔄 Starting initial sync...');
-        toast.success('Login realizado! Iniciando sincronização de dados...');
+        // Realizar sincronização inicial SEMPRE, mesmo offline
+        console.log('🔄 Iniciando sincronização inicial...');
+        toast.success('Login realizado! Carregando dados...');
         
-        const syncResult = await performFullSync(salesRepData.id, salesRepData.sessionToken!);
-        if (syncResult.success) {
+        try {
+          const syncResult = await performFullSync(salesRepData.id, salesRepData.sessionToken!);
+          if (syncResult.success) {
+            setNeedsInitialSync(false);
+            console.log('✅ Sincronização concluída com sucesso');
+            const { clients = 0, products = 0 } = syncResult.syncedData || {};
+            if (clients > 0 || products > 0) {
+              toast.success(`Dados carregados! ${clients} clientes, ${products} produtos`);
+            } else {
+              toast.warning('Login realizado, mas nenhum dado foi carregado.');
+            }
+          } else {
+            console.warn('⚠️ Sincronização falhou:', syncResult.error);
+            toast.warning('Login realizado. ' + (syncResult.error || 'Alguns dados podem não estar disponíveis.'));
+            setNeedsInitialSync(false); // Considerar como sucesso se o login funcionou
+          }
+        } catch (syncError) {
+          console.error('❌ Erro durante sincronização:', syncError);
+          toast.warning('Login realizado, mas houve problemas na sincronização.');
           setNeedsInitialSync(false);
-          toast.success('Sincronização concluída com sucesso!');
-        } else {
-          console.error('❌ Sync failed:', syncResult.error);
-          toast.warning('Dados carregados localmente. ' + (syncResult.error || ''));
-          setNeedsInitialSync(false); // Considerar como sucesso se temos dados locais
         }
         
         return true;
       }
+
+      if (!connected) {
+        // Try offline login with stored credentials
+        const storedRep = localStorage.getItem('salesRep');
+        if (storedRep) {
+          try {
+            const parsedRep = JSON.parse(storedRep);
+            if (parsedRep.code === code) {
+              setSalesRep(parsedRep);
+              toast.success('Login offline realizado com sucesso');
+              return true;
+            }
+          } catch (error) {
+            console.error('Error with offline login:', error);
+          }
+        }
+        
+        toast.error('Sem conexão. Não foi possível fazer login.');
+        return false;
+      }
       
       // Authenticate with Supabase
       const authResult = await supabaseService.authenticateSalesRep(code, password);
-      console.log('🔐 Auth result received:', authResult);
+      console.log('🔐 Resultado da autenticação recebido:', authResult);
       
       if (authResult.success && authResult.salesRep) {
         const salesRepData: SalesRep = {
@@ -147,12 +160,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sessionToken: authResult.sessionToken
         };
         
-        console.log('✅ Login successful, saving sales rep data');
+        console.log('✅ Login bem-sucedido, salvando dados do vendedor');
         login(salesRepData);
         
         // Perform initial sync if needed
         if (!lastSyncDate) {
-          console.log('🔄 Starting initial sync...');
+          console.log('🔄 Iniciando sincronização inicial...');
           toast.success('Login realizado! Iniciando sincronização de dados...');
           
           const syncResult = await performFullSync(salesRepData.id, authResult.sessionToken);
@@ -160,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setNeedsInitialSync(false);
             toast.success('Sincronização concluída com sucesso!');
           } else {
-            console.error('❌ Sync failed:', syncResult.error);
+            console.error('❌ Sincronização falhou:', syncResult.error);
             toast.error('Falha na sincronização: ' + syncResult.error);
             setNeedsInitialSync(true);
           }
@@ -169,10 +182,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return true;
       }
       
-      console.log('❌ Login failed - invalid credentials or response');
+      console.log('❌ Login falhou - credenciais inválidas ou resposta inválida');
       return false;
     } catch (error) {
-      console.error('❌ Error during login:', error);
+      console.error('❌ Erro durante login:', error);
       toast.error(error instanceof Error ? error.message : 'Erro durante o login');
       return false;
     } finally {
