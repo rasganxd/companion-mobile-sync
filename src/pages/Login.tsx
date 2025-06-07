@@ -41,7 +41,7 @@ const Login = () => {
     }
   };
   return <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 flex flex-col">
-      <div className="bg-gradient-to-r from-app-blue to-app-blue-dark shadow-md py-[15px]">
+      <div className="bg-gradient-to-r from-app-blue to-app-blue-dark shadow-md py-[12px]">
         <h1 className="font-bold text-center text-white text-base py-[10px]">
           SalesTrack Mobile - Login
         </h1>
