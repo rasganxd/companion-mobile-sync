@@ -33,9 +33,11 @@ const PlaceOrder = () => {
     selectedProduct,
     quantity,
     unitPrice,
+    searchTerm,
     selectProduct,
     setQuantity,
     setUnitPrice,
+    setSearchTerm,
     addProduct,
     clearSelection
   } = useProductSelection(addOrderItem);
@@ -176,9 +178,9 @@ const PlaceOrder = () => {
 
             {/* Order Items */}
             <OrderItemsList
-              items={orderItems}
+              orderItems={orderItems}
               onRemoveItem={removeOrderItem}
-              total={calculateTotal()}
+              calculateTotal={calculateTotal}
             />
           </div>
         </ScrollArea>
@@ -197,10 +199,10 @@ const PlaceOrder = () => {
 
       {/* Modals */}
       <ClientSelectionModal
-        isOpen={showClientSelection}
+        showClientSelection={showClientSelection}
+        clientSearchTerm={clientSearchTerm}
+        filteredClients={filteredClients}
         onClose={() => setShowClientSelection(false)}
-        clients={filteredClients}
-        searchTerm={clientSearchTerm}
         onSearchChange={setClientSearchTerm}
         onSelectClient={selectClient}
       />
@@ -208,6 +210,8 @@ const PlaceOrder = () => {
       <ProductSearchDialog
         isOpen={showProductSearch}
         onClose={() => setShowProductSearch(false)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         products={products}
         onSelectProduct={selectProduct}
       />

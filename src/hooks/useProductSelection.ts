@@ -28,6 +28,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadProducts();
@@ -44,6 +45,11 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       toast.error('Erro ao carregar produtos');
     }
   };
+
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.code.toString().includes(searchTerm)
+  );
 
   const selectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -72,21 +78,25 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setSelectedProduct(null);
     setQuantity(1);
     setUnitPrice(0);
+    setSearchTerm('');
   };
 
   return {
-    products,
+    products: filteredProducts,
     selectedProduct,
     quantity,
     unitPrice,
+    searchTerm,
     selectProduct,
     setQuantity,
     setUnitPrice,
+    setSearchTerm,
     addProduct,
     clearSelection: () => {
       setSelectedProduct(null);
       setQuantity(1);
       setUnitPrice(0);
+      setSearchTerm('');
     }
   };
 };
