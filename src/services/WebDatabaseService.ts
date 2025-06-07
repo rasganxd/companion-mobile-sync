@@ -104,7 +104,23 @@ class WebDatabaseService implements DatabaseAdapter {
 
   async getClients(): Promise<any[]> {
     await this.ensureInitialized();
-    return this.db!.getAll('clients');
+    const allClients = await this.db!.getAll('clients');
+    
+    // Remover duplicatas baseadas no ID e logar para debug
+    const uniqueClients = allClients.reduce((acc: any[], current: any) => {
+      const existingClient = acc.find(client => client.id === current.id);
+      if (!existingClient) {
+        acc.push(current);
+      } else {
+        console.log('🔍 Cliente duplicado removido:', current);
+      }
+      return acc;
+    }, []);
+    
+    console.log('📊 Total de clientes no banco:', allClients.length);
+    console.log('📊 Clientes únicos retornados:', uniqueClients.length);
+    
+    return uniqueClients;
   }
 
   async getCustomers(): Promise<any[]> {
@@ -140,7 +156,23 @@ class WebDatabaseService implements DatabaseAdapter {
 
   async getProducts(): Promise<any[]> {
     await this.ensureInitialized();
-    return this.db!.getAll('products');
+    const allProducts = await this.db!.getAll('products');
+    
+    // Remover duplicatas baseadas no ID e logar para debug
+    const uniqueProducts = allProducts.reduce((acc: any[], current: any) => {
+      const existingProduct = acc.find(product => product.id === current.id);
+      if (!existingProduct) {
+        acc.push(current);
+      } else {
+        console.log('🔍 Produto duplicado removido:', current);
+      }
+      return acc;
+    }, []);
+    
+    console.log('📊 Total de produtos no banco:', allProducts.length);
+    console.log('📊 Produtos únicos retornados:', uniqueProducts.length);
+    
+    return uniqueProducts;
   }
 
   async getPendingSyncItems(tableName: string): Promise<any[]> {

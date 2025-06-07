@@ -27,7 +27,18 @@ export const useClientSelection = () => {
       const db = getDatabaseAdapter();
       const clientsData = await db.getClients();
       console.log('👥 Clientes carregados:', clientsData);
-      setClients(clientsData || []);
+      
+      // Remover duplicatas baseadas no ID
+      const uniqueClients = clientsData?.reduce((acc: Client[], current: Client) => {
+        const existingClient = acc.find(client => client.id === current.id);
+        if (!existingClient) {
+          acc.push(current);
+        }
+        return acc;
+      }, []) || [];
+      
+      console.log('👥 Clientes únicos após remoção de duplicatas:', uniqueClients);
+      setClients(uniqueClients);
     } catch (error) {
       console.error('❌ Erro ao carregar clientes:', error);
       toast.error('Erro ao carregar clientes');
