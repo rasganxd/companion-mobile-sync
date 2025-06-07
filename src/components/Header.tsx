@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from '@/contexts/NavigationContext';
 import NetworkStatusIndicator from './NetworkStatusIndicator';
 
 interface HeaderProps {
@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({
   rightComponent,
   showNetworkStatus = true
 }) => {
-  const navigate = useNavigate();
+  const { goBack, canGoBack } = useNavigation();
 
   const getBackgroundClasses = () => {
     switch (backgroundColor) {
@@ -38,9 +38,9 @@ const Header: React.FC<HeaderProps> = ({
     <div className={`${getBackgroundClasses()} shadow-md py-3 px-4`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          {showBackButton && (
+          {showBackButton && canGoBack && (
             <button
-              onClick={() => navigate(-1)}
+              onClick={goBack}
               className="text-white hover:bg-white/10 rounded-lg p-2 transition-colors flex-shrink-0"
             >
               <ArrowLeft size={20} />
