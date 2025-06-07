@@ -67,62 +67,62 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({ client, onSelect }) => 
 
   return (
     <Card className={`${statusInfo.bgColor} border-2`}>
-      <CardContent className="p-6">
-        {/* Header com código e status */}
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex items-center gap-3">
+      <CardContent className="p-4">
+        {/* Header com código e status - mais compacto */}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex items-center gap-2">
             {client.code && (
-              <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-lg border">
-                <Hash className="h-4 w-4 text-gray-600" />
-                <span className="font-bold text-lg">{client.code}</span>
+              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border">
+                <Hash className="h-3 w-3 text-gray-600" />
+                <span className="font-bold text-base">{client.code}</span>
               </div>
             )}
           </div>
-          <div className={`px-4 py-2 rounded-lg border text-sm font-medium ${statusInfo.color}`}>
+          <div className={`px-3 py-1 rounded border text-xs font-medium ${statusInfo.color}`}>
             {statusInfo.text}
           </div>
         </div>
 
-        {/* Nome da empresa/cliente */}
-        <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+        {/* Nome da empresa/cliente - mais compacto */}
+        <div className="text-center mb-4">
+          <h2 className="text-lg font-bold text-gray-900 mb-1">
             {client.company_name || client.name}
           </h2>
           {client.company_name && client.name && (
-            <p className="text-sm text-gray-600">
+            <p className="text-xs text-gray-600">
               Razão Social: {client.name}
             </p>
           )}
         </div>
 
-        {/* Valor do pedido se positivado */}
+        {/* Valor do pedido se positivado - mais compacto */}
         {client.status === 'positivado' && client.orderTotal && client.orderTotal > 0 && (
-          <div className="text-center mb-6">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="text-center mb-4">
+            <div className="text-xl font-bold text-green-600">
               {formatCurrency(client.orderTotal)}
             </div>
-            <div className="text-sm text-gray-600">Valor total dos pedidos</div>
+            <div className="text-xs text-gray-600">Valor total dos pedidos</div>
           </div>
         )}
 
-        {/* Informações de contato e endereço */}
-        <div className="space-y-4 mb-6">
+        {/* Informações de contato e endereço - layout otimizado */}
+        <div className="space-y-2 mb-4">
           {client.phone && (
-            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border">
-              <Phone className="h-5 w-5 text-gray-600" />
+            <div className="flex items-center gap-2 p-2 bg-white rounded border">
+              <Phone className="h-4 w-4 text-gray-600" />
               <div>
                 <p className="text-xs text-gray-500">Telefone</p>
-                <p className="font-medium">{client.phone}</p>
+                <p className="text-sm font-medium">{client.phone}</p>
               </div>
             </div>
           )}
           
           {(client.address || client.city || client.state) && (
-            <div className="flex items-start gap-3 p-3 bg-white rounded-lg border">
-              <MapPin className="h-5 w-5 text-gray-600 mt-1" />
+            <div className="flex items-start gap-2 p-2 bg-white rounded border">
+              <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
               <div>
                 <p className="text-xs text-gray-500">Endereço</p>
-                <div className="font-medium">
+                <div className="text-sm font-medium">
                   {client.address && <p>{client.address}</p>}
                   {(client.city || client.state) && (
                     <p>
@@ -137,15 +137,15 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({ client, onSelect }) => 
           )}
         </div>
 
-        {/* Botão de ação */}
+        {/* Botão de ação - mais compacto */}
         <AppButton 
           variant="blue"
           fullWidth 
           onClick={() => onSelect(client)}
-          className="text-base py-3 flex items-center justify-center gap-2"
+          className="text-sm py-2 flex items-center justify-center gap-2"
         >
           <span>Iniciar Atividades</span>
-          <ArrowRight size={18} />
+          <ArrowRight size={16} />
         </AppButton>
       </CardContent>
     </Card>
