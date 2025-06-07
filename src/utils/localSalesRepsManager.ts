@@ -26,8 +26,10 @@ export class LocalSalesRepsManager {
       const data = localStorage.getItem(this.STORAGE_KEY);
       if (data) {
         const savedReps = JSON.parse(data);
-        // Always ensure Candatti is in the list
-        const hasRealData = savedReps.some((rep: LocalSalesRep) => rep.code === '1' && rep.name === 'Candatti');
+        // Always ensure Candatti is in the list with real ID
+        const hasRealData = savedReps.some((rep: LocalSalesRep) => 
+          rep.code === '1' && rep.id === 'e3eff363-2d17-4f73-9918-f53c6bc0bc48'
+        );
         if (hasRealData) {
           return savedReps;
         }
@@ -39,7 +41,7 @@ export class LocalSalesRepsManager {
     // Return real sales rep data for Candatti with correct sales_rep_id from database
     const realSalesRepsData = [
       {
-        id: '61f8c7f7-cb46-4c7e-8fea-93d35b7d7f96', // Real ID from database
+        id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', // Real ID from database
         code: '1',
         name: 'Candatti',
         email: 'candatti@empresa.com',
@@ -83,5 +85,18 @@ export class LocalSalesRepsManager {
   static getSalesRepByCode(code: string): LocalSalesRep | null {
     const salesReps = this.getLocalSalesReps();
     return salesReps.find(rep => rep.code === code && rep.active) || null;
+  }
+
+  // Novo método para garantir dados reais sempre disponíveis
+  static ensureRealDataAvailable(): void {
+    const existingReps = this.getLocalSalesReps();
+    const candattiExists = existingReps.some(rep => 
+      rep.code === '1' && rep.id === 'e3eff363-2d17-4f73-9918-f53c6bc0bc48'
+    );
+    
+    if (!candattiExists) {
+      console.log('🔄 Ensuring Candatti real data is available...');
+      this.getLocalSalesReps(); // This will initialize with real data
+    }
   }
 }
