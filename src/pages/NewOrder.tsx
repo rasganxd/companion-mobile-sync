@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, Search, ShoppingCart, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Package, DollarSign, CheckCircle, Settings } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -14,6 +15,7 @@ import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
 import PaymentSection from '@/components/order/PaymentSection';
 import ActionButtons from '@/components/order/ActionButtons';
+
 const PlaceOrder = () => {
   const {
     goBack
@@ -117,7 +119,9 @@ const PlaceOrder = () => {
       }
     }
   }, [selectedProduct, products, currentProductIndex]);
+  
   const currentProduct = selectedProduct || products[currentProductIndex];
+  
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
   };
@@ -127,7 +131,8 @@ const PlaceOrder = () => {
   console.log('🔍 NewOrder - paymentTables.length:', paymentTables.length);
   console.log('🔍 NewOrder - selectedPaymentTable:', selectedPaymentTable);
   
-  return <div className="min-h-screen bg-gray-100 flex flex-col">
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header laranja estilo POS */}
       <div className="text-white p-4 shadow-lg bg-blue-700">
         <div className="flex items-center justify-between">
@@ -140,7 +145,8 @@ const PlaceOrder = () => {
       </div>
 
       {/* Cliente Info Bar */}
-      {selectedClient && <div className="bg-blue-600 text-white px-4 py-2 text-sm">
+      {selectedClient && (
+        <div className="bg-blue-600 text-white px-4 py-2 text-sm">
           <div className="flex items-center justify-between">
             <div>
                - {selectedClient.company_name || selectedClient.name}
@@ -149,17 +155,20 @@ const PlaceOrder = () => {
               Alterar
             </Button>
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Selecionar Cliente */}
-      {!selectedClient && <div className="border-l-4 border-yellow-500 p-4 bg-blue-300">
+      {!selectedClient && (
+        <div className="border-l-4 border-yellow-500 p-4 bg-blue-300">
           <div className="flex items-center justify-between">
             <span className="text-zinc-950">Nenhum cliente selecionado</span>
             <Button onClick={() => setShowClientSelection(true)} className="text-white text-sm bg-sky-600 hover:bg-sky-500">
               Selecionar Cliente
             </Button>
           </div>
-        </div>}
+        </div>
+      )}
 
       <div className="flex-1 p-4 space-y-4">
         {/* Produto atual e navegação */}
@@ -191,13 +200,13 @@ const PlaceOrder = () => {
           </div>
 
           {/* Informações do produto atual */}
-          {currentProduct && <div className="space-y-4">
+          {currentProduct && (
+            <div className="space-y-4">
               <div className="bg-gray-50 p-3 rounded-lg">
                 <div className="flex items-center gap-2">
                   <Package size={20} className="text-blue-600" />
                   <div>
                     <div className="font-semibold">{currentProduct.code} - {currentProduct.name}</div>
-                    
                   </div>
                 </div>
               </div>
@@ -211,12 +220,14 @@ const PlaceOrder = () => {
                       R$ {(currentProduct.sale_price || currentProduct.price || 0).toFixed(2)}
                     </div>
                   </div>
-                  {currentProduct.min_price && currentProduct.min_price > 0 && <div className="bg-yellow-50 p-2 rounded">
+                  {currentProduct.min_price && currentProduct.min_price > 0 && (
+                    <div className="bg-yellow-50 p-2 rounded">
                       <div className="text-xs text-gray-600">Preço Mínimo</div>
                       <div className="font-semibold text-yellow-700">
                         R$ {currentProduct.min_price.toFixed(2)}
                       </div>
-                    </div>}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="space-y-2">
@@ -226,12 +237,14 @@ const PlaceOrder = () => {
                       {currentProduct.unit || 'UN'}
                     </div>
                   </div>
-                  {currentProduct.has_subunit && currentProduct.subunit && <div className="bg-purple-50 p-2 rounded">
+                  {currentProduct.has_subunit && currentProduct.subunit && (
+                    <div className="bg-purple-50 p-2 rounded">
                       <div className="text-xs text-gray-600">Sub-unidade</div>
                       <div className="font-semibold text-purple-700">
                         {currentProduct.subunit} (1:{currentProduct.subunit_ratio || 1})
                       </div>
-                    </div>}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -261,17 +274,20 @@ const PlaceOrder = () => {
                 <Package size={18} className="mr-2" />
                 Adicionar ao Pedido
               </Button>
-            </div>}
+            </div>
+          )}
         </div>
 
         {/* Lista de itens do pedido */}
-        {orderItems.length > 0 && <div className="bg-white rounded-lg shadow">
+        {orderItems.length > 0 && (
+          <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
               <h3 className="font-semibold text-gray-900">Itens do Pedido ({orderItems.length})</h3>
             </div>
             <div className="p-4">
               <div className="space-y-2">
-                {orderItems.map(item => <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
+                {orderItems.map(item => (
+                  <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
                     <div className="flex-1">
                       <div className="font-medium">{item.code} - {item.productName}</div>
                       <div className="text-sm text-gray-600">
@@ -286,10 +302,12 @@ const PlaceOrder = () => {
                         ×
                       </Button>
                     </div>
-                  </div>)}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>}
+          </div>
+        )}
 
         {/* Seção de Pagamento */}
         {orderItems.length > 0 && (
@@ -301,7 +319,8 @@ const PlaceOrder = () => {
         )}
 
         {/* Totais */}
-        {orderItems.length > 0 && <div className="bg-white rounded-lg shadow p-4">
+        {orderItems.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center text-lg">
                 <span className="font-semibold">Total Bruto:</span>
@@ -312,27 +331,61 @@ const PlaceOrder = () => {
                 <span className="font-bold text-green-600">R$ {calculateTotal()}</span>
               </div>
             </div>
-          </div>}
+          </div>
+        )}
       </div>
 
       {/* Botões de ação atualizados */}
-      <ActionButtons orderItems={orderItems} onClearCart={clearCart} onGoBack={goBack} onSaveAsDraft={() => saveAsDraft(selectedClient)} onFinishOrder={handleFinishOrder} selectedClient={selectedClient || {
-      id: ''
-    }} isSubmitting={isSubmitting} />
+      <ActionButtons 
+        orderItems={orderItems} 
+        onClearCart={clearCart} 
+        onGoBack={goBack} 
+        onSaveAsDraft={() => saveAsDraft(selectedClient)} 
+        onFinishOrder={handleFinishOrder} 
+        selectedClient={selectedClient || { id: '' }} 
+        isSubmitting={isSubmitting} 
+      />
 
       {/* Modals */}
-      <ClientSelectionModal showClientSelection={showClientSelection} clientSearchTerm={clientSearchTerm} filteredClients={filteredClients} onClose={() => setShowClientSelection(false)} onSearchChange={setClientSearchTerm} onSelectClient={selectClient} />
+      <ClientSelectionModal 
+        showClientSelection={showClientSelection} 
+        clientSearchTerm={clientSearchTerm} 
+        filteredClients={filteredClients} 
+        onClose={() => setShowClientSelection(false)} 
+        onSearchChange={setClientSearchTerm} 
+        onSelectClient={selectClient} 
+      />
 
-      <ProductSearchDialog isOpen={showProductSearch} onClose={() => setShowProductSearch(false)} searchTerm={searchTerm} onSearchChange={setSearchTerm} products={products} onSelectProduct={product => {
-      selectProduct(product);
-      const index = products.findIndex(p => p.id === product.id);
-      if (index !== -1) {
-        setCurrentProductIndex(index);
-      }
-      setShowProductSearch(false);
-    }} />
+      <ProductSearchDialog 
+        isOpen={showProductSearch} 
+        onClose={() => setShowProductSearch(false)} 
+        searchTerm={searchTerm} 
+        onSearchChange={setSearchTerm} 
+        products={products} 
+        onSelectProduct={product => {
+          selectProduct(product);
+          const index = products.findIndex(p => p.id === product.id);
+          if (index !== -1) {
+            setCurrentProductIndex(index);
+          }
+          setShowProductSearch(false);
+        }} 
+      />
 
-      {existingOrder && <OrderChoiceModal isOpen={showOrderChoice} onClose={() => setShowOrderChoice(false)} onEditOrder={handleEditOrder} onCreateNew={handleCreateNew} onDeleteOrder={handleDeleteOrder} clientName={selectedClient?.company_name || selectedClient?.name || ''} orderTotal={existingOrder.total || 0} orderItemsCount={existingOrder.items?.length || 0} />}
-    </div>;
+      {existingOrder && (
+        <OrderChoiceModal 
+          isOpen={showOrderChoice} 
+          onClose={() => setShowOrderChoice(false)} 
+          onEditOrder={handleEditOrder} 
+          onCreateNew={handleCreateNew} 
+          onDeleteOrder={handleDeleteOrder} 
+          clientName={selectedClient?.company_name || selectedClient?.name || ''} 
+          orderTotal={existingOrder.total || 0} 
+          orderItemsCount={existingOrder.items?.length || 0} 
+        />
+      )}
+    </div>
+  );
 };
+
 export default PlaceOrder;
