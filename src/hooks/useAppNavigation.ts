@@ -48,9 +48,9 @@ export const useAppNavigation = () => {
     navigateTo(`/order-details/${orderId}`);
   };
   
-  const navigateToPlaceOrder = () => {
-    console.log('🧭 useAppNavigation.navigateToPlaceOrder()');
-    navigateTo('/place-order');
+  const navigateToNewOrder = () => {
+    console.log('🧭 useAppNavigation.navigateToNewOrder()');
+    navigateTo('/new-order');
   };
   
   const navigateToNegativeSale = () => {
@@ -104,7 +104,7 @@ export const useAppNavigation = () => {
     navigateToOrders,
     navigateToRoutes,
     navigateToOrderDetails,
-    navigateToPlaceOrder,
+    navigateToNewOrder,
     navigateToNegativeSale,
     navigateToLastPurchases,
     navigateToMessage,

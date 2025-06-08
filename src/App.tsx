@@ -13,7 +13,7 @@ import MyOrders from '@/pages/MyOrders';
 import Reports from '@/pages/Reports';
 import SyncSettings from '@/pages/SyncSettings';
 import TransmitOrders from '@/pages/TransmitOrders';
-import PlaceOrder from '@/pages/PlaceOrder';
+import NewOrder from '@/pages/NewOrder';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
@@ -79,15 +79,9 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                <Route path="/place-order" element={
-                  <ProtectedRoute>
-                    <PlaceOrder />
-                  </ProtectedRoute>
-                } />
-                
                 <Route path="/new-order" element={
                   <ProtectedRoute>
-                    <PlaceOrder />
+                    <NewOrder />
                   </ProtectedRoute>
                 } />
                 

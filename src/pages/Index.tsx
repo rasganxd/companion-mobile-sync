@@ -33,7 +33,7 @@ const Index = () => {
         <MenuCard
           icon={<Package2 size={32} />}
           title="Fazer Pedidos"
-          to="/place-order"
+          to="/new-order"
           state={{ clientName, clientId, day }}
         />
         <MenuCard
