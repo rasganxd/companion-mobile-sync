@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
@@ -45,26 +44,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { connected } = useNetworkStatus();
   const { performFullSync, loadLastSyncDate, lastSyncDate } = useDataSync();
 
+  // Log state changes
+  useEffect(() => {
+    console.log('🔐 AuthContext state changed:', {
+      salesRep: salesRep?.name || 'null',
+      isLoading,
+      needsInitialSync,
+      connected,
+      timestamp: new Date().toISOString()
+    });
+  }, [salesRep, isLoading, needsInitialSync, connected]);
+
   useEffect(() => {
     const loadStoredAuth = () => {
+      console.log('🔐 AuthContext: Loading stored auth data...');
       try {
         const stored = localStorage.getItem('salesRep');
+        console.log('🔐 AuthContext: localStorage salesRep:', stored ? 'found' : 'not found');
+        
         if (stored) {
           const parsedSalesRep = JSON.parse(stored);
+          console.log('🔐 AuthContext: Parsed salesRep:', parsedSalesRep.name, 'ID:', parsedSalesRep.id);
           setSalesRep(parsedSalesRep);
           
           // Check if needs initial sync
           const lastSync = localStorage.getItem('last_sync_date');
+          console.log('🔐 AuthContext: last_sync_date:', lastSync ? 'found' : 'not found');
           if (!lastSync) {
+            console.log('🔐 AuthContext: Setting needsInitialSync=true');
             setNeedsInitialSync(true);
           }
+        } else {
+          console.log('🔐 AuthContext: No stored auth found');
         }
         
         loadLastSyncDate();
       } catch (error) {
-        console.error('Error loading stored auth:', error);
+        console.error('🔐 AuthContext: Error loading stored auth:', error);
         localStorage.removeItem('salesRep');
       } finally {
+        console.log('🔐 AuthContext: Setting isLoading=false');
         setIsLoading(false);
       }
     };
@@ -73,11 +92,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [loadLastSyncDate]);
 
   const login = (salesRepData: SalesRep) => {
+    console.log('🔐 AuthContext: login() called for:', salesRepData.name);
     setSalesRep(salesRepData);
+    
+    // Persist immediately and verify
     localStorage.setItem('salesRep', JSON.stringify(salesRepData));
+    const verification = localStorage.getItem('salesRep');
+    console.log('🔐 AuthContext: localStorage persistence verified:', verification ? 'success' : 'failed');
     
     // Check if needs sync
     if (!lastSyncDate) {
+      console.log('🔐 AuthContext: No lastSyncDate, setting needsInitialSync=true');
       setNeedsInitialSync(true);
     }
   };
@@ -85,11 +110,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithCredentials = async (code: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      console.log('🔐 Tentando login com código:', code);
+      console.log('🔐 AuthContext: loginWithCredentials() started for code:', code);
       
       // Para desenvolvimento, aceitar login local com código "1"
       if (code === '1' && password === 'senha123') {
-        console.log('🔐 Usando login de desenvolvimento local');
+        console.log('🔐 AuthContext: Using local development login');
         const salesRepData: SalesRep = {
           id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
           name: 'Candatti',
@@ -98,33 +123,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           sessionToken: 'local_dev_token_' + Date.now()
         };
         
-        console.log('✅ Login local bem-sucedido, iniciando sincronização');
+        console.log('🔐 AuthContext: Local login successful, calling login()');
         login(salesRepData);
         
         // Realizar sincronização inicial com melhor tratamento de erros
-        console.log('🔄 Iniciando sincronização inicial...');
+        console.log('🔐 AuthContext: Starting initial sync...');
         toast.success('Login realizado! Carregando dados do banco...');
         
         try {
           const syncResult = await performFullSync(salesRepData.id, salesRepData.sessionToken!);
           if (syncResult.success) {
             setNeedsInitialSync(false);
-            console.log('✅ Sincronização concluída com sucesso');
+            console.log('🔐 AuthContext: Sync completed successfully');
             const { clients = 0, products = 0, paymentTables = 0 } = syncResult.syncedData || {};
             
             if (clients > 0 || products > 0) {
               toast.success(`Dados carregados! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
             } else {
               toast.warning('Login realizado, mas nenhum dado foi encontrado no banco para este vendedor.');
-              console.log('ℹ️ Nenhum dado encontrado no banco para o vendedor');
+              console.log('🔐 AuthContext: No data found for this sales rep');
             }
           } else {
-            console.error('❌ Sincronização falhou:', syncResult.error);
+            console.error('🔐 AuthContext: Sync failed:', syncResult.error);
             toast.error('Erro na sincronização: ' + (syncResult.error || 'Erro desconhecido'));
             setNeedsInitialSync(true);
           }
         } catch (syncError) {
-          console.error('❌ Erro durante sincronização:', syncError);
+          console.error('🔐 AuthContext: Sync error:', syncError);
           toast.error('Erro durante a sincronização. Verifique a conexão e tente novamente.');
           setNeedsInitialSync(true);
         }
@@ -198,11 +223,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    console.log('🔐 AuthContext: logout() called');
     setSalesRep(null);
     localStorage.removeItem('salesRep');
     localStorage.removeItem('last_sync_date');
     localStorage.removeItem('sales_rep_id');
     setNeedsInitialSync(false);
+    console.log('🔐 AuthContext: logout completed, localStorage cleared');
   };
 
   const value = {

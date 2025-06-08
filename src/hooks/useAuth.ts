@@ -13,8 +13,13 @@ export const useAuth = () => {
   } = useAuthContext();
 
   const isAuthenticated = () => {
-    return salesRep !== null;
+    const authenticated = salesRep !== null;
+    console.log('🔐 useAuth.isAuthenticated():', authenticated, 'salesRep:', salesRep?.name || 'null');
+    return authenticated;
   };
+
+  // Log auth state whenever it's accessed
+  console.log('🔐 useAuth hook called - salesRep:', salesRep?.name || 'null', 'isLoading:', isLoading);
 
   return {
     salesRep,
