@@ -1,4 +1,3 @@
-
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,9 +26,9 @@ export const useAppNavigation = () => {
     console.log('🧭 useAppNavigation.navigateToClients()', day || 'no day');
     if (day) {
       // Passar o dia como estado para a tela de clientes
-      navigateTo('/clientes-lista', { day });
+      navigateTo('/clients-list', { day });
     } else {
-      navigateTo('/clientes-lista');
+      navigateTo('/clients-list');
     }
   };
   

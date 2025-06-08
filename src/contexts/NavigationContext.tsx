@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
@@ -22,7 +21,7 @@ const navigationFlows: { [key: string]: string } = {
   '/home': '/home', // Home é a tela raiz - não volta para lugar nenhum
   '/client-activities': '/client-fullscreen', // Lista de atividades volta para fullscreen
   '/client-fullscreen': '/rotas', // Visualização full-screen volta para rotas
-  '/clientes-lista': '/rotas', // Lista de clientes volta para rotas (caso ainda seja usada)
+  '/clients-list': '/rotas', // Lista de clientes volta para rotas
   '/rotas': '/home',
   '/my-orders': '/home',
   '/sync-settings': '/home',
@@ -33,7 +32,7 @@ const navigationFlows: { [key: string]: string } = {
   '/mensagem': '/client-activities',
   '/capturar-posicao': '/client-activities',
   '/order-details': '/my-orders',
-  '/client': '/clientes-lista',
+  '/client': '/clients-list',
 };
 
 export const NavigationProvider = ({ children }: { children: ReactNode }) => {
