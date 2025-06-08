@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, Search, ShoppingCart, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Package, DollarSign, CheckCircle, Settings } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -8,10 +9,13 @@ import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { useProductSelection } from '@/hooks/useProductSelection';
 import { useClientSelection } from '@/hooks/useClientSelection';
+import { usePaymentTables } from '@/hooks/usePaymentTables';
 import ClientSelectionModal from '@/components/order/ClientSelectionModal';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
+import PaymentSection from '@/components/order/PaymentSection';
 import ActionButtons from '@/components/order/ActionButtons';
+
 const PlaceOrder = () => {
   const {
     goBack
@@ -35,6 +39,7 @@ const PlaceOrder = () => {
     }
     return null;
   }, [clientId, clientName]);
+
   const {
     orderItems,
     isSubmitting,
@@ -45,6 +50,7 @@ const PlaceOrder = () => {
     saveAsDraft,
     finishOrder
   } = useOrderManagement();
+
   const {
     products,
     selectedProduct,
@@ -58,6 +64,7 @@ const PlaceOrder = () => {
     addProduct,
     clearSelection
   } = useProductSelection(addOrderItem);
+
   const {
     clients,
     selectedClient,
@@ -75,6 +82,14 @@ const PlaceOrder = () => {
     handleCreateNew,
     handleDeleteOrder
   } = useClientSelection(initialClient);
+
+  const {
+    paymentTables,
+    selectedPaymentTable,
+    loading: paymentTablesLoading,
+    selectPaymentTable
+  } = usePaymentTables();
+
   const [showProductSearch, setShowProductSearch] = React.useState(false);
   const [currentProductIndex, setCurrentProductIndex] = React.useState(0);
 
@@ -99,7 +114,23 @@ const PlaceOrder = () => {
     setCurrentProductIndex(newIndex);
     selectProduct(products[newIndex]);
   };
+
+  // Sincronizar currentProductIndex com produto selecionado
+  React.useEffect(() => {
+    if (selectedProduct && products.length > 0) {
+      const index = products.findIndex(p => p.id === selectedProduct.id);
+      if (index !== -1 && index !== currentProductIndex) {
+        setCurrentProductIndex(index);
+      }
+    }
+  }, [selectedProduct, products, currentProductIndex]);
+
   const currentProduct = selectedProduct || products[currentProductIndex];
+
+  const handleFinishOrder = () => {
+    finishOrder(selectedClient, selectedPaymentTable?.id);
+  };
+
   return <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header laranja estilo POS */}
       <div className="text-white p-4 shadow-lg bg-blue-700">
@@ -264,6 +295,15 @@ const PlaceOrder = () => {
             </div>
           </div>}
 
+        {/* Seção de Pagamento */}
+        {orderItems.length > 0 && (
+          <PaymentSection
+            paymentTables={paymentTables}
+            selectedPaymentTable={selectedPaymentTable}
+            onPaymentTableChange={selectPaymentTable}
+          />
+        )}
+
         {/* Totais */}
         {orderItems.length > 0 && <div className="bg-white rounded-lg shadow p-4">
             <div className="space-y-2">
@@ -280,9 +320,15 @@ const PlaceOrder = () => {
       </div>
 
       {/* Botões de ação atualizados */}
-      <ActionButtons orderItems={orderItems} onClearCart={clearCart} onGoBack={goBack} onSaveAsDraft={() => saveAsDraft(selectedClient)} onFinishOrder={() => finishOrder(selectedClient)} selectedClient={selectedClient || {
-      id: ''
-    }} isSubmitting={isSubmitting} />
+      <ActionButtons 
+        orderItems={orderItems} 
+        onClearCart={clearCart} 
+        onGoBack={goBack} 
+        onSaveAsDraft={() => saveAsDraft(selectedClient)} 
+        onFinishOrder={handleFinishOrder}
+        selectedClient={selectedClient || { id: '' }} 
+        isSubmitting={isSubmitting} 
+      />
 
       {/* Modals */}
       <ClientSelectionModal showClientSelection={showClientSelection} clientSearchTerm={clientSearchTerm} filteredClients={filteredClients} onClose={() => setShowClientSelection(false)} onSearchChange={setClientSearchTerm} onSelectClient={selectClient} />
@@ -299,4 +345,5 @@ const PlaceOrder = () => {
       {existingOrder && <OrderChoiceModal isOpen={showOrderChoice} onClose={() => setShowOrderChoice(false)} onEditOrder={handleEditOrder} onCreateNew={handleCreateNew} onDeleteOrder={handleDeleteOrder} clientName={selectedClient?.company_name || selectedClient?.name || ''} orderTotal={existingOrder.total || 0} orderItemsCount={existingOrder.items?.length || 0} />}
     </div>;
 };
+
 export default PlaceOrder;

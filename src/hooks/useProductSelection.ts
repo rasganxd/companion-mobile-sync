@@ -45,6 +45,14 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     loadProducts();
   }, []);
 
+  // Auto-selecionar primeiro produto quando a lista estiver carregada
+  useEffect(() => {
+    if (products.length > 0 && !selectedProduct) {
+      console.log('📦 Auto-selecionando primeiro produto:', products[0]);
+      selectProduct(products[0]);
+    }
+  }, [products, selectedProduct]);
+
   const loadProducts = async () => {
     try {
       const db = getDatabaseAdapter();

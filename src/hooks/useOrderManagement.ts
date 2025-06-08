@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,6 +25,7 @@ interface Client {
 
 export const useOrderManagement = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { salesRep } = useAuth();
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,7 +109,7 @@ export const useOrderManagement = () => {
     }
   };
 
-  const finishOrder = async (selectedClient: Client | null) => {
+  const finishOrder = async (selectedClient: Client | null, paymentTableId?: string) => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
       return;
@@ -134,7 +135,8 @@ export const useOrderManagement = () => {
         status: 'pending' as const,
         sync_status: 'pending_sync' as const,
         items: orderItems,
-        sales_rep_id: salesRep?.id
+        sales_rep_id: salesRep?.id,
+        payment_table_id: paymentTableId
       };
 
       await db.saveOrder(orderData);
@@ -145,11 +147,16 @@ export const useOrderManagement = () => {
       
       toast.success('Pedido criado com sucesso!');
       
-      navigate('/my-orders', {
+      // Extrair dados do estado atual para preservar na navegação
+      const { day } = location.state || {};
+      
+      // Redirecionar para a lista de clientes ao invés de my-orders
+      navigate('/clients-list', {
         state: { 
+          day: day || 'hoje',
+          orderCreated: true,
           clientId: selectedClient.id,
-          clientName: selectedClient.name,
-          newOrderCreated: true
+          clientName: selectedClient.name
         }
       });
       
