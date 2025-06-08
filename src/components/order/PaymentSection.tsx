@@ -25,6 +25,10 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
   selectedPaymentTable,
   onPaymentTableChange
 }) => {
+  // Debug log para investigar as tabelas de pagamento
+  console.log('🔍 PaymentSection - tabelas recebidas:', paymentTables);
+  console.log('🔍 PaymentSection - tabela selecionada:', selectedPaymentTable);
+
   return (
     <Card className="bg-white shadow-sm">
       <CardContent className="p-3">
@@ -38,13 +42,24 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">A definir</SelectItem>
-            {paymentTables.map(table => (
-              <SelectItem key={table.id} value={table.id}>
-                {table.name}
+            {paymentTables.length > 0 ? (
+              paymentTables.map(table => (
+                <SelectItem key={table.id} value={table.id}>
+                  {table.name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="loading" disabled>
+                Carregando formas de pagamento...
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
+        {paymentTables.length === 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            Nenhuma forma de pagamento disponível
+          </p>
+        )}
       </CardContent>
     </Card>
   );

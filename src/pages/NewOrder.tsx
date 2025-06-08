@@ -121,6 +121,12 @@ const PlaceOrder = () => {
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
   };
+  
+  // Debug log para investigar renderização
+  console.log('🔍 NewOrder - paymentTables:', paymentTables);
+  console.log('🔍 NewOrder - paymentTables.length:', paymentTables.length);
+  console.log('🔍 NewOrder - selectedPaymentTable:', selectedPaymentTable);
+  
   return <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Header laranja estilo POS */}
       <div className="text-white p-4 shadow-lg bg-blue-700">
@@ -286,7 +292,13 @@ const PlaceOrder = () => {
           </div>}
 
         {/* Seção de Pagamento */}
-        {orderItems.length > 0 && <PaymentSection paymentTables={paymentTables} selectedPaymentTable={selectedPaymentTable} onPaymentTableChange={selectPaymentTable} />}
+        {orderItems.length > 0 && (
+          <PaymentSection 
+            paymentTables={paymentTables} 
+            selectedPaymentTable={selectedPaymentTable} 
+            onPaymentTableChange={selectPaymentTable} 
+          />
+        )}
 
         {/* Totais */}
         {orderItems.length > 0 && <div className="bg-white rounded-lg shadow p-4">
