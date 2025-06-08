@@ -404,8 +404,11 @@ const VisitRoutes = () => {
                       ({route.total})
                     </div>
                   </div>
-                  <div className="text-xs text-gray-600 mt-0.5">
-                    {route.positivados}P • {route.negativados}N • R$ {route.totalSales.toFixed(0)}
+                  <div className="text-xs text-gray-600 mt-0.5 leading-tight">
+                    {route.pendentes} PENDENTES • {route.positivados} POSITIVADOS • {route.negativados} NEGATIVADOS
+                  </div>
+                  <div className="text-xs text-green-600 font-medium">
+                    R$ {route.totalSales.toFixed(0)}
                   </div>
                 </div>
                 
