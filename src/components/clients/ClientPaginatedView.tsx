@@ -63,7 +63,7 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
   return <div className="space-y-4">
       {/* Header com alternância de visualização */}
       <div className="flex justify-between items-center">
-        <h3 className="font-medium text-base">
+        <h3 className="font-medium text-sm">
           Cliente {currentPage + 1} de {clients.length}
         </h3>
         <AppButton variant="gray" onClick={onToggleView} className="flex items-center gap-2 py-0">

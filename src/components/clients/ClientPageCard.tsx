@@ -67,7 +67,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
           <div className="flex items-center gap-2">
             {client.code && <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border">
                 <Hash className="h-3 w-3 text-gray-600" />
-                <span className="font-bold text-base">{client.code}</span>
+                <span className="font-bold text-sm">{client.code}</span>
               </div>}
           </div>
           <div className={`px-3 py-1 rounded border text-xs font-medium ${statusInfo.color}`}>
@@ -99,7 +99,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
               <Phone className="h-4 w-4 text-gray-600" />
               <div>
                 <p className="text-xs text-gray-500">Telefone</p>
-                <p className="font-medium text-sm">{client.phone}</p>
+                <p className="font-medium text-xs">{client.phone}</p>
               </div>
             </div>}
           
@@ -108,8 +108,8 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
               <div>
                 <p className="text-xs text-gray-500">Endereço</p>
                 <div className="text-sm font-medium">
-                  {client.address && <p className="text-sm">{client.address}</p>}
-                  {(client.city || client.state) && <p className="text-sm">
+                  {client.address && <p className="text-xs">{client.address}</p>}
+                  {(client.city || client.state) && <p className="text-xs">
                       {client.city}
                       {client.city && client.state && ', '}
                       {client.state}
