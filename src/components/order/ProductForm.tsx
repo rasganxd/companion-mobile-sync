@@ -13,7 +13,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  code?: number;
+  code: number;
   stock: number;
   unit?: string;
   cost?: number;
