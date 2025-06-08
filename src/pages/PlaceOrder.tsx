@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowLeft, Search, ShoppingCart, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Package, DollarSign, CheckCircle, Settings } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
@@ -185,8 +184,7 @@ const PlaceOrder = () => {
               onClick={() => setShowProductSearch(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Search size={16} className="mr-1" />
-              Consultar
+              <Search size={20} />
             </Button>
             <Button
               variant="outline"
