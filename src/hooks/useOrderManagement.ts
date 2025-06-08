@@ -79,6 +79,35 @@ export const useOrderManagement = () => {
     }
   };
 
+  const saveAsDraft = async (selectedClient: Client | null) => {
+    if (orderItems.length === 0) {
+      toast.warning('Adicione produtos ao pedido para salvar como rascunho');
+      return;
+    }
+
+    if (!selectedClient) {
+      toast.warning('Selecione um cliente para salvar o rascunho');
+      return;
+    }
+
+    try {
+      const draftKey = `draft_order_${selectedClient.id}`;
+      const draftData = {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        items: orderItems,
+        total: calculateTotal(),
+        savedAt: new Date().toISOString()
+      };
+
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+      toast.success('Pedido salvo como rascunho! Continue editando quando quiser.');
+    } catch (error) {
+      console.error('❌ Erro ao salvar rascunho:', error);
+      toast.error('Erro ao salvar rascunho');
+    }
+  };
+
   const finishOrder = async (selectedClient: Client | null) => {
     if (!selectedClient) {
       toast.error('Selecione um cliente');
@@ -110,6 +139,10 @@ export const useOrderManagement = () => {
 
       await db.saveOrder(orderData);
       
+      // Limpar rascunho se existir
+      const draftKey = `draft_order_${selectedClient.id}`;
+      localStorage.removeItem(draftKey);
+      
       toast.success('Pedido criado com sucesso!');
       
       navigate('/my-orders', {
@@ -128,15 +161,6 @@ export const useOrderManagement = () => {
     }
   };
 
-  const viewOrder = () => {
-    if (orderItems.length === 0) {
-      toast.warning('Adicione produtos ao pedido');
-      return;
-    }
-    
-    toast.success('Pedido salvo como rascunho');
-  };
-
   return {
     orderItems,
     isSubmitting,
@@ -144,7 +168,7 @@ export const useOrderManagement = () => {
     removeOrderItem,
     clearCart,
     calculateTotal,
-    finishOrder,
-    viewOrder
+    saveAsDraft,
+    finishOrder
   };
 };

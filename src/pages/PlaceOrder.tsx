@@ -11,6 +11,7 @@ import { useClientSelection } from '@/hooks/useClientSelection';
 import ClientSelectionModal from '@/components/order/ClientSelectionModal';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
+import ActionButtons from '@/components/order/ActionButtons';
 
 const PlaceOrder = () => {
   const { goBack } = useAppNavigation();
@@ -38,8 +39,8 @@ const PlaceOrder = () => {
     removeOrderItem,
     clearCart,
     calculateTotal,
-    finishOrder,
-    viewOrder
+    saveAsDraft,
+    finishOrder
   } = useOrderManagement();
 
   const {
@@ -353,42 +354,16 @@ const PlaceOrder = () => {
         )}
       </div>
 
-      {/* Botões de ação */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="grid grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            onClick={viewOrder}
-            disabled={orderItems.length === 0}
-            className="flex items-center justify-center gap-2"
-          >
-            <Settings size={16} />
-            Opções
-          </Button>
-          
-          <Button
-            onClick={clearCart}
-            disabled={orderItems.length === 0}
-            className="flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white"
-          >
-            <DollarSign size={16} />
-            Gravar
-          </Button>
-          
-          <Button
-            onClick={() => finishOrder(selectedClient)}
-            disabled={!selectedClient || orderItems.length === 0 || isSubmitting}
-            className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-          >
-            {isSubmitting ? (
-              <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-            ) : (
-              <CheckCircle size={16} />
-            )}
-            Fin. Pedido
-          </Button>
-        </div>
-      </div>
+      {/* Botões de ação atualizados */}
+      <ActionButtons
+        orderItems={orderItems}
+        onClearCart={clearCart}
+        onGoBack={goBack}
+        onSaveAsDraft={() => saveAsDraft(selectedClient)}
+        onFinishOrder={() => finishOrder(selectedClient)}
+        selectedClient={selectedClient || { id: '' }}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Modals */}
       <ClientSelectionModal

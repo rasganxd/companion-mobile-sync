@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, ShoppingCart, Eye, Trash2, Check } from 'lucide-react';
+import { ArrowLeft, DollarSign, Check } from 'lucide-react';
+import OrderOptionsMenu from './OrderOptionsMenu';
 
 interface OrderItem {
   id: number;
@@ -17,7 +18,7 @@ interface ActionButtonsProps {
   orderItems: OrderItem[];
   onClearCart: () => void;
   onGoBack: () => void;
-  onViewOrder: () => void;
+  onSaveAsDraft: () => void;
   onFinishOrder: () => void;
   selectedClient: { id: string };
   isSubmitting: boolean;
@@ -27,7 +28,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   orderItems,
   onClearCart,
   onGoBack,
-  onViewOrder,
+  onSaveAsDraft,
   onFinishOrder,
   selectedClient,
   isSubmitting
@@ -37,39 +38,22 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
   return (
     <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
-      <div className="grid grid-cols-2 gap-3">
-        {/* Primeira linha */}
-        <Button 
-          variant="outline" 
-          onClick={onGoBack}
-          className="flex items-center justify-center gap-2"
-        >
-          <ArrowLeft size={16} />
-          Voltar
-        </Button>
+      <div className="grid grid-cols-3 gap-3">
+        <OrderOptionsMenu
+          onClearCart={onClearCart}
+          hasItems={hasItems}
+        />
         
-        <Button 
-          variant="outline" 
-          onClick={onClearCart}
+        <Button
+          onClick={onSaveAsDraft}
           disabled={!hasItems}
-          className="flex items-center justify-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+          className="flex items-center justify-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white"
         >
-          <Trash2 size={16} />
-          Limpar
+          <DollarSign size={16} />
+          Gravar
         </Button>
         
-        {/* Segunda linha */}
-        <Button 
-          variant="outline" 
-          onClick={onViewOrder}
-          disabled={!hasItems}
-          className="flex items-center justify-center gap-2"
-        >
-          <Eye size={16} />
-          Visualizar
-        </Button>
-        
-        <Button 
+        <Button
           onClick={onFinishOrder}
           disabled={!canFinish || isSubmitting}
           className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -82,7 +66,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
           ) : (
             <>
               <Check size={16} />
-              Finalizar
+              Fin. Pedido
             </>
           )}
         </Button>
