@@ -30,8 +30,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  // Verificar se há dados persistidos no localStorage antes de redirecionar
   if (!salesRep) {
-    console.log('🛡️ ProtectedRoute: No salesRep found, redirecting to login from:', location.pathname);
+    console.log('🛡️ ProtectedRoute: No salesRep in state, checking localStorage...');
+    
+    try {
+      const stored = localStorage.getItem('salesRep');
+      if (stored) {
+        console.log('🛡️ ProtectedRoute: Found stored auth data, allowing access while auth loads');
+        // Há dados persistidos, permitir acesso enquanto o contexto carrega
+        return <>{children}</>;
+      }
+    } catch (error) {
+      console.error('🛡️ ProtectedRoute: Error checking localStorage:', error);
+    }
+    
+    console.log('🛡️ ProtectedRoute: No auth data found, redirecting to login from:', location.pathname);
     return <Navigate to="/login" replace />;
   }
 

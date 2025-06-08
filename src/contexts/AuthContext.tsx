@@ -223,13 +223,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
-    console.log('🔐 AuthContext: logout() called');
+    console.log('🔐 AuthContext: logout() started - preserving work data');
+    
+    // Log what data exists before logout
+    const existingKeys = Object.keys(localStorage);
+    const workDataKeys = existingKeys.filter(key => 
+      key.startsWith('draft_order_') || 
+      key === 'last_sync_date' || 
+      key === 'sales_rep_id' ||
+      key.includes('order_') ||
+      key.includes('client_')
+    );
+    
+    console.log('🔐 AuthContext: Work data keys to preserve:', workDataKeys);
+    
+    // Only clear authentication data - preserve everything else
     setSalesRep(null);
-    localStorage.removeItem('salesRep');
-    localStorage.removeItem('last_sync_date');
-    localStorage.removeItem('sales_rep_id');
+    localStorage.removeItem('salesRep'); // Only remove auth data
+    
+    // Reset sync requirement but keep sync data
     setNeedsInitialSync(false);
-    console.log('🔐 AuthContext: logout completed, localStorage cleared');
+    
+    console.log('🔐 AuthContext: logout completed - only auth data cleared, work data preserved');
+    console.log('🔐 AuthContext: Preserved data keys:', Object.keys(localStorage).filter(key => 
+      key.startsWith('draft_order_') || 
+      key === 'last_sync_date' || 
+      key === 'sales_rep_id'
+    ));
   };
 
   const value = {
