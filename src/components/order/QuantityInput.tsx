@@ -1,10 +1,13 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPricing } from '@/hooks/useProductPricing';
+import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+
 interface Product {
   id: string;
   name: string;
@@ -16,7 +19,10 @@ interface Product {
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
+  min_price?: number;
+  sale_price?: number;
 }
+
 interface QuantityInputProps {
   quantity: string;
   onQuantityChange: (value: string) => void;
@@ -25,6 +31,7 @@ interface QuantityInputProps {
   selectedUnit?: 'main' | 'sub';
   onUnitChange?: (unit: 'main' | 'sub') => void;
 }
+
 const QuantityInput: React.FC<QuantityInputProps> = ({
   quantity,
   onQuantityChange,
@@ -40,15 +47,53 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
     subUnit,
     ratio
   } = useProductPricing(product, selectedUnit);
+
+  const { validatePrice, validationResult, hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
+  const [localUnitPrice, setLocalUnitPrice] = useState(unitPrice);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocalUnitPrice(unitPrice);
+  }, [unitPrice]);
+
+  useEffect(() => {
+    const result = validatePrice(localUnitPrice);
+    setPriceError(result.error);
+  }, [localUnitPrice, validatePrice]);
+
+  const handlePriceChange = (value: string) => {
+    const newPrice = parseFloat(value) || 0;
+    setLocalUnitPrice(newPrice);
+    
+    const result = validatePrice(newPrice);
+    setPriceError(result.error);
+  };
+
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    return (qty * unitPrice).toFixed(2);
+    return (qty * localUnitPrice).toFixed(2);
   };
+
+  const canAddItem = () => {
+    const qty = parseFloat(quantity) || 0;
+    const isPriceValid = !priceError && localUnitPrice > 0;
+    return qty > 0 && isPriceValid;
+  };
+
+  const handleAddItem = () => {
+    if (canAddItem()) {
+      onAddItem();
+    }
+  };
+
   const hasSubunit = product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1 && subUnit;
-  return <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
+
+  return (
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
       <div className="space-y-4">
         {/* Seletor de Unidade - Mais visível */}
-        {hasSubunit && onUnitChange && <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+        {hasSubunit && onUnitChange && (
+          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Tipo de Unidade:</Label>
             <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => onUnitChange(value)}>
               <SelectTrigger className="w-full h-10 bg-white border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
@@ -76,36 +121,82 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                 1 {mainUnit} = {ratio} {subUnit}
               </div>
               <div className="text-center text-xs text-gray-600 mt-1">
-                Preço por {mainUnit}: R$ {(unitPrice * ratio).toFixed(2)}
+                Preço por {mainUnit}: R$ {(localUnitPrice * ratio).toFixed(2)}
               </div>
             </div>
-          </div>}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Quantidade ({displayUnit}):</Label>
-            <Input type="number" className="h-9 text-center text-sm font-medium border-2 border-gray-300 focus:border-app-blue focus:ring-2 focus:ring-app-blue/20 transition-all duration-200" value={quantity} onChange={e => onQuantityChange(e.target.value)} placeholder="0" min="0" step="0.01" />
+            <Input
+              type="number"
+              className="h-9 text-center text-sm font-medium border-2 border-gray-300 focus:border-app-blue focus:ring-2 focus:ring-app-blue/20 transition-all duration-200"
+              value={quantity}
+              onChange={e => onQuantityChange(e.target.value)}
+              placeholder="0"
+              min="0"
+              step="0.01"
+            />
           </div>
           
           <div>
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço ({displayUnit}):</Label>
-            <Input type="text" className="h-9 text-center text-sm font-medium bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-300 cursor-not-allowed" value={`R$ ${unitPrice.toFixed(2)}`} readOnly />
+            <Input
+              type="number"
+              className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
+                priceError 
+                  ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200' 
+                  : 'border-gray-300 focus:border-app-blue focus:ring-app-blue/20'
+              }`}
+              value={localUnitPrice.toFixed(2)}
+              onChange={e => handlePriceChange(e.target.value)}
+              min="0"
+              step="0.01"
+            />
+            {priceError && (
+              <div className="flex items-center gap-1 mt-1">
+                <AlertTriangle size={12} className="text-red-500" />
+                <span className="text-xs text-red-600">{priceError}</span>
+              </div>
+            )}
+            {hasMinPriceRestriction() && !priceError && (
+              <div className="text-xs text-gray-600 mt-1">
+                Mín: R$ {getMinPrice().toFixed(2)}
+              </div>
+            )}
           </div>
         </div>
         
         {/* Total do item */}
-        {quantity && parseFloat(quantity) > 0 && <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+        {quantity && parseFloat(quantity) > 0 && (
+          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
             <div className="flex justify-between items-center">
               <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
-              <span className="font-bold text-blue-700 text-base">R$ {calculateTotal()}</span>
+              <span className={`font-bold text-base ${priceError ? 'text-red-600' : 'text-blue-700'}`}>
+                R$ {calculateTotal()}
+              </span>
             </div>
-          </div>}
+          </div>
+        )}
         
-        <Button variant="default" className="w-full h-9 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white text-sm font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-98 shadow-md hover:shadow-lg" onClick={onAddItem}>
+        <Button
+          variant="default"
+          className={`w-full h-9 text-sm font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-98 shadow-md hover:shadow-lg ${
+            canAddItem()
+              ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+          }`}
+          onClick={handleAddItem}
+          disabled={!canAddItem()}
+        >
           <Plus size={18} className="mr-2" />
-          Adicionar ao Pedido
+          {priceError ? 'Preço Inválido' : 'Adicionar ao Pedido'}
         </Button>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default QuantityInput;

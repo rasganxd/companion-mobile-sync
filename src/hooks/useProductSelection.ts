@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 
 interface Product {
   id: string;
@@ -18,6 +19,7 @@ interface Product {
   subunit_ratio?: number;
   main_unit_id?: string;
   sub_unit_id?: string;
+  min_price?: number;
 }
 
 interface OrderItem {
@@ -36,6 +38,8 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+
+  const { checkPriceAndNotify } = useProductPriceValidation(selectedProduct);
 
   useEffect(() => {
     loadProducts();
@@ -63,12 +67,12 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       
       console.log(`✅ ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
       
-      // Ensure products have the correct price field
+      // Ensure products have the correct price field and min_price
       const normalizedProducts = validProducts.map(product => ({
         ...product,
-        // Use sale_price as the primary price, fallback to price field
         price: product.sale_price || product.price || 0,
-        sale_price: product.sale_price || product.price || 0
+        sale_price: product.sale_price || product.price || 0,
+        min_price: product.min_price || 0
       }));
       
       setProducts(normalizedProducts);
@@ -80,6 +84,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
           name: product.name,
           code: product.code,
           sale_price: product.sale_price,
+          min_price: product.min_price,
           stock: product.stock
         });
       });
@@ -104,11 +109,18 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setUnitPrice(correctPrice);
     
     console.log('💰 Preço definido:', correctPrice);
+    console.log('💰 Preço mínimo:', product.min_price || 0);
   };
 
   const addProduct = () => {
     if (!selectedProduct || quantity <= 0) {
       toast.error('Selecione um produto e quantidade válida');
+      return;
+    }
+
+    // Validar preço mínimo antes de adicionar
+    if (!checkPriceAndNotify(unitPrice)) {
+      console.log('❌ Preço inválido, não adicionando produto');
       return;
     }
 

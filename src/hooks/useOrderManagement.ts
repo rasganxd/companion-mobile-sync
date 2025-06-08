@@ -49,9 +49,45 @@ export const useOrderManagement = () => {
     return total.toFixed(2);
   };
 
+  const validateOrderItems = async (): Promise<boolean> => {
+    if (orderItems.length === 0) {
+      toast.error('Adicione produtos ao pedido');
+      return false;
+    }
+
+    try {
+      const db = getDatabaseAdapter();
+      
+      // Verificar preços mínimos de todos os produtos no pedido
+      for (const item of orderItems) {
+        const products = await db.getProducts();
+        const product = products.find(p => p.id === item.productId);
+        
+        if (product && product.min_price && product.min_price > 0) {
+          if (item.price < product.min_price) {
+            toast.error(`❌ Produto "${item.productName}" está abaixo do preço mínimo (R$ ${product.min_price.toFixed(2)})`);
+            return false;
+          }
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('❌ Erro ao validar itens do pedido:', error);
+      toast.error('Erro ao validar preços dos produtos');
+      return false;
+    }
+  };
+
   const finishOrder = async (selectedClient: Client | null) => {
-    if (!selectedClient || orderItems.length === 0) {
-      toast.error('Selecione um cliente e adicione produtos');
+    if (!selectedClient) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+
+    // Validar todos os itens antes de finalizar
+    const isValid = await validateOrderItems();
+    if (!isValid) {
       return;
     }
 

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import ProductNavigation from './ProductNavigation';
 import QuantityInput from './QuantityInput';
 import { useProductPricing } from '@/hooks/useProductPricing';
+import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 
 interface Product {
@@ -19,6 +20,8 @@ interface Product {
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
+  min_price?: number;
+  sale_price?: number;
 }
 
 interface PaymentTable {
@@ -50,6 +53,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [paymentTables, setPaymentTables] = useState<PaymentTable[]>([]);
   const { displayUnit, mainUnit, subUnit, ratio, pricePerMainUnit } = useProductPricing(product);
+  const { hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
 
   useEffect(() => {
     const fetchPaymentTables = async () => {
@@ -58,7 +62,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         const db = getDatabaseAdapter();
         const tables = await db.getPaymentTables();
         
-        // Converter para o formato esperado
         const formattedTables = tables.map(table => ({
           id: table.id || table.name,
           name: table.name,
@@ -68,7 +71,6 @@ const ProductForm: React.FC<ProductFormProps> = ({
         setPaymentTables(formattedTables);
       } catch (error) {
         console.error('Error fetching payment tables from local database:', error);
-        // Fallback para tabelas padrão
         setPaymentTables([
           { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
           { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
@@ -110,6 +112,19 @@ const ProductForm: React.FC<ProductFormProps> = ({
           />
         </div>
       </div>
+
+      {/* Preço Mínimo - Mostrar se existir */}
+      {hasMinPriceRestriction() && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-yellow-600 font-medium text-sm">⚠️ Preço Mínimo:</span>
+            <span className="font-bold text-yellow-800">R$ {getMinPrice().toFixed(2)}</span>
+          </div>
+          <p className="text-xs text-yellow-700 mt-1">
+            Não é permitido vender abaixo deste valor
+          </p>
+        </div>
+      )}
       
       {/* Payment Table */}
       <div>
