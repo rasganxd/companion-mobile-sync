@@ -46,6 +46,82 @@ export const useOrderTransmission = () => {
     }
   };
 
+  const validateOrderData = (order: LocalOrder): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // Validar campos obrigatórios
+    if (!order.customer_id) {
+      errors.push('ID do cliente ausente');
+    }
+    
+    if (!order.customer_name) {
+      errors.push('Nome do cliente ausente');
+    }
+    
+    if (!order.total || order.total <= 0) {
+      errors.push('Total do pedido inválido');
+    }
+    
+    if (!order.items || order.items.length === 0) {
+      errors.push('Pedido sem itens');
+    }
+    
+    // Validar itens do pedido
+    if (order.items) {
+      order.items.forEach((item: any, index: number) => {
+        if (!item.productId && !item.product_id) {
+          errors.push(`Item ${index + 1}: ID do produto ausente`);
+        }
+        
+        if (!item.productName && !item.product_name) {
+          errors.push(`Item ${index + 1}: Nome do produto ausente`);
+        }
+        
+        if (!item.quantity || item.quantity <= 0) {
+          errors.push(`Item ${index + 1}: Quantidade inválida`);
+        }
+        
+        if (!item.price && !item.unit_price) {
+          errors.push(`Item ${index + 1}: Preço ausente`);
+        }
+      });
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
+  const normalizeOrderData = (order: LocalOrder): any => {
+    console.log('🔧 Normalizing order data:', order);
+    
+    // Normalizar itens do pedido
+    const normalizedItems = order.items?.map((item: any) => {
+      const normalizedItem = {
+        product_id: item.productId || item.product_id,
+        product_name: item.productName || item.product_name,
+        product_code: item.code || item.product_code,
+        quantity: item.quantity,
+        price: item.price || item.unit_price,
+        unit_price: item.price || item.unit_price,
+        unit: item.unit || 'UN',
+        total: (item.price || item.unit_price || 0) * item.quantity
+      };
+      
+      console.log('🔧 Normalized item:', normalizedItem);
+      return normalizedItem;
+    }) || [];
+    
+    const normalizedOrder = {
+      ...order,
+      items: normalizedItems
+    };
+    
+    console.log('✅ Normalized order:', normalizedOrder);
+    return normalizedOrder;
+  };
+
   const validateSalesRep = () => {
     if (!salesRep || !salesRep.id) {
       const errorMsg = 'Vendedor não identificado. Faça login novamente.';
@@ -109,9 +185,38 @@ export const useOrderTransmission = () => {
       console.log('📤 Starting transmission to Supabase...');
       console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
       
-      // Transmit orders to Supabase (agora individualmente)
+      // Validar e normalizar dados dos pedidos antes da transmissão
+      const validatedOrders: LocalOrder[] = [];
+      const invalidOrders: { order: LocalOrder; errors: string[] }[] = [];
+      
+      for (const order of pendingOrders) {
+        const validation = validateOrderData(order);
+        
+        if (validation.isValid) {
+          const normalizedOrder = normalizeOrderData(order);
+          validatedOrders.push(normalizedOrder);
+        } else {
+          console.error(`❌ Invalid order data for ${order.id}:`, validation.errors);
+          invalidOrders.push({ order, errors: validation.errors });
+          
+          // Marcar pedidos inválidos como erro
+          await db.updateSyncStatus('orders', order.id, 'error');
+        }
+      }
+      
+      if (invalidOrders.length > 0) {
+        const errorMsg = `${invalidOrders.length} pedido(s) com dados inválidos foram marcados como erro`;
+        console.error('❌ Invalid orders:', invalidOrders);
+        toast.error(errorMsg);
+      }
+      
+      if (validatedOrders.length === 0) {
+        throw new Error('Nenhum pedido válido para transmitir');
+      }
+      
+      // Transmit orders to Supabase (agora com dados validados e normalizados)
       const transmissionResult = await supabaseService.transmitOrders(
-        pendingOrders, 
+        validatedOrders, 
         salesRep.sessionToken!
       );
 
@@ -121,7 +226,7 @@ export const useOrderTransmission = () => {
         console.log(`✅ ${transmissionResult.successCount} orders transmitted successfully`);
         
         // Mark successfully transmitted orders
-        for (const order of pendingOrders) {
+        for (const order of validatedOrders) {
           try {
             await db.markOrderAsTransmitted(order.id);
             
@@ -151,7 +256,7 @@ export const useOrderTransmission = () => {
         
         // Mark failed orders as error
         const db = getDatabaseAdapter();
-        for (const order of pendingOrders) {
+        for (const order of validatedOrders) {
           await db.updateSyncStatus('orders', order.id, 'error');
         }
         

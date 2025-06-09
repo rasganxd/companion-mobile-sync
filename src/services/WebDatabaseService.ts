@@ -1,14 +1,10 @@
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
 
-import DatabaseAdapter from './DatabaseAdapter';
-import { DatabaseInitializer } from './database/DatabaseInitializer';
-import { MockDataCleaner } from './database/MockDataCleaner';
-import { DatabaseInstance, ValidTableName, isValidTableName } from './database/types';
-
-class WebDatabaseService implements DatabaseAdapter {
-  private static instance: WebDatabaseService;
+class WebDatabaseService {
+  private static instance: WebDatabaseService | null = null;
   private db: DatabaseInstance | null = null;
-  private isInitializing = false;
-  private mockDataCleaner: MockDataCleaner | null = null;
+  private isInitialized = false;
 
   private constructor() {}
 
@@ -19,337 +15,386 @@ class WebDatabaseService implements DatabaseAdapter {
     return WebDatabaseService.instance;
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (this.db) {
-      return;
-    }
-    
-    if (this.isInitializing) {
-      // Wait for ongoing initialization
-      while (this.isInitializing) {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
-      return;
-    }
-    
-    await this.initDatabase();
-  }
-
   async initDatabase(): Promise<void> {
-    if (this.db || this.isInitializing) {
+    if (this.isInitialized && this.db) {
+      console.log('🌐 Web database already initialized');
       return;
     }
 
     try {
-      this.isInitializing = true;
-      this.db = await DatabaseInitializer.initialize();
-      this.mockDataCleaner = new MockDataCleaner(this.db);
+      console.log('🌐 Initializing Web IndexedDB database...');
       
-      // Automatically clean mock data after initialization
-      await this.forceClearMockData();
-      
+      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 1, {
+        upgrade(db) {
+          console.log('🔧 Creating/updating database schema...');
+          
+          // Create clients table
+          if (!db.objectStoreNames.contains('clients')) {
+            db.createObjectStore('clients', { keyPath: 'id' });
+          }
+          
+          // Create visit_routes table
+          if (!db.objectStoreNames.contains('visit_routes')) {
+            db.createObjectStore('visit_routes', { keyPath: 'id' });
+          }
+          
+          // Create orders table with customer_id index
+          if (!db.objectStoreNames.contains('orders')) {
+            const orderStore = db.createObjectStore('orders', { keyPath: 'id' });
+            orderStore.createIndex('customer_id', 'customer_id');
+          }
+          
+          // Create products table
+          if (!db.objectStoreNames.contains('products')) {
+            db.createObjectStore('products', { keyPath: 'id' });
+          }
+          
+          // Create sync_log table
+          if (!db.objectStoreNames.contains('sync_log')) {
+            db.createObjectStore('sync_log', { keyPath: 'id' });
+          }
+        },
+      });
+
+      this.isInitialized = true;
+      console.log('✅ Web database initialized successfully');
     } catch (error) {
-      console.error('❌ Error initializing database:', error);
+      console.error('❌ Failed to initialize Web database:', error);
       throw error;
-    } finally {
-      this.isInitializing = false;
     }
-  }
-
-  async forceClearMockData(): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.cleanMockData();
-    }
-  }
-
-  // Nova função para limpeza completa de produtos
-  async forceCleanAllProducts(): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.forceCleanAllProducts();
-    }
-  }
-
-  async clearMockData(): Promise<void> {
-    return this.forceClearMockData();
   }
 
   async getClients(): Promise<any[]> {
-    await this.ensureInitialized();
-    const allClients = await this.db!.getAll('clients');
-    
-    if (!this.mockDataCleaner) return allClients;
-    
-    const uniqueClients = this.mockDataCleaner.filterRealClients(allClients);
-    
-    console.log('📊 Total de clientes no banco:', allClients.length);
-    console.log('📊 Clientes reais únicos retornados:', uniqueClients.length);
-    
-    return uniqueClients;
-  }
+    if (!this.db) await this.initDatabase();
 
-  async getCustomers(): Promise<any[]> {
-    return this.getClients();
-  }
-
-  async getPaymentTables(): Promise<any[]> {
-    return [
-      { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
-      { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
-      { id: '3', name: 'Prazo 60', description: 'Pagamento em 60 dias' },
-      { id: '4', name: 'Prazo 90', description: 'Pagamento em 90 dias' }
-    ];
+    try {
+      console.log('🌐 Getting clients from Web database...');
+      return await this.db!.getAll('clients');
+    } catch (error) {
+      console.error('❌ Error getting clients:', error);
+      return [];
+    }
   }
 
   async getVisitRoutes(): Promise<any[]> {
-    await this.ensureInitialized();
-    return this.db!.getAll('visit_routes');
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting visit routes from Web database...');
+      return await this.db!.getAll('visit_routes');
+    } catch (error) {
+      console.error('❌ Error getting visit routes:', error);
+      return [];
+    }
   }
 
   async getOrders(clientId?: string): Promise<any[]> {
-    await this.ensureInitialized();
-    if (clientId) {
-      const tx = this.db!.transaction('orders', 'readonly');
-      const index = tx.store.index('customer_id');
-      return index.getAll(clientId);
-    } else {
-      return this.db!.getAll('orders');
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Getting orders from Web database for client ID: ${clientId}`);
+      if (clientId) {
+        const index = this.db!.transaction('orders').store.index('customer_id');
+        return await index.getAll(clientId);
+      } else {
+        return await this.db!.getAll('orders');
+      }
+    } catch (error) {
+      console.error('❌ Error getting orders:', error);
+      return [];
     }
   }
 
   async getProducts(): Promise<any[]> {
-    await this.ensureInitialized();
-    const allProducts = await this.db!.getAll('products');
-    
-    console.log(`🔍 Total de produtos no IndexedDB: ${allProducts.length}`);
-    
-    if (!this.mockDataCleaner) return allProducts;
-    
-    const uniqueProducts = this.mockDataCleaner.filterRealProducts(allProducts);
-    
-    console.log(`📊 Produtos reais únicos retornados: ${uniqueProducts.length}`);
-    
-    // Log detalhado dos produtos para debug
-    uniqueProducts.forEach((product, index) => {
-      console.log(`📦 Produto ${index + 1}:`, {
-        id: product.id,
-        name: product.name,
-        code: product.code,
-        sale_price: product.sale_price,
-        stock: product.stock
-      });
-    });
-    
-    // Ensure products have correct price mapping
-    const normalizedProducts = uniqueProducts.map(product => ({
-      ...product,
-      // Ensure price field exists for compatibility
-      price: product.sale_price || product.price || 0
-    }));
-    
-    return normalizedProducts;
-  }
+    if (!this.db) await this.initDatabase();
 
-  async saveProduct(product: any): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      // Normalize product data before saving
-      const normalizedProduct = {
-        ...product,
-        // Ensure both price and sale_price are available
-        price: product.sale_price || product.price || 0,
-        sale_price: product.sale_price || product.price || 0,
-        cost_price: product.cost_price || product.cost || 0,
-        // Ensure unit information is preserved
-        unit: product.unit || 'UN',
-        has_subunit: product.has_subunit || false,
-        subunit: product.subunit || null,
-        subunit_ratio: product.subunit_ratio || 1
-      };
-      
-      console.log('💾 Salvando produto normalizado:', normalizedProduct);
-      await this.mockDataCleaner.saveRealProduct(normalizedProduct);
-    }
-  }
-
-  async saveProducts(productsArray: any[]): Promise<void> {
-    await this.ensureInitialized();
-    
-    console.log(`💾 Iniciando salvamento de ${productsArray.length} produtos do Supabase`);
-    
-    // PRIMEIRO: Limpar completamente os produtos existentes
-    await this.forceCleanAllProducts();
-    
-    if (this.mockDataCleaner) {
-      // Normalize all products before saving
-      const normalizedProducts = productsArray.map(product => ({
-        ...product,
-        // Ensure both price and sale_price are available
-        price: product.sale_price || product.price || 0,
-        sale_price: product.sale_price || product.price || 0,
-        cost_price: product.cost_price || product.cost || 0,
-        // Ensure unit information is preserved
-        unit: product.unit || 'UN',
-        has_subunit: product.has_subunit || false,
-        subunit: product.subunit || null,
-        subunit_ratio: product.subunit_ratio || 1
-      }));
-      
-      console.log('💾 Salvando produtos normalizados em lote após limpeza completa:', normalizedProducts.length);
-      await this.mockDataCleaner.saveRealProducts(normalizedProducts);
-    }
-  }
-
-  async getPendingSyncItems(tableName: string): Promise<any[]> {
-    await this.ensureInitialized();
-    
-    if (!isValidTableName(tableName)) {
-      console.warn(`⚠️ Table ${tableName} does not exist`);
+    try {
+      console.log('🌐 Getting products from Web database...');
+      return await this.db!.getAll('products');
+    } catch (error) {
+      console.error('❌ Error getting products:', error);
       return [];
     }
-    
-    const items = await this.db!.getAll(tableName);
-    return items.filter(item => item.sync_status === 'pending_sync');
   }
 
-  async updateSyncStatus(tableName: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
-    await this.ensureInitialized();
-    
-    if (!isValidTableName(tableName)) {
-      console.warn(`⚠️ Table ${tableName} does not exist`);
+  async getPendingSyncItems(table: string): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    if (!isValidTableName(table)) {
+      console.error(`❌ Invalid table name: ${table}`);
+      return [];
+    }
+
+    try {
+      console.log(`🌐 Getting pending sync items from ${table}...`);
+      const items = await this.db!.getAll(table);
+      return items.filter(item => item.sync_status === 'pending_sync');
+    } catch (error) {
+      console.error(`❌ Error getting pending sync items from ${table}:`, error);
+      return [];
+    }
+  }
+
+  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    if (!isValidTableName(table)) {
+      console.error(`❌ Invalid table name: ${table}`);
       return;
     }
-    
-    const item = await this.db!.get(tableName, id);
-    if (item) {
-      item.sync_status = status;
-      await this.db!.put(tableName, item);
-      console.log(`✅ Sync status updated for ${tableName} with id ${id} to ${status}`);
-    } else {
-      console.warn(`⚠️ Item not found in ${tableName} with id ${id}`);
+
+    try {
+      console.log(`🌐 Updating sync status for ${table} with ID ${id} to ${status}...`);
+      const item = await this.db!.get(table, id);
+      if (item) {
+        item.sync_status = status;
+        await this.db!.put(table, item);
+        console.log(`✅ Sync status updated for ${table} with ID ${id} to ${status}`);
+      } else {
+        console.warn(`⚠️ Item with ID ${id} not found in ${table}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error updating sync status for ${table} with ID ${id}:`, error);
     }
   }
 
   async logSync(type: string, status: string, details?: string): Promise<void> {
-    await this.ensureInitialized();
-    const logEntry = {
-      id: `sync_${Date.now()}`,
-      type,
-      status,
-      details,
-      timestamp: new Date().toISOString()
-    };
-    await this.db!.add('sync_log', logEntry);
-    console.log(`📝 Sync log added: ${type} - ${status}`);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const logEntry = {
+        id: new Date().toISOString(),
+        type,
+        status,
+        details,
+        timestamp: new Date().toISOString()
+      };
+      console.log('Logging sync event:', logEntry);
+      await this.db!.put('sync_log', logEntry);
+      console.log('✅ Sync event logged');
+    } catch (error) {
+      console.error('❌ Error logging sync event:', error);
+    }
   }
 
   async saveOrder(order: any): Promise<void> {
-    await this.ensureInitialized();
-    await this.db!.put('orders', order);
-    console.log('💾 Order saved/updated:', order);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Saving order to Web database:', order);
+      await this.db!.put('orders', order);
+      console.log('✅ Order saved to Web database');
+    } catch (error) {
+      console.error('❌ Error saving order:', error);
+    }
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
-    await this.ensureInitialized();
-    const client = await this.getClientById(clientId);
-    if (client) {
-      client.status = status;
-      await this.db!.put('clients', client);
-      console.log(`✅ Client ${clientId} status updated to ${status}`);
-    } else {
-      console.warn(`⚠️ Client not found with id ${clientId}`);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Updating client status for client ID ${clientId} to ${status}...`);
+      const client = await this.getClientById(clientId);
+      if (client) {
+        client.status = status;
+        await this.db!.put('clients', client);
+        console.log(`✅ Client status updated for client ID ${clientId} to ${status}`);
+      } else {
+        console.warn(`⚠️ Client with ID ${clientId} not found`);
+      }
+    } catch (error) {
+      console.error(`❌ Error updating client status for client ID ${clientId}:`, error);
     }
   }
 
   async getClientById(clientId: string): Promise<any | null> {
-    await this.ensureInitialized();
-    return this.db!.get('clients', clientId);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Getting client by ID: ${clientId}`);
+      const client = await this.db!.get('clients', clientId);
+      if (client) {
+        console.log('✅ Client found:', client);
+        return client;
+      } else {
+        console.log('❌ Client not found');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error getting client by ID:', error);
+      return null;
+    }
   }
 
   async closeDatabase(): Promise<void> {
     if (this.db) {
       this.db.close();
       this.db = null;
-      console.log('🚪 Database connection closed');
+      this.isInitialized = false;
+      console.log('🌐 Web database closed');
     }
   }
 
-  // New methods for offline flow
   async getPendingOrders(): Promise<any[]> {
-    await this.ensureInitialized();
-    const orders = await this.db!.getAll('orders');
-    return orders.filter(order => order.sync_status === 'pending_sync');
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting pending orders from Web database...');
+      const orders = await this.db!.getAll('orders');
+      return orders.filter(order => order.sync_status === 'pending_sync');
+    } catch (error) {
+      console.error('❌ Error getting pending orders:', error);
+      return [];
+    }
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
-    await this.ensureInitialized();
-    const order = await this.db!.get('orders', orderId);
-    if (order) {
-      order.sync_status = 'transmitted';
-      await this.db!.put('orders', order);
-      console.log(`✅ Order ${orderId} marked as transmitted`);
-    } else {
-      console.warn(`⚠️ Order not found with id ${orderId}`);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Marking order ${orderId} as transmitted...`);
+      const order = await this.db!.get('orders', orderId);
+      if (order) {
+        order.sync_status = 'transmitted';
+        await this.db!.put('orders', order);
+        console.log(`✅ Order ${orderId} marked as transmitted`);
+      } else {
+        console.warn(`⚠️ Order with ID ${orderId} not found`);
+      }
+    } catch (error) {
+      console.error(`❌ Error marking order ${orderId} as transmitted:`, error);
     }
   }
 
   async getOfflineOrdersCount(): Promise<number> {
-    await this.ensureInitialized();
-    const orders = await this.db!.getAll('orders');
-    return orders.filter(order => order.sync_status === 'pending_sync').length;
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting offline orders count from Web database...');
+      const orders = await this.db!.getAll('orders');
+      const offlineOrders = orders.filter(order => order.sync_status === 'pending_sync' || order.sync_status === 'error');
+      return offlineOrders.length;
+    } catch (error) {
+      console.error('❌ Error getting offline orders count:', error);
+      return 0;
+    }
   }
 
-  // New methods for improved order management
   async getClientOrders(clientId: string): Promise<any[]> {
-    await this.ensureInitialized();
-    const tx = this.db!.transaction('orders', 'readonly');
-    const index = tx.store.index('customer_id');
-    return index.getAll(clientId);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Getting orders for client ID: ${clientId}`);
+      const index = this.db!.transaction('orders').store.index('customer_id');
+      return await index.getAll(clientId);
+    } catch (error) {
+      console.error('❌ Error getting client orders:', error);
+      return [];
+    }
   }
 
   async deleteOrder(orderId: string): Promise<void> {
-    await this.ensureInitialized();
-    await this.db!.delete('orders', orderId);
-    console.log(`🗑️ Order ${orderId} deleted`);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Deleting order with ID: ${orderId}`);
+      await this.db!.delete('orders', orderId);
+      console.log(`✅ Order with ID ${orderId} deleted`);
+    } catch (error) {
+      console.error(`❌ Error deleting order with ID ${orderId}:`, error);
+    }
   }
 
   async getTransmittedOrders(): Promise<any[]> {
-    await this.ensureInitialized();
-    const orders = await this.db!.getAll('orders');
-    return orders.filter(order => order.sync_status === 'transmitted');
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting transmitted orders from Web database...');
+      const orders = await this.db!.getAll('orders');
+      return orders.filter(order => order.sync_status === 'transmitted');
+    } catch (error) {
+      console.error('❌ Error getting transmitted orders:', error);
+      return [];
+    }
   }
 
   async getAllOrders(): Promise<any[]> {
-    await this.ensureInitialized();
-    return this.db!.getAll('orders');
-  }
-  
-  async saveMobileOrder(order: any): Promise<void> {
-    await this.ensureInitialized();
-    await this.db!.put('orders', order);
-    console.log('📱 Mobile order saved locally:', order);
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting all orders from Web database...');
+      return await this.db!.getAll('orders');
+    } catch (error) {
+      console.error('❌ Error getting all orders:', error);
+      return [];
+    }
   }
 
-  // Batch save methods using MockDataCleaner
-  async saveClients(clientsArray: any[]): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.saveRealClients(clientsArray);
+  async saveMobileOrder(order: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Saving mobile order to Web database:', order);
+      await this.db!.put('orders', order);
+      console.log('✅ Mobile order saved to Web database');
+    } catch (error) {
+      console.error('❌ Error saving mobile order:', error);
     }
+  }
+
+  async saveClients(clientsArray: any[]): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    const tx = this.db!.transaction('clients', 'readwrite');
+    const store = tx.objectStore('clients');
+    
+    for (const client of clientsArray) {
+      await store.put(client);
+    }
+    
+    await tx.done;
+    console.log(`✅ Saved ${clientsArray.length} clients to Web database`);
+  }
+
+  async saveProducts(productsArray: any[]): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    const tx = this.db!.transaction('products', 'readwrite');
+    const store = tx.objectStore('products');
+    
+    for (const product of productsArray) {
+      await store.put(product);
+    }
+    
+    await tx.done;
+    console.log(`✅ Saved ${productsArray.length} products to Web database`);
   }
 
   async saveClient(client: any): Promise<void> {
-    await this.ensureInitialized();
-    if (this.mockDataCleaner) {
-      await this.mockDataCleaner.saveRealClient(client);
-    }
+    if (!this.db) await this.initDatabase();
+    
+    const tx = this.db!.transaction('clients', 'readwrite');
+    await tx.objectStore('clients').put(client);
+    await tx.done;
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    const tx = this.db!.transaction('products', 'readwrite');
+    await tx.objectStore('products').put(product);
+    await tx.done;
   }
 
   async isClientNegated(clientId: string): Promise<boolean> {
+    if (!this.db) await this.initDatabase();
+
     try {
       const client = await this.getClientById(clientId);
-      return client?.status === 'Negativado' || client?.status === 'negativado';
+      if (client && client.status === 'negativado') {
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Error checking if client is negated:', error);
       return false;
@@ -357,88 +402,142 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async unnegateClient(clientId: string, reason: string): Promise<void> {
+     if (!this.db) await this.initDatabase();
+
     try {
-      await this.updateClientStatus(clientId, 'Pendente');
-      
-      const logEntry = {
-        id: `unnegate_${Date.now()}`,
-        client_id: clientId,
-        action: 'unnegate',
-        reason: reason,
-        date: new Date().toISOString(),
-        sync_status: 'pending_sync'
-      };
-      
-      console.log('📝 Client unnegation logged:', logEntry);
+      console.log(`🌐 Unnegating client with ID: ${clientId}, reason: ${reason}`);
+      const client = await this.getClientById(clientId);
+      if (client) {
+        client.status = 'ativo';
+        await this.db!.put('clients', client);
+        console.log(`✅ Client with ID ${clientId} unnegated`);
+      } else {
+        console.warn(`⚠️ Client with ID ${clientId} not found`);
+      }
     } catch (error) {
-      console.error('Error unnegating client:', error);
-      throw error;
+      console.error(`❌ Error unnegating client with ID ${clientId}:`, error);
     }
   }
 
   async getClientStatusHistory(clientId: string): Promise<any[]> {
-    return [];
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Getting client status history for client ID: ${clientId}`);
+      // Since IndexedDB doesn't support complex queries, we'll just return a mock history for now
+      return [
+        { status: 'ativo', date: new Date().toISOString(), reason: 'Initial status' }
+      ];
+    } catch (error) {
+      console.error('❌ Error getting client status history:', error);
+      return [];
+    }
   }
 
   async hasClientPendingOrders(clientId: string): Promise<boolean> {
+    if (!this.db) await this.initDatabase();
+
     try {
+      console.log(`🌐 Checking if client ${clientId} has pending orders...`);
       const orders = await this.getClientOrders(clientId);
-      return orders.some(order => 
-        order.sync_status === 'pending_sync' && order.status !== 'cancelled'
-      );
+      const pendingOrders = orders.filter(order => order.status === 'pending');
+      return pendingOrders.length > 0;
     } catch (error) {
-      console.error('Error checking client pending orders:', error);
+      console.error('❌ Error checking for pending orders:', error);
       return false;
     }
   }
 
-  async getActivePendingOrder(clientId: string): Promise<any | null> {
-    try {
-      const orders = await this.getClientOrders(clientId);
-      const pendingOrders = orders.filter(order => 
-        order.sync_status === 'pending_sync' && order.status !== 'cancelled'
-      );
-      
-      if (pendingOrders.length > 0) {
-        return pendingOrders.sort((a, b) => 
-          new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
-        )[0];
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Error getting active pending order:', error);
-      return null;
-    }
-  }
-
   async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
+    if (!this.db) await this.initDatabase();
+
     try {
-      const isNegated = await this.isClientNegated(clientId);
-      if (isNegated) {
-        return {
-          canCreate: false,
-          reason: 'Cliente está negativado'
-        };
+      console.log(`🌐 Checking if can create order for client ${clientId}...`);
+
+      const client = await this.getClientById(clientId);
+      if (!client) {
+        return { canCreate: false, reason: 'Cliente não encontrado' };
+      }
+
+      if (client.status === 'negativado') {
+        return { canCreate: false, reason: 'Cliente negativado' };
       }
 
       const activePendingOrder = await this.getActivePendingOrder(clientId);
       if (activePendingOrder) {
-        return {
-          canCreate: false,
-          reason: 'Cliente já possui um pedido pendente',
-          existingOrder: activePendingOrder
-        };
+        return { canCreate: false, reason: 'Já existe um pedido pendente para este cliente', existingOrder: activePendingOrder };
       }
 
       return { canCreate: true };
     } catch (error) {
-      console.error('Error validating client for order creation:', error);
-      return {
-        canCreate: false,
-        reason: 'Erro ao validar cliente'
-      };
+      console.error('❌ Error checking if can create order:', error);
+      return { canCreate: false, reason: 'Erro ao verificar elegibilidade' };
     }
+  }
+
+  async getActivePendingOrder(clientId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Getting active pending order for client ${clientId}...`);
+      const orders = await this.getClientOrders(clientId);
+      const pendingOrder = orders.find(order => order.status === 'pending');
+      return pendingOrder || null;
+    } catch (error) {
+      console.error('❌ Error getting active pending order:', error);
+      return null;
+    }
+  }
+
+  async getCustomers(): Promise<any[]> {
+    return this.getClients();
+  }
+
+  async getPaymentTables(): Promise<any[]> {
+    // Mock payment tables for now
+    return [
+      { id: '1', name: 'À Vista', type: 'cash' },
+      { id: '2', name: '30 Dias', type: 'term' },
+      { id: '3', name: '60 Dias', type: 'term' }
+    ];
+  }
+
+  async getOrderById(orderId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+    
+    try {
+      console.log(`🔍 Getting order by ID: ${orderId}`);
+      const order = await this.db!.get('orders', orderId);
+      
+      if (order) {
+        console.log('✅ Order found:', order);
+        return order;
+      } else {
+        console.log('❌ Order not found');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error getting order by ID:', error);
+      return null;
+    }
+  }
+
+  async clearMockData(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    console.log('🧹 Clearing mock data from Web database...');
+    
+    const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products'], 'readwrite');
+    
+    await Promise.all([
+      tx.objectStore('clients').clear(),
+      tx.objectStore('visit_routes').clear(),
+      tx.objectStore('orders').clear(),
+      tx.objectStore('products').clear()
+    ]);
+    
+    await tx.done;
+    console.log('✅ Mock data cleared from Web database');
   }
 }
 

@@ -43,6 +43,8 @@ interface DatabaseAdapter {
   // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
   getPaymentTables(): Promise<any[]>;
+  // ✅ NOVO: Método para obter pedido por ID
+  getOrderById(orderId: string): Promise<any | null>;
   // ✅ NOVO: Método para limpar dados mock
   clearMockData?(): Promise<void>;
 }
