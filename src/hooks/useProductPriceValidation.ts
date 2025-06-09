@@ -150,7 +150,9 @@ export const useProductPriceValidation = (product: Product | null) => {
   };
 
   const hasMinPriceRestriction = (): boolean => {
-    return getMinPrice() > 0;
+    const result = getMinPrice() > 0;
+    console.log('🔍 hasMinPriceRestriction:', result, 'minPrice:', getMinPrice());
+    return result;
   };
 
   const getMaxDiscountPercent = (): number => {
@@ -158,7 +160,9 @@ export const useProductPriceValidation = (product: Product | null) => {
   };
 
   const hasDiscountRestriction = (): boolean => {
-    return getMaxDiscountPercent() > 0;
+    const result = getMaxDiscountPercent() > 0;
+    console.log('🔍 hasDiscountRestriction:', result, 'maxDiscount:', getMaxDiscountPercent());
+    return result;
   };
 
   const getCurrentDiscountPercent = (inputPrice: number): number => {

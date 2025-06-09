@@ -130,6 +130,10 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const maxDiscountPercent = getMaxDiscountPercent();
   const salePrice = currentProduct.sale_price || currentProduct.price || 0;
 
+  // Debug logs para verificar valores
+  console.log('🔍 NewOrderProductDetails - hasDiscountRestriction():', hasDiscountRestriction());
+  console.log('🔍 NewOrderProductDetails - hasMinPriceRestriction():', hasMinPriceRestriction());
+
   return (
     <div className="space-y-4">
       {/* Informações do Produto */}
@@ -217,15 +221,15 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             <span className="text-xs text-red-600">{priceError}</span>
           </div>
         )}
-        {hasMinPriceRestriction() && !priceError && (
+        {hasMinPriceRestriction() === true && !priceError && (
           <div className="text-xs text-gray-600 mt-1">
             Mín: {formatPrice(getMinPrice())}
           </div>
         )}
       </div>
 
-      {/* Informações de Desconto */}
-      {hasDiscountRestriction() && (
+      {/* Informações de Desconto - Renderização explícita com verificação booleana */}
+      {hasDiscountRestriction() === true && (
         <div className="bg-white border border-blue-200 rounded-lg p-3">
           <div className="flex items-center gap-2 mb-2">
             <Info size={14} className="text-blue-500" />

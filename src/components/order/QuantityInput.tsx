@@ -138,6 +138,10 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const maxDiscountPercent = getMaxDiscountPercent();
   const salePrice = product.sale_price || product.price || 0;
 
+  // Debug logs para verificar valores
+  console.log('🔍 QuantityInput - hasDiscountRestriction():', hasDiscountRestriction());
+  console.log('🔍 QuantityInput - hasMinPriceRestriction():', hasMinPriceRestriction());
+
   return (
     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
       <div className="space-y-4">
@@ -212,7 +216,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                 <span className="text-xs text-red-600">{priceError}</span>
               </div>
             )}
-            {hasMinPriceRestriction() && !priceError && (
+            {hasMinPriceRestriction() === true && !priceError && (
               <div className="text-xs text-gray-600 mt-1">
                 Mín: {formatPrice(getMinPrice())}
               </div>
@@ -220,8 +224,8 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           </div>
         </div>
 
-        {/* Informações de Desconto */}
-        {hasDiscountRestriction() && (
+        {/* Informações de Desconto - Renderização explícita com verificação booleana */}
+        {hasDiscountRestriction() === true && (
           <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <Info size={14} className="text-blue-500" />
