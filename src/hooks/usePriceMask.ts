@@ -2,13 +2,13 @@
 import { useState, useCallback } from 'react';
 
 export const usePriceMask = (initialValue: number = 0) => {
-  const [displayValue, setDisplayValue] = useState(() => formatPrice(initialValue));
-  const [numericValue, setNumericValue] = useState(initialValue);
-
   const formatPrice = useCallback((value: number): string => {
     if (isNaN(value) || value === 0) return 'R$ 0,00';
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   }, []);
+
+  const [displayValue, setDisplayValue] = useState(() => formatPrice(initialValue));
+  const [numericValue, setNumericValue] = useState(initialValue);
 
   const parsePrice = useCallback((formattedValue: string): number => {
     // Remove tudo exceto números e vírgula/ponto
