@@ -175,7 +175,7 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
             <span className="text-xs text-red-600">{priceError}</span>
           </div>
         )}
-        {hasMinPriceRestriction && !priceError && (
+        {hasMinPriceRestriction === true && !priceError && (
           <div className="text-xs text-gray-600 mt-1">
             Mín: {formatPrice(getMinPrice())}
           </div>
