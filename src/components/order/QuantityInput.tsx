@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPricing } from '@/hooks/useProductPricing';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { usePriceMask } from '@/hooks/usePriceMask';
 
 interface Product {
   id: string;
@@ -49,34 +50,26 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   } = useProductPricing(product, selectedUnit);
 
   const { validatePrice, validationResult, hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
-  const [localUnitPrice, setLocalUnitPrice] = useState(unitPrice);
+  const { displayValue, numericValue, handleInputChange, handleBlur, setValue } = usePriceMask(unitPrice);
   const [priceError, setPriceError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLocalUnitPrice(unitPrice);
-  }, [unitPrice]);
+    setValue(unitPrice);
+  }, [unitPrice, setValue]);
 
   useEffect(() => {
-    const result = validatePrice(localUnitPrice);
+    const result = validatePrice(numericValue);
     setPriceError(result.error);
-  }, [localUnitPrice, validatePrice]);
-
-  const handlePriceChange = (value: string) => {
-    const newPrice = parseFloat(value) || 0;
-    setLocalUnitPrice(newPrice);
-    
-    const result = validatePrice(newPrice);
-    setPriceError(result.error);
-  };
+  }, [numericValue, validatePrice]);
 
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    return (qty * localUnitPrice).toFixed(2);
+    return (qty * numericValue).toFixed(2);
   };
 
   const canAddItem = () => {
     const qty = parseFloat(quantity) || 0;
-    const isPriceValid = !priceError && localUnitPrice > 0;
+    const isPriceValid = !priceError && numericValue > 0;
     return qty > 0 && isPriceValid;
   };
 
@@ -121,7 +114,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                 1 {mainUnit} = {ratio} {subUnit}
               </div>
               <div className="text-center text-xs text-gray-600 mt-1">
-                Preço por {mainUnit}: R$ {(localUnitPrice * ratio).toFixed(2)}
+                Preço por {mainUnit}: R$ {(numericValue * ratio).toFixed(2).replace('.', ',')}
               </div>
             </div>
           </div>
@@ -144,16 +137,16 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           <div>
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço ({displayUnit}):</Label>
             <Input
-              type="number"
+              type="text"
               className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
                 priceError 
                   ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200' 
                   : 'border-gray-300 focus:border-app-blue focus:ring-app-blue/20'
               }`}
-              value={localUnitPrice.toFixed(2)}
-              onChange={e => handlePriceChange(e.target.value)}
-              min="0"
-              step="0.01"
+              value={displayValue}
+              onChange={e => handleInputChange(e.target.value)}
+              onBlur={handleBlur}
+              placeholder="R$ 0,00"
             />
             {priceError && (
               <div className="flex items-center gap-1 mt-1">
@@ -163,7 +156,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
             )}
             {hasMinPriceRestriction() && !priceError && (
               <div className="text-xs text-gray-600 mt-1">
-                Mín: R$ {getMinPrice().toFixed(2)}
+                Mín: R$ {getMinPrice().toFixed(2).replace('.', ',')}
               </div>
             )}
           </div>
@@ -175,7 +168,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
             <div className="flex justify-between items-center">
               <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
               <span className={`font-bold text-base ${priceError ? 'text-red-600' : 'text-blue-700'}`}>
-                R$ {calculateTotal()}
+                R$ {calculateTotal().replace('.', ',')}
               </span>
             </div>
           </div>

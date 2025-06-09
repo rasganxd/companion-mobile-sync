@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Package } from 'lucide-react';
 import { useUnitSelection } from '@/hooks/useUnitSelection';
+import { usePriceMask } from '@/hooks/usePriceMask';
 
 interface Product {
   id: string;
@@ -43,6 +44,19 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct
 }) => {
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
+  const { displayValue, numericValue, handleInputChange, handleBlur, setValue } = usePriceMask(unitPrice);
+
+  // Atualizar o valor da máscara quando unitPrice mudar
+  React.useEffect(() => {
+    setValue(unitPrice);
+  }, [unitPrice, setValue]);
+
+  // Notificar mudanças de preço para o componente pai
+  React.useEffect(() => {
+    if (numericValue !== unitPrice) {
+      onUnitPriceChange(numericValue);
+    }
+  }, [numericValue, unitPrice, onUnitPriceChange]);
 
   if (!currentProduct) {
     return (
@@ -58,7 +72,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     const unit = unitOptions.find(opt => opt.value === unitType);
     if (unit && onUnitChange) {
       onUnitChange(unit.code);
-      onUnitPriceChange(unit.price);
+      setValue(unit.price);
     }
   };
 
@@ -79,7 +93,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         {currentProduct.min_price && currentProduct.min_price > 0 && (
           <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
             <p className="text-xs text-yellow-700">
-              ⚠️ Preço mínimo: R$ {currentProduct.min_price.toFixed(2)}
+              ⚠️ Preço mínimo: R$ {currentProduct.min_price.toFixed(2).replace('.', ',')}
             </p>
           </div>
         )}
@@ -133,11 +147,11 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       <div>
         <Label className="text-sm font-medium text-gray-700 mb-1 block">Preço Unitário</Label>
         <Input
-          type="number"
-          value={unitPrice}
-          onChange={(e) => onUnitPriceChange(Number(e.target.value))}
-          min="0"
-          step="0.01"
+          type="text"
+          value={displayValue}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder="R$ 0,00"
           className="text-center"
         />
       </div>
@@ -147,18 +161,18 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-green-900">Total do Item:</span>
           <span className="font-bold text-green-600">
-            R$ {(quantity * unitPrice).toFixed(2)}
+            R$ {(quantity * numericValue).toFixed(2).replace('.', ',')}
           </span>
         </div>
         <div className="text-xs text-green-700 mt-1">
-          {quantity} {selectedUnit} × R$ {unitPrice.toFixed(2)}
+          {quantity} {selectedUnit} × {displayValue}
         </div>
       </div>
 
       {/* Botão Adicionar */}
       <Button 
         onClick={onAddProduct}
-        disabled={quantity <= 0 || unitPrice <= 0}
+        disabled={quantity <= 0 || numericValue <= 0}
         className="w-full bg-green-600 hover:bg-green-700 text-white"
       >
         <Plus size={16} className="mr-2" />
