@@ -163,7 +163,7 @@ export const useOrderTransmission = () => {
       }
 
       if (transmissionResult.successCount === 0 && transmissionResult.errorCount > 0) {
-        throw new Error(transmissionResult.error || 'Todos os pedidos falharam na transmissão');
+        throw new Error(transmissionResult.errorMessage || 'Todos os pedidos falharam na transmissão');
       }
 
       await loadOrders();

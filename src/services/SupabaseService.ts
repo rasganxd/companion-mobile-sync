@@ -1,4 +1,3 @@
-
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -364,12 +363,9 @@ class SupabaseService {
       successCount,
       errorCount,
       totalOrders: orders.length,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
+      errorMessage: errorCount > 0 ? `${errorCount} de ${orders.length} pedidos falharam na transmissão` : undefined
     };
-
-    if (errorCount > 0) {
-      result.error = `${errorCount} de ${orders.length} pedidos falharam na transmissão`;
-    }
 
     console.log('📊 Transmission summary:', result);
     return result;
