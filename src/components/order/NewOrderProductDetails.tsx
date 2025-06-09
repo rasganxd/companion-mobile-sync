@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Package } from 'lucide-react';
+import { useUnitSelection } from '@/hooks/useUnitSelection';
 
 interface Product {
   id: string;
@@ -24,10 +25,10 @@ interface NewOrderProductDetailsProps {
   currentProduct: Product | null;
   quantity: number;
   unitPrice: number;
-  selectedUnit?: string; // ✅ NOVO: Unidade selecionada
+  selectedUnit?: string;
   onQuantityChange: (quantity: number) => void;
   onUnitPriceChange: (price: number) => void;
-  onUnitChange?: (unit: string) => void; // ✅ NOVO: Callback para mudança de unidade
+  onUnitChange?: (unit: string) => void;
   onAddProduct: () => void;
 }
 
@@ -35,12 +36,14 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   currentProduct,
   quantity,
   unitPrice,
-  selectedUnit = 'UN', // ✅ NOVO: Valor padrão
+  selectedUnit = 'UN',
   onQuantityChange,
   onUnitPriceChange,
   onUnitChange,
   onAddProduct
 }) => {
+  const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
+
   if (!currentProduct) {
     return (
       <div className="bg-gray-50 rounded-lg p-6 text-center">
@@ -50,29 +53,14 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     );
   }
 
-  // ✅ NOVO: Criar opções de unidade baseadas no produto
-  const getUnitOptions = () => {
-    const options = [];
-    
-    // Unidade principal
-    if (currentProduct.unit) {
-      options.push({ value: currentProduct.unit, label: currentProduct.unit });
+  const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
+    setSelectedUnitType(unitType);
+    const unit = unitOptions.find(opt => opt.value === unitType);
+    if (unit && onUnitChange) {
+      onUnitChange(unit.code);
+      onUnitPriceChange(unit.price);
     }
-    
-    // Subunidade se disponível
-    if (currentProduct.has_subunit && currentProduct.subunit) {
-      options.push({ value: currentProduct.subunit, label: currentProduct.subunit });
-    }
-    
-    // Se não há opções específicas, adicionar UN como padrão
-    if (options.length === 0) {
-      options.push({ value: 'UN', label: 'UN' });
-    }
-    
-    return options;
   };
-
-  const unitOptions = getUnitOptions();
 
   return (
     <div className="space-y-4">
@@ -111,21 +99,34 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           />
         </div>
         
-        {/* ✅ NOVO: Seletor de unidade */}
+        {/* Seletor de Unidade Melhorado */}
         <div>
-          <Label className="text-sm font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select value={selectedUnit} onValueChange={onUnitChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecione unidade" />
-            </SelectTrigger>
-            <SelectContent>
-              {unitOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label className="text-sm font-medium text-gray-700 mb-1 block">
+            {hasMultipleUnits ? 'Tipo de Unidade' : 'Unidade'}
+          </Label>
+          {hasMultipleUnits ? (
+            <Select value={selectedUnitType} onValueChange={handleUnitTypeChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione unidade" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border border-gray-300 shadow-lg z-50">
+                {unitOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs text-gray-500">{option.displayText}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={currentProduct.unit || 'UN'}
+              readOnly
+              className="text-center bg-gray-50"
+            />
+          )}
         </div>
       </div>
 
