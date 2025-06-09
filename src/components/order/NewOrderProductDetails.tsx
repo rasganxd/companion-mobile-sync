@@ -48,6 +48,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const {
     maskedValue: maskedUnitPrice,
     handleChange: handlePriceChange,
+    handleBlur: handlePriceBlur,
     setValue: setPriceValue,
     getValue: getPriceValue,
     formatPrice
@@ -78,6 +79,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const handlePriceInputChange = (value: string) => {
     const newPrice = handlePriceChange(value);
     onUnitPriceChange(newPrice);
+  };
+
+  const handlePriceInputBlur = () => {
+    handlePriceBlur();
+    const currentPrice = getPriceValue();
+    onUnitPriceChange(currentPrice);
   };
 
   return (
@@ -117,7 +124,6 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           />
         </div>
         
-        {/* Seletor de Unidade Melhorado */}
         <div>
           <Label className="text-sm font-medium text-gray-700 mb-1 block">
             {hasMultipleUnits ? 'Tipo de Unidade' : 'Unidade'}
@@ -154,6 +160,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           type="text"
           value={maskedUnitPrice}
           onChange={(e) => handlePriceInputChange(e.target.value)}
+          onBlur={handlePriceInputBlur}
           className="text-center"
           placeholder="R$ 0,00"
         />
@@ -172,7 +179,6 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         </div>
       </div>
 
-      {/* Botão Adicionar */}
       <Button 
         onClick={onAddProduct}
         disabled={quantity <= 0 || getPriceValue() <= 0}

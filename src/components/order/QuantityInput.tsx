@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -54,6 +53,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const {
     maskedValue: maskedUnitPrice,
     handleChange: handlePriceChange,
+    handleBlur: handlePriceBlur,
     setValue: setPriceValue,
     getValue: getPriceValue,
     formatPrice
@@ -74,6 +74,13 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const handlePriceInputChange = (value: string) => {
     const newPrice = handlePriceChange(value);
     const result = validatePrice(newPrice);
+    setPriceError(result.error);
+  };
+
+  const handlePriceInputBlur = () => {
+    handlePriceBlur();
+    const currentPrice = getPriceValue();
+    const result = validatePrice(currentPrice);
     setPriceError(result.error);
   };
 
@@ -162,6 +169,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
               }`}
               value={maskedUnitPrice}
               onChange={e => handlePriceInputChange(e.target.value)}
+              onBlur={handlePriceInputBlur}
               placeholder="R$ 0,00"
             />
             {priceError && (

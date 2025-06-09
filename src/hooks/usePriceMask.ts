@@ -12,40 +12,68 @@ export const usePriceMask = (initialValue: number = 0) => {
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const [maskedValue, setMaskedValue] = useState(() => formatPrice(initialValue));
+  const [inputValue, setInputValue] = useState(() => formatPrice(initialValue));
+  const [isTyping, setIsTyping] = useState(false);
 
   const handleChange = useCallback((value: string) => {
+    setIsTyping(true);
+    
+    // Se o usuário está apagando tudo, permite valor vazio
+    if (value === '' || value === 'R$ ') {
+      setInputValue('R$ ');
+      return 0;
+    }
+
     // Remove caracteres não numéricos exceto vírgula e ponto
-    const cleanValue = value.replace(/[^0-9,\.]/g, '');
+    let cleanValue = value.replace(/[^0-9,\.]/g, '');
     
-    // Converte vírgula para ponto para parsing
+    // Se não tem números, retorna 0
+    if (!/\d/.test(cleanValue)) {
+      setInputValue('R$ ');
+      return 0;
+    }
+
+    // Substitui vírgula por ponto para cálculos
     const normalizedValue = cleanValue.replace(',', '.');
-    
-    // Valida se é um número válido
     const numericValue = parseFloat(normalizedValue);
+    
     if (!isNaN(numericValue) && numericValue >= 0) {
-      setMaskedValue(formatPrice(numericValue));
+      // Durante a digitação, mantém o formato mais simples
+      if (cleanValue.includes(',') || cleanValue.includes('.')) {
+        setInputValue(`R$ ${cleanValue}`);
+      } else {
+        setInputValue(`R$ ${cleanValue}`);
+      }
       return numericValue;
     }
     
     // Se inválido, mantém o valor anterior
-    return parsePrice(maskedValue);
-  }, [maskedValue]);
+    return parsePrice(inputValue);
+  }, [inputValue]);
+
+  const handleBlur = useCallback(() => {
+    setIsTyping(false);
+    const numericValue = parsePrice(inputValue);
+    setInputValue(formatPrice(numericValue));
+  }, [inputValue]);
 
   const setValue = useCallback((value: number) => {
-    setMaskedValue(formatPrice(value));
+    setIsTyping(false);
+    setInputValue(formatPrice(value));
   }, []);
 
   const getValue = useCallback(() => {
-    return parsePrice(maskedValue);
-  }, [maskedValue]);
+    return parsePrice(inputValue);
+  }, [inputValue]);
 
   return {
-    maskedValue,
+    maskedValue: inputValue,
     handleChange,
+    handleBlur,
     setValue,
     getValue,
     formatPrice,
-    parsePrice
+    parsePrice,
+    isTyping
   };
 };
