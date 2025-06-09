@@ -21,7 +21,7 @@ import ViewOrderDetails from '@/pages/ViewOrderDetails';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
-import { NavigationProvider } from '@/contexts/NavigationProvider';
+import { NavigationProvider } from '@/contexts/NavigationContext';
 
 // Protected Route Component
 import ProtectedRoute from '@/components/ProtectedRoute';
