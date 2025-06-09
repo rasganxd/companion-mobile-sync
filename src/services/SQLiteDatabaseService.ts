@@ -417,7 +417,28 @@ class SQLiteDatabaseService {
     }
   }
 
-  // Original methods for offline flow
+  async getOrderById(orderId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE id = ?', 
+        [orderId]
+      );
+      
+      if (result.values && result.values.length > 0) {
+        const order = result.values[0];
+        return {
+          ...order,
+          items: order.items ? JSON.parse(order.items) : []
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ Error getting order by ID:', error);
+      return null;
+    }
+  }
+
   async getPendingOrders(): Promise<any[]> {
     const pendingOrders = await this.getPendingSyncItems('orders');
     
@@ -435,7 +456,6 @@ class SQLiteDatabaseService {
     return pendingOrders.length;
   }
 
-  // New methods for improved order management
   async getClientOrders(clientId: string): Promise<any[]> {
     if (!this.db) await this.initDatabase();
     try {
