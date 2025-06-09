@@ -1,5 +1,5 @@
 
-import { IDBPDatabase, DBSchema } from 'idb';
+import { IDBPDatabase } from 'idb';
 
 export interface SalesAppDBSchema extends DBSchema {
   clients: {
@@ -13,9 +13,13 @@ export interface SalesAppDBSchema extends DBSchema {
   orders: {
     key: string;
     value: any;
-    indexes: { 'customer_id': string };
+    indexes: { customer_id: string };
   };
   products: {
+    key: string;
+    value: any;
+  };
+  payment_tables: {
     key: string;
     value: any;
   };
@@ -25,13 +29,18 @@ export interface SalesAppDBSchema extends DBSchema {
   };
 }
 
-// Valid table names for the schema - explicitly define to avoid issues with indexes
-export type ValidTableName = 'clients' | 'visit_routes' | 'orders' | 'products' | 'sync_log';
+export type DatabaseInstance = IDBPDatabase<SalesAppDBSchema>;
 
-// Type guard to check if a string is a valid table name
-export function isValidTableName(tableName: string): tableName is ValidTableName {
-  const validTables: ValidTableName[] = ['clients', 'visit_routes', 'orders', 'products', 'sync_log'];
-  return validTables.includes(tableName as ValidTableName);
+export type ValidTableName = 'clients' | 'visit_routes' | 'orders' | 'products' | 'payment_tables' | 'sync_log';
+
+export function isValidTableName(table: string): table is ValidTableName {
+  return ['clients', 'visit_routes', 'orders', 'products', 'payment_tables', 'sync_log'].includes(table);
 }
 
-export type DatabaseInstance = IDBPDatabase<SalesAppDBSchema>;
+interface DBSchema {
+  [key: string]: {
+    key: any;
+    value: any;
+    indexes?: { [key: string]: any };
+  };
+}

@@ -11,4 +11,5 @@ export interface LocalOrder {
   reason?: string;
   notes?: string;
   payment_method?: string;
+  payment_table_id?: string; // ✅ NOVO: ID da tabela de pagamento selecionada
 }

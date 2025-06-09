@@ -136,8 +136,16 @@ export const useOrderManagement = () => {
         sync_status: 'pending_sync' as const,
         items: orderItems,
         sales_rep_id: salesRep?.id,
-        payment_table_id: paymentTableId
+        payment_table_id: paymentTableId // ✅ NOVO: Incluir ID da tabela de pagamento
       };
+
+      console.log('💾 Salvando pedido com tabela de pagamento:', {
+        orderId: orderData.id,
+        paymentTableId: orderData.payment_table_id,
+        customerName: orderData.customer_name,
+        total: orderData.total,
+        itemsCount: orderData.items.length
+      });
 
       await db.saveOrder(orderData);
       

@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -102,7 +103,8 @@ export const useDataSync = () => {
       products: products.length,
       paymentTables: paymentTables.length,
       clientsSample: clients.slice(0, 2).map(c => ({ id: c.id, name: c.name })),
-      productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name }))
+      productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name })),
+      paymentTablesSample: paymentTables.slice(0, 2).map(pt => ({ id: pt.id, name: pt.name }))
     });
 
     // Verificar se há dados mock ainda presentes
@@ -161,7 +163,7 @@ export const useDataSync = () => {
       let paymentTablesData: any[] = [];
 
       // Etapa 1: Buscar clientes REAIS
-      updateProgress('Carregando clientes...', 0, 3);
+      updateProgress('Carregando clientes...', 0, 4);
       try {
         console.log('📥 Buscando clientes REAIS do Supabase');
         clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
@@ -182,7 +184,7 @@ export const useDataSync = () => {
       }
 
       // Etapa 2: Buscar produtos REAIS com limpeza completa
-      updateProgress('Carregando produtos...', 1, 3);
+      updateProgress('Carregando produtos...', 1, 4);
       try {
         console.log('📥 Buscando produtos REAIS do Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
@@ -213,20 +215,38 @@ export const useDataSync = () => {
         throw new Error(`Erro ao carregar produtos: ${errorMessage}`);
       }
 
-      // Etapa 3: Buscar tabelas de pagamento
-      updateProgress('Carregando tabelas de pagamento...', 2, 3);
+      // Etapa 3: Buscar tabelas de pagamento REAIS
+      updateProgress('Carregando tabelas de pagamento...', 2, 4);
       try {
-        console.log('📥 Buscando tabelas de pagamento REAIS');
+        console.log('📥 Buscando tabelas de pagamento REAIS do Supabase');
         paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
         console.log(`📥 Recebidas ${paymentTablesData.length} tabelas de pagamento`);
-        syncedPaymentTables = paymentTablesData.length;
+        
+        // Log detalhado das tabelas de pagamento recebidas
+        paymentTablesData.forEach((paymentTable, index) => {
+          console.log(`💳 Tabela de pagamento ${index + 1} do Supabase:`, {
+            id: paymentTable.id,
+            name: paymentTable.name,
+            type: paymentTable.type,
+            active: paymentTable.active
+          });
+        });
+        
+        if (paymentTablesData.length > 0) {
+          await db.savePaymentTables(paymentTablesData);
+          syncedPaymentTables = paymentTablesData.length;
+          console.log(`✅ Salvas ${syncedPaymentTables} tabelas de pagamento REAIS`);
+        } else {
+          console.log('ℹ️ Nenhuma tabela de pagamento encontrada no banco de dados');
+          syncedPaymentTables = 0;
+        }
       } catch (error) {
         console.warn('⚠️ Falha ao sincronizar tabelas de pagamento:', error);
         syncedPaymentTables = 0;
       }
 
       // Validar dados sincronizados
-      updateProgress('Validando dados...', 3, 3);
+      updateProgress('Validando dados...', 3, 4);
       const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
 
       if (!isDataValid) {
@@ -245,7 +265,7 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts,
+        total: syncedClients + syncedProducts + syncedPaymentTables,
         dataValid: isDataValid
       });
 

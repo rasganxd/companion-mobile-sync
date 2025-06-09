@@ -24,8 +24,8 @@ class WebDatabaseService {
     try {
       console.log('🌐 Initializing Web IndexedDB database...');
       
-      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 1, {
-        upgrade(db) {
+      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 2, {
+        upgrade(db, oldVersion) {
           console.log('🔧 Creating/updating database schema...');
           
           // Create clients table
@@ -47,6 +47,12 @@ class WebDatabaseService {
           // Create products table
           if (!db.objectStoreNames.contains('products')) {
             db.createObjectStore('products', { keyPath: 'id' });
+          }
+          
+          // Create payment_tables table (NEW)
+          if (!db.objectStoreNames.contains('payment_tables')) {
+            db.createObjectStore('payment_tables', { keyPath: 'id' });
+            console.log('✅ Criada tabela payment_tables no IndexedDB');
           }
           
           // Create sync_log table
@@ -494,12 +500,53 @@ class WebDatabaseService {
   }
 
   async getPaymentTables(): Promise<any[]> {
-    // Mock payment tables for now
-    return [
-      { id: '1', name: 'À Vista', type: 'cash' },
-      { id: '2', name: '30 Dias', type: 'term' },
-      { id: '3', name: '60 Dias', type: 'term' }
-    ];
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Getting payment tables from Web database...');
+      const paymentTables = await this.db!.getAll('payment_tables');
+      console.log(`💳 Encontradas ${paymentTables.length} tabelas de pagamento no banco local`);
+      
+      // Log das tabelas encontradas
+      paymentTables.forEach((table, index) => {
+        console.log(`💳 Tabela ${index + 1}:`, {
+          id: table.id,
+          name: table.name,
+          type: table.type,
+          active: table.active
+        });
+      });
+      
+      return paymentTables;
+    } catch (error) {
+      console.error('❌ Error getting payment tables:', error);
+      return [];
+    }
+  }
+
+  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    try {
+      console.log(`💳 Salvando ${paymentTablesArray.length} tabelas de pagamento no Web database...`);
+      
+      // Limpar tabelas existentes antes de salvar novas
+      const tx = this.db!.transaction('payment_tables', 'readwrite');
+      const store = tx.objectStore('payment_tables');
+      await store.clear();
+      
+      // Salvar novas tabelas
+      for (const paymentTable of paymentTablesArray) {
+        await store.put(paymentTable);
+        console.log(`💳 Tabela salva: ${paymentTable.name} (${paymentTable.id})`);
+      }
+      
+      await tx.done;
+      console.log(`✅ Saved ${paymentTablesArray.length} payment tables to Web database`);
+    } catch (error) {
+      console.error('❌ Error saving payment tables:', error);
+      throw error;
+    }
   }
 
   async getOrderById(orderId: string): Promise<any | null> {
@@ -527,13 +574,14 @@ class WebDatabaseService {
     
     console.log('🧹 Clearing mock data from Web database...');
     
-    const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products'], 'readwrite');
+    const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products', 'payment_tables'], 'readwrite');
     
     await Promise.all([
       tx.objectStore('clients').clear(),
       tx.objectStore('visit_routes').clear(),
       tx.objectStore('orders').clear(),
-      tx.objectStore('products').clear()
+      tx.objectStore('products').clear(),
+      tx.objectStore('payment_tables').clear()
     ]);
     
     await tx.done;

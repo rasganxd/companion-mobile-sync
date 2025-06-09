@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -120,12 +119,14 @@ export const useOrderTransmission = () => {
     
     const normalizedOrder = {
       ...order,
-      items: normalizedItems
+      items: normalizedItems,
+      payment_table_id: order.payment_table_id // ✅ NOVO: Incluir payment_table_id na transmissão
     };
     
-    console.log('✅ Normalized order with preserved units:', {
+    console.log('✅ Normalized order with preserved units and payment table:', {
       orderId: normalizedOrder.id,
       customerName: normalizedOrder.customer_name,
+      paymentTableId: normalizedOrder.payment_table_id, // ✅ LOG: Verificar payment_table_id
       itemsWithUnits: normalizedItems.map(item => ({
         name: item.product_name,
         unit: item.unit,
@@ -228,7 +229,7 @@ export const useOrderTransmission = () => {
         throw new Error('Nenhum pedido válido para transmitir');
       }
       
-      // Transmit orders to Supabase (agora com dados validados e normalizados)
+      // Transmit orders to Supabase (agora com dados validados e normalizados incluindo payment_table_id)
       const transmissionResult = await supabaseService.transmitOrders(
         validatedOrders, 
         salesRep.sessionToken!
@@ -251,7 +252,11 @@ export const useOrderTransmission = () => {
               salesRepName: salesRep?.name,
               customerName: order.customer_name,
               syncStatus: 'transmitted',
-              details: { total: order.total, itemsCount: order.items?.length || 0 }
+              details: { 
+                total: order.total, 
+                itemsCount: order.items?.length || 0,
+                paymentTableId: order.payment_table_id // ✅ LOG: Incluir payment_table_id nos logs
+              }
             });
             
             console.log('✅ Order marked as transmitted:', order.id);
