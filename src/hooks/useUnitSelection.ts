@@ -43,7 +43,7 @@ export const useUnitSelection = (product: Product | null) => {
     const mainUnit = product.unit || 'UN';
     options.push({
       value: 'main',
-      label: `${mainUnit} (Principal)`,
+      label: mainUnit,
       code: mainUnit,
       price: basePrice,
       displayText: `${mainUnit} - R$ ${basePrice.toFixed(2)}`
@@ -54,7 +54,7 @@ export const useUnitSelection = (product: Product | null) => {
       const subUnitPrice = basePrice / product.subunit_ratio;
       options.push({
         value: 'sub',
-        label: `${product.subunit} (Secundária)`,
+        label: product.subunit,
         code: product.subunit,
         price: subUnitPrice,
         displayText: `${product.subunit} - R$ ${subUnitPrice.toFixed(2)} (${product.subunit_ratio}/${mainUnit})`
