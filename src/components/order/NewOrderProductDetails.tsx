@@ -174,9 +174,11 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             R$ {(quantity * getPriceValue()).toFixed(2).replace('.', ',')}
           </span>
         </div>
-        <div className="text-xs text-green-700 mt-1">
-          {quantity} {selectedUnit} × {maskedUnitPrice}
-        </div>
+        {quantity > 0 && (
+          <div className="text-xs text-green-700 mt-1">
+            {quantity} {selectedUnit} × {maskedUnitPrice}
+          </div>
+        )}
       </div>
 
       <Button 
