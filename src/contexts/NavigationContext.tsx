@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
@@ -32,6 +33,7 @@ const navigationFlows: { [key: string]: string } = {
   '/mensagem': '/client-activities',
   '/capturar-posicao': '/client-activities',
   '/order-details': '/my-orders',
+  '/view-order-details': '/transmit-orders', // Nova rota volta para transmissão
   '/client': '/clients-list',
 };
 
@@ -128,7 +130,14 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   const goBack = () => {
     const currentPath = location.pathname;
-    const targetPath = navigationFlows[currentPath] || '/home';
+    
+    // Para rotas dinâmicas como /view-order-details/:orderId, usar o padrão base
+    let pathKey = currentPath;
+    if (currentPath.startsWith('/view-order-details/')) {
+      pathKey = '/view-order-details';
+    }
+    
+    const targetPath = navigationFlows[pathKey] || '/home';
     
     console.log(`⬅️ Going back from ${currentPath} to ${targetPath} (${isNative ? 'native' : 'web'} mode)`);
     

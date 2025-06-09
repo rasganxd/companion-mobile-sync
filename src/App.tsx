@@ -17,10 +17,11 @@ import NewOrder from '@/pages/NewOrder';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
+import ViewOrderDetails from '@/pages/ViewOrderDetails';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
-import { NavigationProvider } from '@/contexts/NavigationContext';
+import { NavigationProvider } from '@/contexts/NavigationProvider';
 
 // Protected Route Component
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -118,6 +119,12 @@ function App() {
                 <Route path="/transmit-orders" element={
                   <ProtectedRoute>
                     <TransmitOrders />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/view-order-details/:orderId" element={
+                  <ProtectedRoute>
+                    <ViewOrderDetails />
                   </ProtectedRoute>
                 } />
                 

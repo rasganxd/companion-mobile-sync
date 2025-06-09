@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Eye, Trash2, RotateCcw } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -5,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { LocalOrder } from '@/types/order';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
+
 interface OrderCardProps {
   order: LocalOrder;
   showDeleteButton?: boolean;
@@ -12,6 +14,7 @@ interface OrderCardProps {
   onDelete?: (orderId: string) => void;
   onRetry?: (orderId: string) => void;
 }
+
 const OrderCard: React.FC<OrderCardProps> = ({
   order,
   showDeleteButton = false,
@@ -20,8 +23,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
   onRetry
 }) => {
   const {
-    navigateTo
+    navigateToViewOrderDetails
   } = useAppNavigation();
+
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -30,9 +34,11 @@ const OrderCard: React.FC<OrderCardProps> = ({
       minute: '2-digit'
     });
   };
+
   const formatCurrency = (amount: number): string => {
     return `R$ ${amount.toFixed(2)}`;
   };
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case 'pending':
@@ -47,6 +53,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         return 'bg-gray-100 text-gray-800';
     }
   };
+
   const getSyncStatusColor = (syncStatus: string): string => {
     switch (syncStatus) {
       case 'pending_sync':
@@ -61,6 +68,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         return 'bg-gray-100 text-gray-800';
     }
   };
+
   const getSyncStatusLabel = (syncStatus: string): string => {
     switch (syncStatus) {
       case 'pending_sync':
@@ -75,7 +83,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
         return syncStatus;
     }
   };
-  return <Card className="mb-4">
+
+  return (
+    <Card className="mb-4">
       <CardContent className="pt-4">
         <div className="flex justify-between items-start mb-2">
           <div className="min-w-0 flex-1">
@@ -86,7 +96,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
           <div className="text-right flex-shrink-0 ml-2">
             <div className="flex flex-wrap gap-1 mb-1 justify-end">
-              
               <Badge className={`text-xs ${getSyncStatusColor(order.sync_status)}`}>
                 {getSyncStatusLabel(order.sync_status)}
               </Badge>
@@ -95,35 +104,62 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
         
-        {order.reason && <p className="text-sm text-red-600 mb-2 italic">
+        {order.reason && (
+          <p className="text-sm text-red-600 mb-2 italic">
             Motivo: {order.reason}
-          </p>}
+          </p>
+        )}
         
-        {order.notes && <p className="text-sm text-gray-600 mb-2 italic">
+        {order.notes && (
+          <p className="text-sm text-gray-600 mb-2 italic">
             "{order.notes}"
-          </p>}
+          </p>
+        )}
         
-        {order.items && order.items.length > 0 && <p className="text-xs text-gray-500 mb-2">
+        {order.items && order.items.length > 0 && (
+          <p className="text-xs text-gray-500 mb-2">
             {order.items.length} produto(s)
-          </p>}
+          </p>
+        )}
         
         <div className="flex flex-wrap gap-2 mt-3">
-          <Button variant="outline" size="sm" onClick={() => navigateTo(`/order-details/${order.id}`)} className="text-xs">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => navigateToViewOrderDetails(order.id)} 
+            className="text-xs"
+          >
             <Eye size={14} className="mr-1" />
             Ver Detalhes
           </Button>
           
-          {showRetryButton && onRetry && <Button variant="outline" size="sm" onClick={() => onRetry(order.id)} className="text-xs">
+          {showRetryButton && onRetry && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onRetry(order.id)} 
+              className="text-xs"
+            >
               <RotateCcw size={14} className="mr-1" />
               Tentar Novamente
-            </Button>}
+            </Button>
+          )}
           
-          {showDeleteButton && onDelete && <Button variant="destructive" size="sm" onClick={() => onDelete(order.id)} className="text-xs">
+          {showDeleteButton && onDelete && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              onClick={() => onDelete(order.id)} 
+              className="text-xs"
+            >
               <Trash2 size={14} className="mr-1" />
               Excluir
-            </Button>}
+            </Button>
+          )}
         </div>
       </CardContent>
-    </Card>;
+    </Card>
+  );
 };
+
 export default OrderCard;

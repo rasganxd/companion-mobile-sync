@@ -1,3 +1,4 @@
+
 import { useNavigation } from '@/contexts/NavigationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -45,6 +46,11 @@ export const useAppNavigation = () => {
   const navigateToOrderDetails = (orderId: string) => {
     console.log('🧭 useAppNavigation.navigateToOrderDetails():', orderId);
     navigateTo(`/order-details/${orderId}`);
+  };
+
+  const navigateToViewOrderDetails = (orderId: string) => {
+    console.log('🧭 useAppNavigation.navigateToViewOrderDetails():', orderId);
+    navigateTo(`/view-order-details/${orderId}`);
   };
   
   const navigateToNewOrder = () => {
@@ -103,6 +109,7 @@ export const useAppNavigation = () => {
     navigateToOrders,
     navigateToRoutes,
     navigateToOrderDetails,
+    navigateToViewOrderDetails,
     navigateToNewOrder,
     navigateToNegativeSale,
     navigateToLastPurchases,
