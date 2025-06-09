@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Info } from 'lucide-react';
 import { useUnitSelection } from '@/hooks/useUnitSelection';
+import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 import { formatPriceInput } from '@/lib/utils';
 
 interface Product {
@@ -20,6 +21,7 @@ interface Product {
   subunit_ratio?: number;
   min_price?: number;
   sale_price?: number;
+  max_discount_percent?: number;
 }
 
 interface NewOrderProductDetailsProps {
@@ -44,7 +46,18 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct
 }) => {
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
+  const { 
+    validatePrice, 
+    hasMinPriceRestriction, 
+    getMinPrice,
+    hasDiscountRestriction,
+    getMaxDiscountPercent,
+    getCurrentDiscountPercent,
+    getMinPriceByDiscount
+  } = useProductPriceValidation(currentProduct);
+  
   const [priceInputValue, setPriceInputValue] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
   const isUserTyping = useRef(false);
 
   // Sincronizar o valor do input apenas quando não estiver digitando
@@ -53,6 +66,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       setPriceInputValue(unitPrice.toFixed(2));
     }
   }, [unitPrice]);
+
+  // Validar preço sempre que mudar
+  useEffect(() => {
+    const result = validatePrice(unitPrice);
+    setPriceError(result.error);
+  }, [unitPrice, validatePrice]);
 
   if (!currentProduct) {
     return (
@@ -106,6 +125,10 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
+
+  const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
+  const maxDiscountPercent = getMaxDiscountPercent();
+  const salePrice = currentProduct.sale_price || currentProduct.price || 0;
 
   return (
     <div className="space-y-4">
@@ -183,16 +206,63 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           onChange={(e) => handlePriceInputChange(e.target.value)}
           onBlur={handlePriceInputBlur}
           onFocus={handlePriceInputFocus}
-          className="text-center"
+          className={`text-center ${
+            priceError ? 'border-red-500 bg-red-50' : ''
+          }`}
           placeholder="0.00"
         />
+        {priceError && (
+          <div className="flex items-center gap-1 mt-1">
+            <AlertTriangle size={12} className="text-red-500" />
+            <span className="text-xs text-red-600">{priceError}</span>
+          </div>
+        )}
+        {hasMinPriceRestriction() && !priceError && (
+          <div className="text-xs text-gray-600 mt-1">
+            Mín: {formatPrice(getMinPrice())}
+          </div>
+        )}
       </div>
+
+      {/* Informações de Desconto */}
+      {hasDiscountRestriction() && (
+        <div className="bg-white border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Info size={14} className="text-blue-500" />
+            <span className="text-sm font-medium text-gray-700">Informações de Desconto</span>
+          </div>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Preço de venda:</span>
+              <span className="font-medium">{formatPrice(salePrice)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Desconto máximo:</span>
+              <span className="font-medium text-orange-600">{maxDiscountPercent.toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Desconto atual:</span>
+              <span className={`font-medium ${
+                currentDiscountPercent > maxDiscountPercent ? 'text-red-600' : 'text-green-600'
+              }`}>
+                {currentDiscountPercent.toFixed(1)}%
+              </span>
+            </div>
+            {getMinPriceByDiscount() > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Preço mín. por desconto:</span>
+                <span className="font-medium">{formatPrice(getMinPriceByDiscount())}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Total do Item */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-green-900">Total do Item:</span>
-          <span className="font-bold text-green-600">
+          <span className={`font-bold ${priceError ? 'text-red-600' : 'text-green-600'}`}>
             R$ {(quantity * unitPrice).toFixed(2).replace('.', ',')}
           </span>
         </div>
@@ -205,11 +275,11 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
       <Button 
         onClick={onAddProduct}
-        disabled={quantity <= 0 || unitPrice <= 0}
+        disabled={quantity <= 0 || unitPrice <= 0 || !!priceError}
         className="w-full bg-green-600 hover:bg-green-700 text-white"
       >
         <Plus size={16} className="mr-2" />
-        Adicionar ao Pedido
+        {priceError ? 'Preço Inválido' : 'Adicionar ao Pedido'}
       </Button>
     </div>
   );

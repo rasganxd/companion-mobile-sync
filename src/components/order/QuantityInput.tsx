@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { useProductPricing } from '@/hooks/useProductPricing';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 import { formatPriceInput } from '@/lib/utils';
@@ -22,6 +22,7 @@ interface Product {
   subunit_ratio?: number;
   min_price?: number;
   sale_price?: number;
+  max_discount_percent?: number;
 }
 
 interface QuantityInputProps {
@@ -49,7 +50,16 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
     ratio
   } = useProductPricing(product, selectedUnit);
 
-  const { validatePrice, validationResult, hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
+  const { 
+    validatePrice, 
+    validationResult, 
+    hasMinPriceRestriction, 
+    getMinPrice,
+    hasDiscountRestriction,
+    getMaxDiscountPercent,
+    getCurrentDiscountPercent,
+    getMinPriceByDiscount
+  } = useProductPriceValidation(product);
   
   const [currentPrice, setCurrentPrice] = useState(unitPrice);
   const [priceInputValue, setPriceInputValue] = useState('');
@@ -124,6 +134,9 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   const hasSubunit = product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1 && subUnit;
+  const currentDiscountPercent = getCurrentDiscountPercent(currentPrice);
+  const maxDiscountPercent = getMaxDiscountPercent();
+  const salePrice = product.sale_price || product.price || 0;
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
@@ -206,6 +219,40 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
             )}
           </div>
         </div>
+
+        {/* Informações de Desconto */}
+        {hasDiscountRestriction() && (
+          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-2">
+              <Info size={14} className="text-blue-500" />
+              <span className="text-sm font-medium text-gray-700">Informações de Desconto</span>
+            </div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Preço de venda:</span>
+                <span className="font-medium">{formatPrice(salePrice)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Desconto máximo:</span>
+                <span className="font-medium text-orange-600">{maxDiscountPercent.toFixed(1)}%</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Desconto atual:</span>
+                <span className={`font-medium ${
+                  currentDiscountPercent > maxDiscountPercent ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  {currentDiscountPercent.toFixed(1)}%
+                </span>
+              </div>
+              {getMinPriceByDiscount() > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Preço mín. por desconto:</span>
+                  <span className="font-medium">{formatPrice(getMinPriceByDiscount())}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* Total do item */}
         {quantity && parseFloat(quantity) > 0 && (
