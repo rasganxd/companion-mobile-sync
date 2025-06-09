@@ -95,6 +95,7 @@ class SQLiteDatabaseService {
         items TEXT,
         date TEXT,
         source_project TEXT DEFAULT 'mobile',
+        payment_table_id TEXT,
         FOREIGN KEY (customer_id) REFERENCES clients (id)
       );
 
@@ -115,6 +116,16 @@ class SQLiteDatabaseService {
         visited INTEGER DEFAULT 0,
         remaining INTEGER DEFAULT 0,
         total INTEGER DEFAULT 0,
+        sync_status TEXT DEFAULT 'pending_sync',
+        updated_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS payment_tables (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        type TEXT,
+        active INTEGER DEFAULT 1,
         sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT
       );
@@ -149,13 +160,61 @@ class SQLiteDatabaseService {
   }
 
   async getPaymentTables(): Promise<any[]> {
-    // Return default payment tables for SQLite version
-    return [
-      { id: '1', name: 'À Vista', description: 'Pagamento à vista' },
-      { id: '2', name: 'Prazo 30', description: 'Pagamento em 30 dias' },
-      { id: '3', name: 'Prazo 60', description: 'Pagamento em 60 dias' },
-      { id: '4', name: 'Prazo 90', description: 'Pagamento em 90 dias' }
-    ];
+    if (!this.db) await this.initDatabase();
+    try {
+      const result = await this.db!.query('SELECT * FROM payment_tables WHERE active = 1');
+      const paymentTables = result.values || [];
+      
+      console.log(`💳 SQLite: Encontradas ${paymentTables.length} tabelas de pagamento no banco local`);
+      
+      paymentTables.forEach((table, index) => {
+        console.log(`💳 SQLite Tabela ${index + 1}:`, {
+          id: table.id,
+          name: table.name,
+          type: table.type,
+          active: table.active
+        });
+      });
+      
+      return paymentTables;
+    } catch (error) {
+      console.error('❌ Error getting payment tables from SQLite:', error);
+      return [];
+    }
+  }
+
+  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
+    if (!this.db) await this.initDatabase();
+    
+    try {
+      console.log(`💳 SQLite: Salvando ${paymentTablesArray.length} tabelas de pagamento...`);
+      
+      // Limpar tabelas existentes
+      await this.db!.run('DELETE FROM payment_tables');
+      
+      // Salvar novas tabelas
+      for (const paymentTable of paymentTablesArray) {
+        const now = new Date().toISOString();
+        await this.db!.run(
+          'INSERT INTO payment_tables (id, name, description, type, active, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          [
+            paymentTable.id,
+            paymentTable.name,
+            paymentTable.description || '',
+            paymentTable.type || '',
+            paymentTable.active ? 1 : 0,
+            'synced',
+            now
+          ]
+        );
+        console.log(`💳 SQLite: Tabela salva: ${paymentTable.name} (${paymentTable.id})`);
+      }
+      
+      console.log(`✅ SQLite: Successfully saved ${paymentTablesArray.length} payment tables`);
+    } catch (error) {
+      console.error('❌ SQLite Error saving payment tables:', error);
+      throw error;
+    }
   }
 
   async saveClient(client: any): Promise<void> {
@@ -347,7 +406,7 @@ class SQLiteDatabaseService {
     
     try {
       await this.db!.run(
-        'INSERT OR REPLACE INTO orders (id, customer_id, customer_name, order_date, total, status, sync_status, updated_at, notes, payment_method, reason, items, date, source_project) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO orders (id, customer_id, customer_name, order_date, total, status, sync_status, updated_at, notes, payment_method, reason, items, date, source_project, payment_table_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           id, 
           order.customer_id, 
@@ -362,7 +421,8 @@ class SQLiteDatabaseService {
           order.reason || '',
           JSON.stringify(order.items || []),
           order.date || now,
-          order.source_project || 'mobile'
+          order.source_project || 'mobile',
+          order.payment_table_id || null
         ]
       );
       
@@ -370,7 +430,8 @@ class SQLiteDatabaseService {
         id,
         customer_name: order.customer_name,
         sync_status: syncStatus,
-        total: order.total
+        total: order.total,
+        payment_table_id: order.payment_table_id
       });
     } catch (error) {
       console.error('❌ Error saving order:', error);
