@@ -138,6 +138,15 @@ const PlaceOrder = () => {
       />
 
       <div className="flex-1 p-4 space-y-4">
+        {/* Seção de Pagamento - Agora após cliente */}
+        {selectedClient && (
+          <PaymentSection 
+            paymentTables={paymentTables} 
+            selectedPaymentTable={selectedPaymentTable} 
+            onPaymentTableChange={selectPaymentTable} 
+          />
+        )}
+
         {/* Produto atual e navegação */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
@@ -168,15 +177,6 @@ const PlaceOrder = () => {
           orderItems={orderItems}
           onRemoveItem={removeOrderItem}
         />
-
-        {/* Seção de Pagamento */}
-        {orderItems.length > 0 && (
-          <PaymentSection 
-            paymentTables={paymentTables} 
-            selectedPaymentTable={selectedPaymentTable} 
-            onPaymentTableChange={selectPaymentTable} 
-          />
-        )}
 
         {/* Totais */}
         {orderItems.length > 0 && (
