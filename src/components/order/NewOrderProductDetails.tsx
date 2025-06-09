@@ -116,11 +116,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           <Label className="text-sm font-medium text-gray-700 mb-1 block">Quantidade</Label>
           <Input
             type="number"
-            value={quantity}
+            value={quantity || ''}
             onChange={(e) => onQuantityChange(Number(e.target.value))}
             min="1"
             step="1"
             className="text-center"
+            placeholder=""
           />
         </div>
         

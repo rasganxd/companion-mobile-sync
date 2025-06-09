@@ -100,11 +100,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                 <Label className="text-xs text-gray-600 mb-1 block">Quantidade</Label>
                 <Input
                   type="number"
-                  value={quantity}
+                  value={quantity || ''}
                   onChange={(e) => onQuantityChange(Number(e.target.value))}
                   min="1"
                   step="1"
                   className="text-center"
+                  placeholder=""
                 />
               </div>
               <div>

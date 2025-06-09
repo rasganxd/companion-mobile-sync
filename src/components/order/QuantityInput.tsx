@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -150,9 +151,9 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
             <Input
               type="number"
               className="h-9 text-center text-sm font-medium border-2 border-gray-300 focus:border-app-blue focus:ring-2 focus:ring-app-blue/20 transition-all duration-200"
-              value={quantity}
+              value={quantity || ''}
               onChange={e => onQuantityChange(e.target.value)}
-              placeholder="0"
+              placeholder=""
               min="0"
               step="0.01"
             />
