@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,10 +45,13 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 }) => {
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
   const [priceInputValue, setPriceInputValue] = useState('');
+  const isUserTyping = useRef(false);
 
-  // Sincronizar o valor do input com o unitPrice externo
+  // Sincronizar o valor do input apenas quando não estiver digitando
   useEffect(() => {
-    setPriceInputValue(unitPrice.toFixed(2));
+    if (!isUserTyping.current) {
+      setPriceInputValue(unitPrice.toFixed(2));
+    }
   }, [unitPrice]);
 
   if (!currentProduct) {
@@ -69,17 +73,23 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   };
 
   const handlePriceInputChange = (value: string) => {
+    isUserTyping.current = true;
     const { formatted, numeric } = formatPriceInput(value);
     setPriceInputValue(formatted);
     onUnitPriceChange(numeric);
   };
 
   const handlePriceInputBlur = () => {
+    isUserTyping.current = false;
     // Formatar para 2 casas decimais ao sair do campo
     if (priceInputValue && !isNaN(parseFloat(priceInputValue))) {
       const formatted = parseFloat(priceInputValue).toFixed(2);
       setPriceInputValue(formatted);
     }
+  };
+
+  const handlePriceInputFocus = () => {
+    isUserTyping.current = true;
   };
 
   const formatPrice = (value: number): string => {
@@ -161,6 +171,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           value={priceInputValue}
           onChange={(e) => handlePriceInputChange(e.target.value)}
           onBlur={handlePriceInputBlur}
+          onFocus={handlePriceInputFocus}
           className="text-center"
           placeholder="0.00"
         />

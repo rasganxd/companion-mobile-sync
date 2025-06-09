@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -53,10 +54,13 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const [currentPrice, setCurrentPrice] = useState(unitPrice);
   const [priceInputValue, setPriceInputValue] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
+  const isUserTyping = useRef(false);
 
   useEffect(() => {
-    setCurrentPrice(unitPrice);
-    setPriceInputValue(unitPrice.toFixed(2));
+    if (!isUserTyping.current) {
+      setCurrentPrice(unitPrice);
+      setPriceInputValue(unitPrice.toFixed(2));
+    }
   }, [unitPrice]);
 
   useEffect(() => {
@@ -69,6 +73,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   const handlePriceInputChange = (value: string) => {
+    isUserTyping.current = true;
     const { formatted, numeric } = formatPriceInput(value);
     setPriceInputValue(formatted);
     setCurrentPrice(numeric);
@@ -77,11 +82,16 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   };
 
   const handlePriceInputBlur = () => {
+    isUserTyping.current = false;
     // Formatar para 2 casas decimais ao sair do campo
     if (priceInputValue && !isNaN(parseFloat(priceInputValue))) {
       const formatted = parseFloat(priceInputValue).toFixed(2);
       setPriceInputValue(formatted);
     }
+  };
+
+  const handlePriceInputFocus = () => {
+    isUserTyping.current = true;
   };
 
   const calculateTotal = () => {
@@ -168,6 +178,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
               value={priceInputValue}
               onChange={e => handlePriceInputChange(e.target.value)}
               onBlur={handlePriceInputBlur}
+              onFocus={handlePriceInputFocus}
               placeholder="0.00"
             />
             {priceError && (
