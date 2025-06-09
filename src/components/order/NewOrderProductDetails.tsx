@@ -1,11 +1,11 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Package } from 'lucide-react';
 import { useUnitSelection } from '@/hooks/useUnitSelection';
+import { formatPriceInput } from '@/lib/utils';
 
 interface Product {
   id: string;
@@ -43,6 +43,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct
 }) => {
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
+  const [priceInputValue, setPriceInputValue] = useState('');
+
+  // Sincronizar o valor do input com o unitPrice externo
+  useEffect(() => {
+    setPriceInputValue(unitPrice.toFixed(2));
+  }, [unitPrice]);
 
   if (!currentProduct) {
     return (
@@ -59,6 +65,20 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     if (unit && onUnitChange) {
       onUnitChange(unit.code);
       onUnitPriceChange(unit.price);
+    }
+  };
+
+  const handlePriceInputChange = (value: string) => {
+    const { formatted, numeric } = formatPriceInput(value);
+    setPriceInputValue(formatted);
+    onUnitPriceChange(numeric);
+  };
+
+  const handlePriceInputBlur = () => {
+    // Formatar para 2 casas decimais ao sair do campo
+    if (priceInputValue && !isNaN(parseFloat(priceInputValue))) {
+      const formatted = parseFloat(priceInputValue).toFixed(2);
+      setPriceInputValue(formatted);
     }
   };
 
@@ -137,13 +157,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       <div>
         <Label className="text-sm font-medium text-gray-700 mb-1 block">Preço Unitário</Label>
         <Input
-          type="number"
-          value={unitPrice.toFixed(2)}
-          onChange={(e) => onUnitPriceChange(Number(e.target.value))}
+          type="text"
+          value={priceInputValue}
+          onChange={(e) => handlePriceInputChange(e.target.value)}
+          onBlur={handlePriceInputBlur}
           className="text-center"
           placeholder="0.00"
-          step="0.01"
-          min="0"
         />
       </div>
 

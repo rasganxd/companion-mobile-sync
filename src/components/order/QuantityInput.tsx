@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPricing } from '@/hooks/useProductPricing';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { formatPriceInput } from '@/lib/utils';
 
 interface Product {
   id: string;
@@ -51,10 +51,12 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const { validatePrice, validationResult, hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
   
   const [currentPrice, setCurrentPrice] = useState(unitPrice);
+  const [priceInputValue, setPriceInputValue] = useState('');
   const [priceError, setPriceError] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentPrice(unitPrice);
+    setPriceInputValue(unitPrice.toFixed(2));
   }, [unitPrice]);
 
   useEffect(() => {
@@ -66,11 +68,20 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  const handlePriceChange = (value: string) => {
-    const newPrice = Number(value);
-    setCurrentPrice(newPrice);
-    const result = validatePrice(newPrice);
+  const handlePriceInputChange = (value: string) => {
+    const { formatted, numeric } = formatPriceInput(value);
+    setPriceInputValue(formatted);
+    setCurrentPrice(numeric);
+    const result = validatePrice(numeric);
     setPriceError(result.error);
+  };
+
+  const handlePriceInputBlur = () => {
+    // Formatar para 2 casas decimais ao sair do campo
+    if (priceInputValue && !isNaN(parseFloat(priceInputValue))) {
+      const formatted = parseFloat(priceInputValue).toFixed(2);
+      setPriceInputValue(formatted);
+    }
   };
 
   const calculateTotal = () => {
@@ -148,17 +159,16 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           <div>
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço ({displayUnit}):</Label>
             <Input
-              type="number"
+              type="text"
               className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
                 priceError 
                   ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200' 
                   : 'border-gray-300 focus:border-app-blue focus:ring-app-blue/20'
               }`}
-              value={currentPrice.toFixed(2)}
-              onChange={e => handlePriceChange(e.target.value)}
+              value={priceInputValue}
+              onChange={e => handlePriceInputChange(e.target.value)}
+              onBlur={handlePriceInputBlur}
               placeholder="0.00"
-              step="0.01"
-              min="0"
             />
             {priceError && (
               <div className="flex items-center gap-1 mt-1">
