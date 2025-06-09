@@ -74,17 +74,28 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
   const handlePriceInputChange = (value: string) => {
     isUserTyping.current = true;
-    const { formatted, numeric } = formatPriceInput(value);
-    setPriceInputValue(formatted);
-    onUnitPriceChange(numeric);
+    // Permite edição livre durante a digitação
+    setPriceInputValue(value);
+    
+    // Só aplica formatação se houver conteúdo válido
+    if (value && value.trim() !== '') {
+      const { numeric } = formatPriceInput(value);
+      onUnitPriceChange(numeric);
+    } else {
+      onUnitPriceChange(0);
+    }
   };
 
   const handlePriceInputBlur = () => {
     isUserTyping.current = false;
     // Formatar para 2 casas decimais ao sair do campo
-    if (priceInputValue && !isNaN(parseFloat(priceInputValue))) {
-      const formatted = parseFloat(priceInputValue).toFixed(2);
-      setPriceInputValue(formatted);
+    if (priceInputValue && priceInputValue.trim() !== '' && !isNaN(parseFloat(priceInputValue))) {
+      const { formatted } = formatPriceInput(priceInputValue);
+      const finalFormatted = parseFloat(formatted || '0').toFixed(2);
+      setPriceInputValue(finalFormatted);
+    } else if (!priceInputValue || priceInputValue.trim() === '') {
+      setPriceInputValue('0.00');
+      onUnitPriceChange(0);
     }
   };
 

@@ -7,8 +7,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPriceInput(value: string): { formatted: string; numeric: number } {
-  // Remove todos os caracteres que não são números, vírgula ou ponto
+  // Se o valor está vazio, permite que continue vazio
+  if (!value || value === '') {
+    return {
+      formatted: '',
+      numeric: 0
+    };
+  }
+
+  // Remove apenas caracteres que claramente não são números, vírgula ou ponto
+  // Mas preserva o valor durante a edição para permitir backspace/delete
   let cleaned = value.replace(/[^\d,.-]/g, '');
+  
+  // Se após a limpeza ficou vazio, retorna vazio
+  if (!cleaned) {
+    return {
+      formatted: '',
+      numeric: 0
+    };
+  }
   
   // Substitui vírgula por ponto para padronização
   cleaned = cleaned.replace(',', '.');
@@ -19,7 +36,7 @@ export function formatPriceInput(value: string): { formatted: string; numeric: n
     cleaned = parts[0] + '.' + parts.slice(1).join('');
   }
   
-  // Limita a 2 casas decimais
+  // Limita a 2 casas decimais apenas se há um ponto
   const dotIndex = cleaned.indexOf('.');
   if (dotIndex !== -1 && cleaned.length > dotIndex + 3) {
     cleaned = cleaned.substring(0, dotIndex + 3);
