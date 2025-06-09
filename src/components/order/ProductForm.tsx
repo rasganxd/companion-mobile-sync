@@ -148,7 +148,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
             Preço {currentUnit?.code || product.unit || 'UN'}:
           </Label>
           <Input
-            value={`R$ ${displayPrice.toFixed(2).replace('.', ',')}`}
+            value={`R$ ${displayPrice.toFixed(2)}`}
             readOnly
             className="h-8 w-full bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-300 text-sm cursor-not-allowed font-medium"
           />
@@ -160,7 +160,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <span className="text-yellow-600 font-medium text-sm">⚠️ Preço Mínimo:</span>
-            <span className="font-bold text-yellow-800">R$ {getMinPrice().toFixed(2).replace('.', ',')}</span>
+            <span className="font-bold text-yellow-800">R$ {getMinPrice().toFixed(2)}</span>
           </div>
           <p className="text-xs text-yellow-700 mt-1">
             Não é permitido vender abaixo deste valor
