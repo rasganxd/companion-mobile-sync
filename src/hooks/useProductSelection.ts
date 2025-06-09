@@ -38,6 +38,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUnit, setSelectedUnit] = useState<string>('UN'); // ✅ NOVO: Estado para unidade selecionada
 
   const { checkPriceAndNotify } = useProductPriceValidation(selectedProduct);
 
@@ -116,7 +117,12 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     const correctPrice = product.sale_price || product.price || 0;
     setUnitPrice(correctPrice);
     
+    // ✅ NOVO: Definir unidade padrão do produto
+    const defaultUnit = product.unit || 'UN';
+    setSelectedUnit(defaultUnit);
+    
     console.log('💰 Preço definido:', correctPrice);
+    console.log('📏 Unidade padrão definida:', defaultUnit);
     console.log('💰 Preço mínimo:', product.min_price || 0);
   };
 
@@ -132,20 +138,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       return;
     }
 
-    // Calculate final price considering subunits if applicable
-    let finalPrice = unitPrice;
-    let finalUnit = selectedProduct.unit || 'UN';
-    
-    // If product has subunit and ratio, adjust pricing
-    if (selectedProduct.has_subunit && selectedProduct.subunit_ratio && selectedProduct.subunit_ratio > 1) {
-      // If selling by subunit, price should be calculated per subunit
-      if (selectedProduct.subunit) {
-        finalUnit = selectedProduct.subunit;
-        // Price per subunit = main unit price / ratio
-        finalPrice = (selectedProduct.sale_price || selectedProduct.price || 0) / selectedProduct.subunit_ratio;
-      }
-    }
-
+    // ✅ CORREÇÃO: Usar a unidade realmente selecionada pelo usuário
     const newItem: OrderItem = {
       id: Date.now(),
       productId: selectedProduct.id,
@@ -153,10 +146,16 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       quantity,
       price: unitPrice, // Use the price set by user (can be different from product price)
       code: selectedProduct.code.toString(),
-      unit: finalUnit
+      unit: selectedUnit // ✅ USAR unidade selecionada, não forçar UN
     };
 
-    console.log('➕ Adicionando item ao pedido:', newItem);
+    console.log('➕ Adicionando item ao pedido com unidade correta:', {
+      productName: newItem.productName,
+      quantity: newItem.quantity,
+      unit: newItem.unit, // ✅ Deve ser a unidade selecionada
+      price: newItem.price
+    });
+    
     onAddItem(newItem);
     
     // Limpar seleção
@@ -164,6 +163,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
+    setSelectedUnit('UN'); // Reset para padrão
   };
 
   const clearSelection = () => {
@@ -171,6 +171,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
+    setSelectedUnit('UN');
   };
 
   return {
@@ -179,10 +180,12 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     quantity,
     unitPrice,
     searchTerm,
+    selectedUnit, // ✅ NOVO: Expor unidade selecionada
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
+    setSelectedUnit, // ✅ NOVO: Expor setter da unidade
     addProduct,
     clearSelection
   };

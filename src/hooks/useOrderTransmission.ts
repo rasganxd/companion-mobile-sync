@@ -105,11 +105,16 @@ export const useOrderTransmission = () => {
         quantity: item.quantity,
         price: item.price || item.unit_price,
         unit_price: item.price || item.unit_price,
-        unit: item.unit || 'UN',
+        unit: item.unit, // ✅ CORREÇÃO: Preservar unidade original, não forçar 'UN'
         total: (item.price || item.unit_price || 0) * item.quantity
       };
       
-      console.log('🔧 Normalized item:', normalizedItem);
+      console.log('🔧 Normalized item:', {
+        ...normalizedItem,
+        originalUnit: item.unit,
+        preservedUnit: normalizedItem.unit // ✅ LOG: Verificar se unidade foi preservada
+      });
+      
       return normalizedItem;
     }) || [];
     
@@ -118,7 +123,16 @@ export const useOrderTransmission = () => {
       items: normalizedItems
     };
     
-    console.log('✅ Normalized order:', normalizedOrder);
+    console.log('✅ Normalized order with preserved units:', {
+      orderId: normalizedOrder.id,
+      customerName: normalizedOrder.customer_name,
+      itemsWithUnits: normalizedItems.map(item => ({
+        name: item.product_name,
+        unit: item.unit,
+        quantity: item.quantity
+      }))
+    });
+    
     return normalizedOrder;
   };
 
