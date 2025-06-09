@@ -314,24 +314,64 @@ class SupabaseService {
   }
 
   async transmitOrders(orders: any[], sessionToken: string) {
-    console.log(`📤 Transmitting ${orders.length} orders to Supabase`);
+    console.log(`📤 Transmitting ${orders.length} orders to Supabase individually`);
     
-    const response = await fetch(`${this.baseUrl}/mobile-orders-import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({ orders })
-    });
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Erro ao transmitir pedidos');
+    // Transmitir cada pedido individualmente
+    for (const order of orders) {
+      try {
+        console.log(`📤 Transmitting order ${order.id}:`, {
+          customer_id: order.customer_id,
+          customer_name: order.customer_name,
+          total: order.total,
+          date: order.date,
+          itemsCount: order.items?.length || 0
+        });
+
+        const response = await fetch(`${this.baseUrl}/mobile-orders-import`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify(order) // Enviar pedido individual, não array
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          const errorMsg = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+          console.error(`❌ Error transmitting order ${order.id}:`, errorMsg);
+          errors.push(`Pedido ${order.id}: ${errorMsg}`);
+          errorCount++;
+        } else {
+          const result = await response.json();
+          console.log(`✅ Order ${order.id} transmitted successfully:`, result);
+          successCount++;
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+        console.error(`❌ Network error transmitting order ${order.id}:`, errorMsg);
+        errors.push(`Pedido ${order.id}: ${errorMsg}`);
+        errorCount++;
+      }
     }
 
-    const result = await response.json();
-    console.log('✅ Orders transmitted successfully');
+    const result = {
+      success: successCount > 0,
+      successCount,
+      errorCount,
+      totalOrders: orders.length,
+      errors: errors.length > 0 ? errors : undefined
+    };
+
+    if (errorCount > 0) {
+      result.error = `${errorCount} de ${orders.length} pedidos falharam na transmissão`;
+    }
+
+    console.log('📊 Transmission summary:', result);
     return result;
   }
 }

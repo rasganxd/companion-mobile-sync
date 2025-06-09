@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -101,8 +102,6 @@ export const useOrderTransmission = () => {
     }
 
     setIsTransmitting(true);
-    let successCount = 0;
-    let errorCount = 0;
 
     try {
       const db = getDatabaseAdapter();
@@ -110,16 +109,18 @@ export const useOrderTransmission = () => {
       console.log('📤 Starting transmission to Supabase...');
       console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
       
-      // Transmit orders to Supabase
+      // Transmit orders to Supabase (agora individualmente)
       const transmissionResult = await supabaseService.transmitOrders(
         pendingOrders, 
         salesRep.sessionToken!
       );
 
-      if (transmissionResult.success) {
-        console.log('✅ Transmission successful, marking orders as transmitted...');
+      console.log('📊 Transmission result:', transmissionResult);
+
+      if (transmissionResult.success && transmissionResult.successCount > 0) {
+        console.log(`✅ ${transmissionResult.successCount} orders transmitted successfully`);
         
-        // Mark all orders as transmitted
+        // Mark successfully transmitted orders
         for (const order of pendingOrders) {
           try {
             await db.markOrderAsTransmitted(order.id);
@@ -134,26 +135,35 @@ export const useOrderTransmission = () => {
               details: { total: order.total, itemsCount: order.items?.length || 0 }
             });
             
-            successCount++;
-            console.log('✅ Order transmitted:', order.id);
+            console.log('✅ Order marked as transmitted:', order.id);
             
           } catch (error) {
             console.error('❌ Error marking order as transmitted:', order.id, error);
             await db.updateSyncStatus('orders', order.id, 'error');
-            errorCount++;
           }
         }
 
-        if (successCount > 0) {
-          toast.success(`${successCount} pedido(s) transmitido(s) com sucesso!`);
+        toast.success(`${transmissionResult.successCount} pedido(s) transmitido(s) com sucesso!`);
+      }
+      
+      if (transmissionResult.errorCount > 0) {
+        console.error('❌ Some orders failed transmission:', transmissionResult.errors);
+        
+        // Mark failed orders as error
+        const db = getDatabaseAdapter();
+        for (const order of pendingOrders) {
+          await db.updateSyncStatus('orders', order.id, 'error');
         }
         
-        if (errorCount > 0) {
-          toast.error(`${errorCount} pedido(s) falharam na transmissão`);
+        toast.error(`${transmissionResult.errorCount} pedido(s) falharam na transmissão`);
+        
+        if (transmissionResult.errors) {
+          setTransmissionError(transmissionResult.errors.join('\n'));
         }
-      } else {
-        console.error('❌ Transmission failed:', transmissionResult.error);
-        throw new Error(transmissionResult.error || 'Falha na transmissão para o servidor');
+      }
+
+      if (transmissionResult.successCount === 0 && transmissionResult.errorCount > 0) {
+        throw new Error(transmissionResult.error || 'Todos os pedidos falharam na transmissão');
       }
 
       await loadOrders();
@@ -178,7 +188,7 @@ export const useOrderTransmission = () => {
       setTransmissionError(errorMsg);
       toast.error('Erro na transmissão: ' + errorMsg);
       
-      // Mark all orders as error if transmission failed
+      // Mark all orders as error if transmission failed completely
       const db = getDatabaseAdapter();
       for (const order of pendingOrders) {
         await db.updateSyncStatus('orders', order.id, 'error');
