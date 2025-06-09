@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPricing } from '@/hooks/useProductPricing';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
-import { usePriceMask } from '@/hooks/usePriceMask';
 
 interface Product {
   id: string;
@@ -51,50 +50,37 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
 
   const { validatePrice, validationResult, hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
   
-  const {
-    maskedValue: maskedUnitPrice,
-    handleChange: handlePriceChange,
-    handleBlur: handlePriceBlur,
-    setValue: setPriceValue,
-    getValue: getPriceValue,
-    formatPrice
-  } = usePriceMask(unitPrice);
-
+  const [currentPrice, setCurrentPrice] = useState(unitPrice);
   const [priceError, setPriceError] = useState<string | null>(null);
 
   useEffect(() => {
-    setPriceValue(unitPrice);
-  }, [unitPrice, setPriceValue]);
+    setCurrentPrice(unitPrice);
+  }, [unitPrice]);
 
   useEffect(() => {
-    const currentPrice = getPriceValue();
     const result = validatePrice(currentPrice);
     setPriceError(result.error);
-  }, [maskedUnitPrice, validatePrice, getPriceValue]);
+  }, [currentPrice, validatePrice]);
 
-  const handlePriceInputChange = (value: string) => {
-    const newPrice = handlePriceChange(value);
-    const result = validatePrice(newPrice);
-    setPriceError(result.error);
+  const formatPrice = (value: number): string => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  const handlePriceInputBlur = () => {
-    handlePriceBlur();
-    const currentPrice = getPriceValue();
-    const result = validatePrice(currentPrice);
+  const handlePriceChange = (value: string) => {
+    const newPrice = Number(value);
+    setCurrentPrice(newPrice);
+    const result = validatePrice(newPrice);
     setPriceError(result.error);
   };
 
   const calculateTotal = () => {
     const qty = parseFloat(quantity) || 0;
-    const price = getPriceValue();
-    return (qty * price).toFixed(2);
+    return (qty * currentPrice).toFixed(2);
   };
 
   const canAddItem = () => {
     const qty = parseFloat(quantity) || 0;
-    const price = getPriceValue();
-    const isPriceValid = !priceError && price > 0;
+    const isPriceValid = !priceError && currentPrice > 0;
     return qty > 0 && isPriceValid;
   };
 
@@ -139,7 +125,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                 1 {mainUnit} = {ratio} {subUnit}
               </div>
               <div className="text-center text-xs text-gray-600 mt-1">
-                Preço por {mainUnit}: {formatPrice(getPriceValue() * ratio)}
+                Preço por {mainUnit}: {formatPrice(currentPrice * ratio)}
               </div>
             </div>
           </div>
@@ -162,16 +148,17 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           <div>
             <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço ({displayUnit}):</Label>
             <Input
-              type="text"
+              type="number"
               className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
                 priceError 
                   ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200' 
                   : 'border-gray-300 focus:border-app-blue focus:ring-app-blue/20'
               }`}
-              value={maskedUnitPrice}
-              onChange={e => handlePriceInputChange(e.target.value)}
-              onBlur={handlePriceInputBlur}
-              placeholder="R$ 0,00"
+              value={currentPrice.toFixed(2)}
+              onChange={e => handlePriceChange(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
             />
             {priceError && (
               <div className="flex items-center gap-1 mt-1">

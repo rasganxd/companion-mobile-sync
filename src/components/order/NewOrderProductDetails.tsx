@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Package } from 'lucide-react';
 import { useUnitSelection } from '@/hooks/useUnitSelection';
-import { usePriceMask } from '@/hooks/usePriceMask';
 
 interface Product {
   id: string;
@@ -44,19 +43,6 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct
 }) => {
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(currentProduct);
-  
-  const {
-    maskedValue: maskedUnitPrice,
-    handleChange: handlePriceChange,
-    handleBlur: handlePriceBlur,
-    setValue: setPriceValue,
-    getValue: getPriceValue,
-    formatPrice
-  } = usePriceMask(unitPrice);
-
-  React.useEffect(() => {
-    setPriceValue(unitPrice);
-  }, [unitPrice, setPriceValue]);
 
   if (!currentProduct) {
     return (
@@ -76,15 +62,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     }
   };
 
-  const handlePriceInputChange = (value: string) => {
-    const newPrice = handlePriceChange(value);
-    onUnitPriceChange(newPrice);
-  };
-
-  const handlePriceInputBlur = () => {
-    handlePriceBlur();
-    const currentPrice = getPriceValue();
-    onUnitPriceChange(currentPrice);
+  const formatPrice = (value: number): string => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
   return (
@@ -158,12 +137,13 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       <div>
         <Label className="text-sm font-medium text-gray-700 mb-1 block">Preço Unitário</Label>
         <Input
-          type="text"
-          value={maskedUnitPrice}
-          onChange={(e) => handlePriceInputChange(e.target.value)}
-          onBlur={handlePriceInputBlur}
+          type="number"
+          value={unitPrice.toFixed(2)}
+          onChange={(e) => onUnitPriceChange(Number(e.target.value))}
           className="text-center"
-          placeholder="R$ 0,00"
+          placeholder="0.00"
+          step="0.01"
+          min="0"
         />
       </div>
 
@@ -172,19 +152,19 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         <div className="flex justify-between items-center">
           <span className="text-sm font-medium text-green-900">Total do Item:</span>
           <span className="font-bold text-green-600">
-            R$ {(quantity * getPriceValue()).toFixed(2).replace('.', ',')}
+            R$ {(quantity * unitPrice).toFixed(2).replace('.', ',')}
           </span>
         </div>
         {quantity > 0 && (
           <div className="text-xs text-green-700 mt-1">
-            {quantity} {selectedUnit} × {maskedUnitPrice}
+            {quantity} {selectedUnit} × {formatPrice(unitPrice)}
           </div>
         )}
       </div>
 
       <Button 
         onClick={onAddProduct}
-        disabled={quantity <= 0 || getPriceValue() <= 0}
+        disabled={quantity <= 0 || unitPrice <= 0}
         className="w-full bg-green-600 hover:bg-green-700 text-white"
       >
         <Plus size={16} className="mr-2" />
