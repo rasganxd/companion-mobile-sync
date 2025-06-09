@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -156,7 +155,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       </div>
 
       {/* Preço Mínimo - Mostrar se existir */}
-      {hasMinPriceRestriction() && (
+      {hasMinPriceRestriction() === true && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
             <span className="text-yellow-600 font-medium text-sm">⚠️ Preço Mínimo:</span>
