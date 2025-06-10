@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 interface Client {
@@ -25,7 +26,7 @@ const NewOrderClientInfo: React.FC<NewOrderClientInfoProps> = ({
         </div>
       </div>;
   }
-  return <div className="border-l-4 border-yellow-500 p-4 py-0 bg-sky-500">
+  return <div className="p-4 py-0 bg-sky-500">
       <div className="flex items-center justify-between bg-sky-500 py-[3px]">
         <span className="text-zinc-950 text-sm">Nenhum cliente selecionado</span>
         <Button onClick={onShowClientSelection} className="text-white text-xs bg-sky-800 hover:bg-sky-700 py-px font-normal">
