@@ -21,14 +21,24 @@ interface Product {
   max_discount_percent?: number;
 }
 
+interface UnitOption {
+  value: 'main' | 'sub';
+  label: string;
+  code: string;
+  price: number;
+  displayText: string;
+}
+
 interface NewOrderProductDetailsProps {
   currentProduct: Product | null;
   quantity: number;
   unitPrice: number;
-  selectedUnit: string;
+  unitOptions: UnitOption[];
+  selectedUnitType: 'main' | 'sub';
+  hasMultipleUnits: boolean;
   onQuantityChange: (quantity: number) => void;
   onUnitPriceChange: (price: number) => void;
-  onUnitChange: (unit: string) => void;
+  onUnitTypeChange: (unitType: 'main' | 'sub') => void;
   onAddProduct: () => void;
 }
 
@@ -36,17 +46,19 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   currentProduct,
   quantity,
   unitPrice,
-  selectedUnit,
+  unitOptions,
+  selectedUnitType,
+  hasMultipleUnits,
   onQuantityChange,
   onUnitPriceChange,
-  onUnitChange,
+  onUnitTypeChange,
   onAddProduct
 }) => {
   const { 
     hasDiscountRestriction, 
-    getMinPrice, 
     getMaxDiscountPercent,
     getCurrentDiscountPercent,
+    getMinPriceForCurrentUnit,
     validationResult
   } = useProductPriceValidation(currentProduct);
 
@@ -62,35 +74,22 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const salePrice = currentProduct.sale_price || currentProduct.price || 0;
   const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
   const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
+  const minPriceForCurrentUnit = getMinPriceForCurrentUnit(unitPrice);
 
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  const getUnitOptions = () => {
-    const options = [{ code: currentProduct.unit || 'UN', label: currentProduct.unit || 'UN' }];
-    
-    if (currentProduct.has_subunit && currentProduct.subunit) {
-      options.push({ 
-        code: currentProduct.subunit, 
-        label: currentProduct.subunit 
-      });
-    }
-    
-    return options;
-  };
-
-  const unitOptions = getUnitOptions();
-
   console.log('🔍 NewOrderProductDetails - Renderizando:', {
     productName: currentProduct.name,
     hasDiscountRestriction: hasDiscountRestriction(),
-    minPrice: getMinPrice(),
+    minPriceForCurrentUnit,
     maxDiscountPercent: getMaxDiscountPercent(),
     currentPrice: unitPrice,
     currentDiscountPercent,
     isDiscountExceeded,
-    validationResult
+    selectedUnitType,
+    unitOptions: unitOptions.length
   });
 
   return (
@@ -135,8 +134,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               </span>
             </div>
             <div className="flex justify-between">
-              <span>Preço mínimo permitido:</span>
-              <span className="font-bold text-red-600">{formatPrice(getMinPrice())}</span>
+              <span>Preço mínimo para esta unidade:</span>
+              <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
             </div>
             {isDiscountExceeded && (
               <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
@@ -163,14 +162,18 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select value={selectedUnit} onValueChange={onUnitChange}>
+          <Select 
+            value={selectedUnitType} 
+            onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
+            disabled={!hasMultipleUnits}
+          >
             <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {unitOptions.map((option) => (
-                <SelectItem key={option.code} value={option.code}>
-                  {option.label}
+                <SelectItem key={option.value} value={option.value}>
+                  {option.displayText}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -179,7 +182,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">
-            Preço Unit. {hasDiscountRestriction() && `(Mín: ${formatPrice(getMinPrice())})`}
+            Preço Unit. {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && `(Mín: ${formatPrice(minPriceForCurrentUnit)})`}
           </Label>
           <Input
             type="number"

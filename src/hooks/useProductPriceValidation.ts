@@ -20,11 +20,9 @@ interface Product {
 interface PriceValidationResult {
   isValid: boolean;
   error: string | null;
-  minPrice: number;
   suggestedPrice: number;
   maxDiscountPercent: number;
   currentDiscountPercent: number;
-  minPriceByDiscount: number;
   isDiscountExceeded: boolean;
 }
 
@@ -32,11 +30,9 @@ export const useProductPriceValidation = (product: Product | null) => {
   const [validationResult, setValidationResult] = useState<PriceValidationResult>({
     isValid: true,
     error: null,
-    minPrice: 0,
     suggestedPrice: 0,
     maxDiscountPercent: 0,
     currentDiscountPercent: 0,
-    minPriceByDiscount: 0,
     isDiscountExceeded: false
   });
 
@@ -65,9 +61,31 @@ export const useProductPriceValidation = (product: Product | null) => {
     const salePrice = product.sale_price || product.price || 0;
     const maxDiscount = product.max_discount_percent || 0;
     
+    // Para cálculo de desconto, sempre usar o preço equivalente da unidade principal
+    // Se o produto tem subunidade, precisamos calcular o equivalente na unidade principal
+    let mainUnitEquivalentPrice = inputPrice;
+    
+    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+      // Se o preço atual é muito menor que o preço de venda, provavelmente estamos na subunidade
+      // Converter para equivalente da unidade principal para cálculo do desconto
+      const subUnitPrice = salePrice / product.subunit_ratio;
+      
+      // Se o preço está próximo do preço da subunidade, estamos na subunidade
+      if (Math.abs(inputPrice - subUnitPrice) < Math.abs(inputPrice - salePrice)) {
+        mainUnitEquivalentPrice = inputPrice * product.subunit_ratio;
+        console.log('🔄 Convertendo preço da subunidade para unidade principal:', {
+          inputPrice,
+          subUnitPrice,
+          ratio: product.subunit_ratio,
+          mainUnitEquivalentPrice
+        });
+      }
+    }
+    
     console.log('🔍 calculateDiscountInfo - Dados de entrada:', {
       productName: product.name,
       inputPrice,
+      mainUnitEquivalentPrice,
       salePrice,
       maxDiscount
     });
@@ -77,14 +95,14 @@ export const useProductPriceValidation = (product: Product | null) => {
       return { currentDiscount: 0, isExceeded: false };
     }
     
-    const currentDiscount = ((salePrice - inputPrice) / salePrice) * 100;
+    const currentDiscount = ((salePrice - mainUnitEquivalentPrice) / salePrice) * 100;
     const isExceeded = maxDiscount > 0 && currentDiscount > maxDiscount;
     
     console.log('📊 calculateDiscountInfo - Resultado:', {
       currentDiscount: Math.max(0, currentDiscount),
       isExceeded,
       calculationDetails: {
-        formula: `((${salePrice} - ${inputPrice}) / ${salePrice}) * 100`,
+        formula: `((${salePrice} - ${mainUnitEquivalentPrice}) / ${salePrice}) * 100`,
         result: currentDiscount
       }
     });
@@ -103,11 +121,9 @@ export const useProductPriceValidation = (product: Product | null) => {
       return {
         isValid: false,
         error: 'Produto não selecionado',
-        minPrice: 0,
         suggestedPrice: 0,
         maxDiscountPercent: 0,
         currentDiscountPercent: 0,
-        minPriceByDiscount: 0,
         isDiscountExceeded: false
       };
     }
@@ -124,17 +140,7 @@ export const useProductPriceValidation = (product: Product | null) => {
       hasDiscountRestriction: maxDiscountPercent > 0
     });
     
-    // Calcular preço mínimo baseado APENAS no desconto máximo
-    const minPriceByDiscount = maxDiscountPercent > 0 
-      ? salePrice * (1 - maxDiscountPercent / 100) 
-      : 0;
-    
-    console.log('💰 validatePrice - Cálculos de preço:', {
-      minPriceByDiscount,
-      calculationFormula: maxDiscountPercent > 0 ? `${salePrice} * (1 - ${maxDiscountPercent} / 100)` : 'Sem restrição'
-    });
-    
-    // Calcular informações de desconto
+    // Calcular informações de desconto (sempre baseado na unidade principal)
     const { currentDiscount, isExceeded } = calculateDiscountInfo(inputPrice);
 
     // Validação APENAS por desconto máximo
@@ -145,11 +151,9 @@ export const useProductPriceValidation = (product: Product | null) => {
       return {
         isValid: false,
         error: `Desconto máximo permitido: ${maxDiscountPercent.toFixed(1)}%`,
-        minPrice: minPriceByDiscount,
-        suggestedPrice: minPriceByDiscount,
+        suggestedPrice: salePrice,
         maxDiscountPercent,
         currentDiscountPercent: currentDiscount,
-        minPriceByDiscount,
         isDiscountExceeded: true
       };
     }
@@ -164,11 +168,9 @@ export const useProductPriceValidation = (product: Product | null) => {
     return {
       isValid: true,
       error: null,
-      minPrice: minPriceByDiscount,
       suggestedPrice: salePrice,
       maxDiscountPercent,
       currentDiscountPercent: currentDiscount,
-      minPriceByDiscount,
       isDiscountExceeded: false
     };
   };
@@ -212,21 +214,6 @@ export const useProductPriceValidation = (product: Product | null) => {
     return result;
   };
 
-  const hasMinPriceRestriction = (): boolean => {
-    if (!product) return false;
-    
-    const hasMaxDiscount = (product.max_discount_percent || 0) > 0;
-    
-    console.log('🔍 hasMinPriceRestriction:', {
-      productName: product.name,
-      maxDiscountPercent: product.max_discount_percent,
-      hasMaxDiscount,
-      hasRestriction: hasMaxDiscount
-    });
-    
-    return hasMaxDiscount;
-  };
-
   const getMaxDiscountPercent = (): number => {
     return product?.max_discount_percent || 0;
   };
@@ -245,11 +232,24 @@ export const useProductPriceValidation = (product: Product | null) => {
     return calculateDiscountInfo(inputPrice).currentDiscount;
   };
 
-  const getMinPriceByDiscount = (): number => {
+  const getMinPriceForCurrentUnit = (inputPrice: number): number => {
     if (!product || !hasDiscountRestriction()) return 0;
+    
     const salePrice = product.sale_price || product.price || 0;
     const maxDiscount = product.max_discount_percent || 0;
-    return salePrice * (1 - maxDiscount / 100);
+    const minMainUnitPrice = salePrice * (1 - maxDiscount / 100);
+    
+    // Se o produto tem subunidade e o preço atual sugere que estamos na subunidade
+    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+      const subUnitPrice = salePrice / product.subunit_ratio;
+      
+      // Se o preço está próximo do preço da subunidade, retornar o mínimo da subunidade
+      if (Math.abs(inputPrice - subUnitPrice) < Math.abs(inputPrice - salePrice)) {
+        return minMainUnitPrice / product.subunit_ratio;
+      }
+    }
+    
+    return minMainUnitPrice;
   };
 
   return {
@@ -257,10 +257,9 @@ export const useProductPriceValidation = (product: Product | null) => {
     checkPriceAndNotify,
     validationResult,
     getMinPrice,
-    hasMinPriceRestriction,
     getMaxDiscountPercent,
     hasDiscountRestriction,
     getCurrentDiscountPercent,
-    getMinPriceByDiscount
+    getMinPriceForCurrentUnit
   };
 };

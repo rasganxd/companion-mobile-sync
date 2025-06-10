@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { useUnitSelection } from '@/hooks/useUnitSelection';
 
 interface Product {
   id: string;
@@ -38,7 +38,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState<string>('UN');
+
+  // Usar o hook de seleção de unidades
+  const { 
+    unitOptions, 
+    selectedUnit, 
+    selectedUnitType, 
+    setSelectedUnitType, 
+    hasMultipleUnits 
+  } = useUnitSelection(selectedProduct);
 
   const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct);
 
@@ -53,6 +61,18 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       selectProduct(products[0]);
     }
   }, [products, selectedProduct]);
+
+  // Atualizar preço automaticamente quando a unidade selecionada mudar
+  useEffect(() => {
+    if (selectedUnit) {
+      console.log('📏 Unidade mudou, atualizando preço:', {
+        unitType: selectedUnitType,
+        unitPrice: selectedUnit.price,
+        unitLabel: selectedUnit.label
+      });
+      setUnitPrice(selectedUnit.price);
+    }
+  }, [selectedUnit, selectedUnitType]);
 
   const loadProducts = async () => {
     try {
@@ -119,21 +139,17 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       code: product.code,
       sale_price: product.sale_price,
       max_discount_percent: product.max_discount_percent,
-      hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0)
+      hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0),
+      hasSubunit: product.has_subunit,
+      subunit: product.subunit,
+      subunitRatio: product.subunit_ratio
     });
     
     setSelectedProduct(product);
     
-    // Use sale_price if available, otherwise use price
-    const correctPrice = product.sale_price || product.price || 0;
-    setUnitPrice(correctPrice);
+    // O preço será definido automaticamente pelo useEffect que monitora selectedUnit
+    // Não definir unitPrice aqui para evitar conflitos
     
-    // Definir unidade padrão como unidade principal
-    const defaultUnit = product.unit || 'UN';
-    setSelectedUnit(defaultUnit);
-    
-    console.log('💰 Preço definido:', correctPrice);
-    console.log('📏 Unidade padrão definida:', defaultUnit);
     console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
     
     // Log informações sobre unidades
@@ -151,11 +167,12 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       selectedProduct: selectedProduct?.name || 'Nenhum',
       quantity,
       unitPrice,
+      selectedUnit: selectedUnit?.label || 'Nenhuma',
       hasProduct: !!selectedProduct
     });
 
-    if (!selectedProduct || quantity <= 0) {
-      toast.error('Selecione um produto e quantidade válida');
+    if (!selectedProduct || quantity <= 0 || !selectedUnit) {
+      toast.error('Selecione um produto, unidade e quantidade válida');
       return;
     }
 
@@ -185,7 +202,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       quantity,
       price: unitPrice,
       code: selectedProduct.code.toString(),
-      unit: selectedUnit
+      unit: selectedUnit.label
     };
 
     console.log('➕ ADICIONANDO ITEM AO PEDIDO:', {
@@ -204,7 +221,6 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
-    setSelectedUnit('UN');
     
     console.log('✅ PRODUTO ADICIONADO COM SUCESSO E SELEÇÃO LIMPA');
   };
@@ -214,7 +230,6 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
-    setSelectedUnit('UN');
   };
 
   return {
@@ -223,12 +238,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     quantity,
     unitPrice,
     searchTerm,
+    unitOptions,
     selectedUnit,
+    selectedUnitType,
+    hasMultipleUnits,
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
-    setSelectedUnit,
+    setSelectedUnitType,
     addProduct,
     clearSelection
   };
