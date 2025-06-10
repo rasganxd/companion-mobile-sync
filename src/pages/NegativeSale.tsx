@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -13,19 +12,27 @@ import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useConfirm } from '@/hooks/useConfirm';
 import { toast } from '@/hooks/use-toast';
-
 const NegativeSale = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clientId, clientName } = location.state || { clientId: null, clientName: 'Cliente' };
-  
+  const {
+    clientId,
+    clientName
+  } = location.state || {
+    clientId: null,
+    clientName: 'Cliente'
+  };
   const [reason, setReason] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [clientAlreadyNegated, setClientAlreadyNegated] = useState<boolean>(false);
-  
-  const { isOpen, options, confirm, handleConfirm: confirmHandleConfirm, handleCancel: confirmHandleCancel } = useConfirm();
-  
+  const {
+    isOpen,
+    options,
+    confirm,
+    handleConfirm: confirmHandleConfirm,
+    handleCancel: confirmHandleCancel
+  } = useConfirm();
   useEffect(() => {
     if (!clientId) {
       navigate(-1);
@@ -33,13 +40,11 @@ const NegativeSale = () => {
       checkClientStatus();
     }
   }, [clientId, navigate]);
-
   const checkClientStatus = async () => {
     try {
       const db = getDatabaseAdapter();
       const isNegated = await db.isClientNegated(clientId);
       setClientAlreadyNegated(isNegated);
-      
       if (isNegated) {
         console.log(`⚠️ Cliente ${clientName} já está negativado`);
       }
@@ -47,11 +52,9 @@ const NegativeSale = () => {
       console.error('Error checking client status:', error);
     }
   };
-
   const handleCancelAction = () => {
     navigate(-1);
   };
-
   const handleConfirmAction = async () => {
     if (!reason) {
       toast({
@@ -70,39 +73,37 @@ const NegativeSale = () => {
         confirmText: 'Sim, negativar novamente',
         cancelText: 'Cancelar'
       });
-      
       if (!confirmed) {
         return;
       }
     }
-
     try {
       setIsLoading(true);
       const db = getDatabaseAdapter();
-      
+
       // Create a negative sale record locally with status 'cancelled'
       const order = {
-        id: `neg_${Date.now()}`, // Local ID with negative prefix
+        id: `neg_${Date.now()}`,
+        // Local ID with negative prefix
         customer_id: clientId,
         customer_name: clientName,
         date: new Date().toISOString(),
-        status: "cancelled", // Usar 'cancelled' para pedidos negativados
+        status: "cancelled",
+        // Usar 'cancelled' para pedidos negativados
         reason: reason,
         notes: message,
         items: [],
         total: 0,
-        sync_status: "pending_sync", // Offline status
+        sync_status: "pending_sync",
+        // Offline status
         source_project: "mobile",
         payment_method: "N/A"
       };
-      
       await db.saveOrder(order);
-      
+
       // Update client status locally - usar 'negativado' minúsculo
       await db.updateClientStatus(clientId, "negativado");
-      
       console.log('📱 Negative sale saved locally:', order);
-      
       if (clientAlreadyNegated) {
         toast({
           title: "Sucesso",
@@ -114,9 +115,13 @@ const NegativeSale = () => {
           description: `Cliente ${clientName} negativado com sucesso`
         });
       }
-      
+
       // Corrigir navegação para usar a rota correta e passar o day
-      navigate('/clients-list', { state: { day: location.state?.day || 'Segunda' } });
+      navigate('/clients-list', {
+        state: {
+          day: location.state?.day || 'Segunda'
+        }
+      });
     } catch (error) {
       console.error("Error saving negative sale:", error);
       toast({
@@ -128,29 +133,18 @@ const NegativeSale = () => {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        title="Negativar Venda" 
-        backgroundColor="red"
-        showBackButton
-      />
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Negativar Venda" backgroundColor="red" showBackButton />
       
-      {clientName && (
-        <div className="bg-red-600 text-white px-3 py-1 text-xs">
-          <span className="font-semibold">{clientId}</span> - {clientName}
-          {clientAlreadyNegated && (
-            <span className="ml-2 bg-red-800 px-2 py-0.5 rounded text-xs">
+      {clientName && <div className="bg-red-600 text-white px-3 py-1 text-xs">
+           - {clientName}
+          {clientAlreadyNegated && <span className="ml-2 bg-red-800 px-2 py-0.5 rounded text-xs">
               ⚠️ JÁ NEGATIVADO
-            </span>
-          )}
-        </div>
-      )}
+            </span>}
+        </div>}
       
       <ScrollArea className="flex-1 px-4 py-4">
-        {clientAlreadyNegated && (
-          <Card className="mb-4 border-yellow-300 bg-yellow-50">
+        {clientAlreadyNegated && <Card className="mb-4 border-yellow-300 bg-yellow-50">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-yellow-800">
                 <AlertTriangle className="h-5 w-5" />
@@ -162,8 +156,7 @@ const NegativeSale = () => {
                 </div>
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>}
         
         <Card className="mb-4">
           <CardContent className="p-4">
@@ -201,52 +194,25 @@ const NegativeSale = () => {
           <CardContent className="p-4">
             <div className="space-y-2">
               <Label htmlFor="message">Observações (opcional):</Label>
-              <Textarea 
-                id="message" 
-                placeholder="Insira detalhes adicionais aqui..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                className="resize-none"
-                rows={4}
-              />
+              <Textarea id="message" placeholder="Insira detalhes adicionais aqui..." value={message} onChange={e => setMessage(e.target.value)} className="resize-none" rows={4} />
             </div>
           </CardContent>
         </Card>
       </ScrollArea>
       
       <div className="p-4 bg-white border-t grid grid-cols-2 gap-4">
-        <AppButton 
-          variant="gray" 
-          onClick={handleCancelAction}
-          disabled={isLoading}
-          className="flex items-center justify-center"
-        >
+        <AppButton variant="gray" onClick={handleCancelAction} disabled={isLoading} className="flex items-center justify-center">
           <X size={16} className="mr-2" />
           Cancelar
         </AppButton>
         
-        <AppButton 
-          variant="orange" 
-          onClick={handleConfirmAction}
-          disabled={isLoading || !reason}
-          className="flex items-center justify-center"
-        >
+        <AppButton variant="orange" onClick={handleConfirmAction} disabled={isLoading || !reason} className="flex items-center justify-center">
           <Check size={16} className="mr-2" />
           {clientAlreadyNegated ? 'Registrar Nova Negativação' : 'Confirmar'}
         </AppButton>
       </div>
       
-      <ConfirmDialog
-        isOpen={isOpen}
-        title={options.title}
-        description={options.description}
-        confirmText={options.confirmText || 'Confirmar'}
-        cancelText={options.cancelText || 'Cancelar'}
-        onConfirm={confirmHandleConfirm}
-        onCancel={confirmHandleCancel}
-      />
-    </div>
-  );
+      <ConfirmDialog isOpen={isOpen} title={options.title} description={options.description} confirmText={options.confirmText || 'Confirmar'} cancelText={options.cancelText || 'Cancelar'} onConfirm={confirmHandleConfirm} onCancel={confirmHandleCancel} />
+    </div>;
 };
-
 export default NegativeSale;
