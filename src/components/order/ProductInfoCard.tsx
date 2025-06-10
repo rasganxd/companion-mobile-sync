@@ -27,22 +27,20 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({ product }) => {
   };
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <div className="flex items-center gap-3 mb-2">
-        <Package className="text-blue-600" size={20} />
-        <div>
-          <h3 className="font-semibold text-blue-900">{product.name}</h3>
-          <p className="text-sm text-blue-700">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Package className="text-blue-600 flex-shrink-0" size={18} />
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-blue-900 text-sm truncate">{product.name}</h3>
+          <p className="text-xs text-blue-700">
             Código: {product.code} • Estoque: {product.stock}
           </p>
         </div>
       </div>
       
       {product.min_price && product.min_price > 0 && (
-        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded">
-          <p className="text-xs text-yellow-700">
-            ⚠️ Preço mínimo: {formatPrice(product.min_price)}
-          </p>
+        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
+          ⚠️ Preço mínimo: {formatPrice(product.min_price)}
         </div>
       )}
     </div>
