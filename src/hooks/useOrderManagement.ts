@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -59,19 +58,33 @@ export const useOrderManagement = () => {
     try {
       const db = getDatabaseAdapter();
       
-      // Verificar preços mínimos de todos os produtos no pedido
+      // Verificar APENAS max_discount_percent de todos os produtos no pedido
       for (const item of orderItems) {
         const products = await db.getProducts();
         const product = products.find(p => p.id === item.productId);
         
-        if (product && product.min_price && product.min_price > 0) {
-          if (item.price < product.min_price) {
-            toast.error(`❌ Produto "${item.productName}" está abaixo do preço mínimo (R$ ${product.min_price.toFixed(2)})`);
+        if (product && product.max_discount_percent && product.max_discount_percent > 0) {
+          const salePrice = product.sale_price || product.price || 0;
+          const minPriceByDiscount = salePrice * (1 - product.max_discount_percent / 100);
+          
+          if (item.price < minPriceByDiscount) {
+            const currentDiscount = ((salePrice - item.price) / salePrice) * 100;
+            console.log('❌ Produto com desconto acima do permitido:', {
+              productName: item.productName,
+              itemPrice: item.price,
+              salePrice,
+              maxDiscountPercent: product.max_discount_percent,
+              currentDiscount,
+              minPriceByDiscount
+            });
+            
+            toast.error(`❌ Produto "${item.productName}" tem desconto de ${currentDiscount.toFixed(1)}%, máximo permitido: ${product.max_discount_percent.toFixed(1)}%`);
             return false;
           }
         }
       }
       
+      console.log('✅ Todos os itens do pedido passaram na validação de desconto');
       return true;
     } catch (error) {
       console.error('❌ Erro ao validar itens do pedido:', error);
@@ -136,7 +149,7 @@ export const useOrderManagement = () => {
         sync_status: 'pending_sync' as const,
         items: orderItems,
         sales_rep_id: salesRep?.id,
-        payment_table_id: paymentTableId // ✅ NOVO: Incluir ID da tabela de pagamento
+        payment_table_id: paymentTableId
       };
 
       console.log('💾 Salvando pedido com tabela de pagamento:', {

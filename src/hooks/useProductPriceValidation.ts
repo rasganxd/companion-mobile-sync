@@ -7,7 +7,6 @@ interface Product {
   name: string;
   price: number;
   sale_price?: number;
-  min_price?: number;
   max_discount_percent?: number;
   code: number;
   stock: number;
@@ -70,54 +69,34 @@ export const useProductPriceValidation = (product: Product | null) => {
     }
 
     const salePrice = product.sale_price || product.price || 0;
-    const minPriceExisting = product.min_price || 0;
     const maxDiscountPercent = product.max_discount_percent || 0;
     
-    console.log('🔍 Validando preço - dados do produto:', {
+    console.log('🔍 Validando preço - APENAS max_discount_percent:', {
       productName: product.name,
       inputPrice,
       salePrice,
-      minPriceExisting,
       maxDiscountPercent
     });
     
-    // Calcular preço mínimo baseado no desconto máximo
+    // Calcular preço mínimo baseado APENAS no desconto máximo
     const minPriceByDiscount = maxDiscountPercent > 0 
       ? salePrice * (1 - maxDiscountPercent / 100) 
       : 0;
     
-    // Usar o maior entre min_price e minPriceByDiscount
-    const finalMinPrice = Math.max(minPriceExisting, minPriceByDiscount);
-    
     console.log('🔍 Cálculos de validação:', {
       minPriceByDiscount,
-      finalMinPrice,
-      hasMinPriceRestriction: finalMinPrice > 0
+      hasDiscountRestriction: maxDiscountPercent > 0
     });
     
     // Calcular informações de desconto
     const { currentDiscount, isExceeded } = calculateDiscountInfo(inputPrice);
 
-    // Validação de preço mínimo
-    if (inputPrice < finalMinPrice && finalMinPrice > 0) {
-      return {
-        isValid: false,
-        error: `Preço mínimo permitido: R$ ${finalMinPrice.toFixed(2)}`,
-        minPrice: finalMinPrice,
-        suggestedPrice: salePrice,
-        maxDiscountPercent,
-        currentDiscountPercent: currentDiscount,
-        minPriceByDiscount,
-        isDiscountExceeded: isExceeded
-      };
-    }
-
-    // Validação de desconto máximo
-    if (isExceeded) {
+    // Validação APENAS por desconto máximo
+    if (maxDiscountPercent > 0 && currentDiscount > maxDiscountPercent) {
       return {
         isValid: false,
         error: `Desconto máximo permitido: ${maxDiscountPercent.toFixed(1)}%`,
-        minPrice: finalMinPrice,
+        minPrice: minPriceByDiscount,
         suggestedPrice: minPriceByDiscount,
         maxDiscountPercent,
         currentDiscountPercent: currentDiscount,
@@ -129,7 +108,7 @@ export const useProductPriceValidation = (product: Product | null) => {
     return {
       isValid: true,
       error: null,
-      minPrice: finalMinPrice,
+      minPrice: minPriceByDiscount,
       suggestedPrice: salePrice,
       maxDiscountPercent,
       currentDiscountPercent: currentDiscount,
@@ -152,43 +131,44 @@ export const useProductPriceValidation = (product: Product | null) => {
 
   const getMinPrice = (): number => {
     if (!product) return 0;
-    const minPriceExisting = product.min_price || 0;
     const maxDiscountPercent = product.max_discount_percent || 0;
     const salePrice = product.sale_price || product.price || 0;
     
-    const minPriceByDiscount = maxDiscountPercent > 0 
+    const result = maxDiscountPercent > 0 
       ? salePrice * (1 - maxDiscountPercent / 100) 
       : 0;
     
-    const result = Math.max(minPriceExisting, minPriceByDiscount);
+    console.log('🔍 getMinPrice - APENAS max_discount_percent:', {
+      productName: product.name,
+      maxDiscountPercent,
+      salePrice,
+      calculatedMinPrice: result
+    });
+    
     return result;
   };
 
   const hasMinPriceRestriction = (): boolean => {
     if (!product) return false;
     
-    // Considerar que há restrição se há min_price > 0 OU max_discount_percent > 0
-    const hasMinPrice = (product.min_price || 0) > 0;
+    // Considerar que há restrição APENAS se há max_discount_percent > 0
     const hasMaxDiscount = (product.max_discount_percent || 0) > 0;
-    const result = hasMinPrice || hasMaxDiscount;
     
-    console.log('🔍 Verificando restrições de preço:', {
+    console.log('🔍 Verificando restrições de preço - APENAS max_discount_percent:', {
       productName: product.name,
-      minPrice: product.min_price,
       maxDiscountPercent: product.max_discount_percent,
-      hasMinPrice,
       hasMaxDiscount,
-      hasAnyRestriction: result
+      hasAnyRestriction: hasMaxDiscount
     });
     
-    return result;
+    return hasMaxDiscount;
   };
 
   const getMaxDiscountPercent = (): number => {
     return product?.max_discount_percent || 0;
   };
 
-  const hasDiscountRestriction =  (): boolean => {
+  const hasDiscountRestriction = (): boolean => {
     return getMaxDiscountPercent() > 0;
   };
 

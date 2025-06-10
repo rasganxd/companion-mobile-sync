@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -19,7 +18,7 @@ interface Product {
   subunit_ratio?: number;
   main_unit_id?: string;
   sub_unit_id?: string;
-  min_price?: number;
+  max_discount_percent?: number;
 }
 
 interface OrderItem {
@@ -76,25 +75,23 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       
       console.log(`✅ ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
       
-      // Ensure products have the correct price field and min_price
+      // Ensure products have the correct price field and max_discount_percent
       const normalizedProducts = validProducts.map(product => ({
         ...product,
         price: product.sale_price || product.price || 0,
         sale_price: product.sale_price || product.price || 0,
-        min_price: product.min_price || 0
+        max_discount_percent: product.max_discount_percent || 0
       }));
       
       setProducts(normalizedProducts);
       
-      // Log detalhado dos produtos para debug de preço mínimo
+      // Log detalhado dos produtos para debug de desconto máximo
       normalizedProducts.forEach((product, index) => {
         console.log(`📦 Produto final ${index + 1}:`, {
           id: product.id,
           name: product.name,
           code: product.code,
           sale_price: product.sale_price,
-          min_price: product.min_price,
-          min_price_type: typeof product.min_price,
           max_discount_percent: product.max_discount_percent,
           max_discount_type: typeof product.max_discount_percent,
           stock: product.stock,
@@ -102,7 +99,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
           has_subunit: product.has_subunit,
           subunit: product.subunit,
           subunit_ratio: product.subunit_ratio,
-          hasMinPriceRestriction: (product.min_price && product.min_price > 0) || (product.max_discount_percent && product.max_discount_percent > 0)
+          hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0)
         });
       });
       
@@ -131,7 +128,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     
     console.log('💰 Preço definido:', correctPrice);
     console.log('📏 Unidade padrão definida:', defaultUnit);
-    console.log('💰 Preço mínimo:', product.min_price || 0);
+    console.log('💰 Desconto máximo:', product.max_discount_percent || 0);
     
     // Log informações sobre unidades
     if (product.has_subunit) {
@@ -149,9 +146,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       return;
     }
 
-    // Validar preço mínimo antes de adicionar
+    // Validar desconto máximo antes de adicionar
+    console.log('🔍 Validando preço antes de adicionar:', {
+      productName: selectedProduct.name,
+      unitPrice,
+      maxDiscountPercent: selectedProduct.max_discount_percent
+    });
+
     if (!checkPriceAndNotify(unitPrice)) {
-      console.log('❌ Preço inválido, não adicionando produto');
+      console.log('❌ Preço inválido por desconto máximo, não adicionando produto');
       return;
     }
 
@@ -165,11 +168,12 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       unit: selectedUnit
     };
 
-    console.log('➕ Adicionando item ao pedido com unidade correta:', {
+    console.log('➕ Adicionando item ao pedido com validação de desconto:', {
       productName: newItem.productName,
       quantity: newItem.quantity,
       unit: newItem.unit,
-      price: newItem.price
+      price: newItem.price,
+      maxDiscountPercent: selectedProduct.max_discount_percent
     });
     
     onAddItem(newItem);
