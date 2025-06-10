@@ -87,7 +87,7 @@ class SQLiteDatabaseService {
         )
       `);
 
-      // Orders table
+      // Orders table - ✅ INCLUIR payment_table_id na estrutura
       await this.db.execute(`
         CREATE TABLE IF NOT EXISTS orders (
           id TEXT PRIMARY KEY,
@@ -100,6 +100,7 @@ class SQLiteDatabaseService {
           sync_status TEXT DEFAULT 'pending_sync',
           source_project TEXT DEFAULT 'mobile',
           payment_method TEXT,
+          payment_table_id TEXT,
           reason TEXT,
           notes TEXT,
           items TEXT,
@@ -123,12 +124,15 @@ class SQLiteDatabaseService {
         )
       `);
 
-      // Payment tables
+      // ✅ CORREÇÃO: Tabela payment_tables com TODAS as colunas necessárias
       await this.db.execute(`
         CREATE TABLE IF NOT EXISTS payment_tables (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
+          description TEXT,
           type TEXT,
+          payable_to TEXT,
+          payment_location TEXT,
           active BOOLEAN DEFAULT 1,
           installments TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -266,19 +270,26 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Saving order to SQLite database:', order);
+      console.log('📱 Saving order to SQLite database:', {
+        id: order.id,
+        customer_name: order.customer_name,
+        payment_table_id: order.payment_table_id,
+        status: order.status,
+        total: order.total
+      });
+      
       await this.db!.run(
         `INSERT INTO orders (
           id, customer_id, customer_name, sales_rep_id, date, status, total, 
-          sync_status, source_project, payment_method, reason, notes, items
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          sync_status, source_project, payment_method, payment_table_id, reason, notes, items
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           order.id, order.customer_id, order.customer_name, order.sales_rep_id,
           order.date, order.status, order.total, order.sync_status, order.source_project,
-          order.payment_method, order.reason, order.notes, JSON.stringify(order.items)
+          order.payment_method, order.payment_table_id, order.reason, order.notes, JSON.stringify(order.items)
         ]
       );
-      console.log('✅ Order saved to SQLite database');
+      console.log('✅ Order saved to SQLite database with payment_table_id:', order.payment_table_id);
     } catch (error) {
       console.error('❌ Error saving order:', error);
     }
@@ -469,12 +480,12 @@ class SQLiteDatabaseService {
       await this.db!.run(
         `INSERT INTO orders (
           id, customer_id, customer_name, sales_rep_id, date, status, total, 
-          sync_status, source_project, payment_method, reason, notes, items
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          sync_status, source_project, payment_method, payment_table_id, reason, notes, items
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           order.id, order.customer_id, order.customer_name, order.sales_rep_id,
           order.date, order.status, order.total, order.sync_status, order.source_project,
-          order.payment_method, order.reason, order.notes, JSON.stringify(order.items)
+          order.payment_method, order.payment_table_id, order.reason, order.notes, JSON.stringify(order.items)
         ]
       );
       console.log('✅ Mobile order saved to SQLite database');
@@ -702,7 +713,8 @@ class SQLiteDatabaseService {
 
     try {
       console.log('📱 Getting payment tables from SQLite database...');
-      const result = await this.db!.query('SELECT * FROM payment_tables');
+      const result = await this.db!.query('SELECT * FROM payment_tables WHERE active = 1');
+      console.log(`📱 Found ${result.values?.length || 0} active payment tables:`, result.values);
       return result.values || [];
     } catch (error) {
       console.error('❌ Error getting payment tables:', error);
@@ -710,6 +722,7 @@ class SQLiteDatabaseService {
     }
   }
 
+  // ✅ IMPLEMENTAÇÃO: Método savePaymentTables que estava faltando
   async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
     if (!this.db) await this.initDatabase();
   
@@ -717,20 +730,41 @@ class SQLiteDatabaseService {
       console.log(`📱 Saving ${paymentTablesArray.length} payment tables to SQLite database...`);
   
       for (const paymentTable of paymentTablesArray) {
+        console.log('📱 Saving payment table:', {
+          id: paymentTable.id,
+          name: paymentTable.name,
+          type: paymentTable.type,
+          active: paymentTable.active,
+          description: paymentTable.description,
+          payable_to: paymentTable.payable_to,
+          payment_location: paymentTable.payment_location
+        });
+
         await this.db!.run(
           `INSERT OR REPLACE INTO payment_tables (
-            id, name, type, active, installments
-          ) VALUES (?, ?, ?, ?, ?)`,
+            id, name, description, type, payable_to, payment_location, active, installments
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            paymentTable.id, paymentTable.name, paymentTable.type,
-            paymentTable.active, paymentTable.installments
+            paymentTable.id, 
+            paymentTable.name, 
+            paymentTable.description || null,
+            paymentTable.type || null,
+            paymentTable.payable_to || null,
+            paymentTable.payment_location || null,
+            paymentTable.active !== false ? 1 : 0, // Garantir que seja boolean convertido para integer
+            paymentTable.installments ? JSON.stringify(paymentTable.installments) : null
           ]
         );
       }
   
       console.log('✅ Payment tables saved to SQLite database');
+      
+      // Verificar se foram salvas corretamente
+      const savedTables = await this.getPaymentTables();
+      console.log(`✅ Verification: ${savedTables.length} payment tables now in database`);
     } catch (error) {
       console.error('❌ Error saving payment tables:', error);
+      throw error;
     }
   }
 
