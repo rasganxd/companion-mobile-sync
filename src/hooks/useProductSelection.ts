@@ -86,7 +86,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       
       setProducts(normalizedProducts);
       
-      // Log final dos produtos para debug
+      // Log detalhado dos produtos para debug de preço mínimo
       normalizedProducts.forEach((product, index) => {
         console.log(`📦 Produto final ${index + 1}:`, {
           id: product.id,
@@ -94,11 +94,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
           code: product.code,
           sale_price: product.sale_price,
           min_price: product.min_price,
+          min_price_type: typeof product.min_price,
+          max_discount_percent: product.max_discount_percent,
+          max_discount_type: typeof product.max_discount_percent,
           stock: product.stock,
           unit: product.unit,
           has_subunit: product.has_subunit,
           subunit: product.subunit,
-          subunit_ratio: product.subunit_ratio
+          subunit_ratio: product.subunit_ratio,
+          hasMinPriceRestriction: (product.min_price && product.min_price > 0) || (product.max_discount_percent && product.max_discount_percent > 0)
         });
       });
       

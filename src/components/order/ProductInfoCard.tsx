@@ -26,6 +26,20 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({ product }) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
+  // Debug logs para verificar valores
+  console.log('🔍 ProductInfoCard - Debug dados do produto:', {
+    id: product.id,
+    name: product.name,
+    min_price: product.min_price,
+    min_price_type: typeof product.min_price,
+    max_discount_percent: product.max_discount_percent,
+    sale_price: product.sale_price,
+    price: product.price
+  });
+
+  const hasMinPrice = product.min_price && product.min_price > 0;
+  console.log('🔍 ProductInfoCard - hasMinPrice:', hasMinPrice);
+
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
       <div className="flex items-center gap-2 mb-2">
@@ -38,7 +52,12 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({ product }) => {
         </div>
       </div>
       
-      {product.min_price && product.min_price > 0 && (
+      {/* Debug: Sempre mostrar informações de preço mínimo para testes */}
+      <div className="p-2 bg-gray-100 border border-gray-300 rounded text-xs text-gray-600 mb-2">
+        DEBUG: min_price = {product.min_price || 'undefined'} | max_discount = {product.max_discount_percent || 'undefined'}
+      </div>
+      
+      {hasMinPrice && (
         <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
           ⚠️ Preço mínimo: {formatPrice(product.min_price)}
         </div>

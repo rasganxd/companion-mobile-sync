@@ -73,6 +73,18 @@ export const useProductPriceValidation = (product: Product | null) => {
     const minPriceExisting = product.min_price || 0;
     const maxDiscountPercent = product.max_discount_percent || 0;
     
+    // Debug detalhado
+    console.log('🔍 validatePrice - Debug detalhado:', {
+      productId: product.id,
+      productName: product.name,
+      inputPrice,
+      salePrice,
+      minPriceExisting,
+      maxDiscountPercent,
+      'product.min_price': product.min_price,
+      'product.max_discount_percent': product.max_discount_percent
+    });
+    
     // Calcular preço mínimo baseado no desconto máximo
     const minPriceByDiscount = maxDiscountPercent > 0 
       ? salePrice * (1 - maxDiscountPercent / 100) 
@@ -80,6 +92,13 @@ export const useProductPriceValidation = (product: Product | null) => {
     
     // Usar o maior entre min_price e minPriceByDiscount
     const finalMinPrice = Math.max(minPriceExisting, minPriceByDiscount);
+    
+    console.log('🔍 validatePrice - Cálculos:', {
+      minPriceByDiscount,
+      finalMinPrice,
+      'minPriceExisting > 0': minPriceExisting > 0,
+      'maxDiscountPercent > 0': maxDiscountPercent > 0
+    });
     
     // Calcular informações de desconto
     const { currentDiscount, isExceeded } = calculateDiscountInfo(inputPrice);
@@ -146,17 +165,36 @@ export const useProductPriceValidation = (product: Product | null) => {
       ? salePrice * (1 - maxDiscountPercent / 100) 
       : 0;
     
-    return Math.max(minPriceExisting, minPriceByDiscount);
+    const result = Math.max(minPriceExisting, minPriceByDiscount);
+    
+    console.log('🔍 getMinPrice - Debug:', {
+      productId: product.id,
+      minPriceExisting,
+      maxDiscountPercent,
+      salePrice,
+      minPriceByDiscount,
+      finalResult: result
+    });
+    
+    return result;
   };
 
   const hasMinPriceRestriction = (): boolean => {
     const result = getMinPrice() > 0;
-    console.log('🔍 hasMinPriceRestriction:', result, 'minPrice:', getMinPrice());
+    console.log('🔍 hasMinPriceRestriction - Debug:', {
+      productId: product?.id,
+      minPrice: getMinPrice(),
+      result,
+      'product.min_price': product?.min_price,
+      'product.max_discount_percent': product?.max_discount_percent
+    });
     return result;
   };
 
   const getMaxDiscountPercent = (): number => {
-    return product?.max_discount_percent || 0;
+    const result = product?.max_discount_percent || 0;
+    console.log('🔍 getMaxDiscountPercent:', result);
+    return result;
   };
 
   const hasDiscountRestriction = (): boolean => {
