@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -14,6 +13,7 @@ interface OrderItem {
   price: number;
   total: number;
   description?: string;
+  unit?: string; // ✅ ADICIONADO: Campo unit na interface
 }
 
 interface MobileOrder {
@@ -260,10 +260,13 @@ serve(async (req) => {
         quantity: item.quantity,
         price: item.price,
         unit_price: item.price,
-        total: item.total
+        total: item.total,
+        unit: item.unit || 'UN' // ✅ CORREÇÃO: Incluir campo unit na inserção dos itens
       }));
 
-      console.log(`🔍 Inserting ${itemsToInsert.length} items`);
+      console.log(`🔍 Inserting ${itemsToInsert.length} items with units:`, 
+        itemsToInsert.map(item => ({ name: item.product_name, unit: item.unit }))
+      );
 
       const { error: itemsError } = await supabase
         .from('order_items')
@@ -276,7 +279,7 @@ serve(async (req) => {
         throw new Error(`Failed to create order items: ${itemsError.message}`);
       }
 
-      console.log('✅ Order items created successfully');
+      console.log('✅ Order items created successfully with preserved units');
     }
 
     return new Response(

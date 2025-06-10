@@ -416,6 +416,7 @@ export type Database = {
           payment_table: string | null
           payment_table_id: string | null
           payments: Json | null
+          rejection_reason: string | null
           sales_rep_id: string | null
           sales_rep_name: string | null
           source_project: string
@@ -423,6 +424,7 @@ export type Database = {
           sync_status: string | null
           total: number
           updated_at: string
+          visit_notes: string | null
         }
         Insert: {
           archived?: boolean | null
@@ -451,6 +453,7 @@ export type Database = {
           payment_table?: string | null
           payment_table_id?: string | null
           payments?: Json | null
+          rejection_reason?: string | null
           sales_rep_id?: string | null
           sales_rep_name?: string | null
           source_project?: string
@@ -458,6 +461,7 @@ export type Database = {
           sync_status?: string | null
           total?: number
           updated_at?: string
+          visit_notes?: string | null
         }
         Update: {
           archived?: boolean | null
@@ -486,6 +490,7 @@ export type Database = {
           payment_table?: string | null
           payment_table_id?: string | null
           payments?: Json | null
+          rejection_reason?: string | null
           sales_rep_id?: string | null
           sales_rep_name?: string | null
           source_project?: string
@@ -493,6 +498,7 @@ export type Database = {
           sync_status?: string | null
           total?: number
           updated_at?: string
+          visit_notes?: string | null
         }
         Relationships: [
           {
