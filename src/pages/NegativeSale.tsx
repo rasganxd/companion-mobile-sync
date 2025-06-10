@@ -102,8 +102,15 @@ const NegativeSale = () => {
       await db.saveOrder(order);
 
       // Update client status locally - usar 'negativado' minúsculo
+      console.log(`📱 [DEBUG] Atualizando status do cliente ${clientId} para 'negativado'`);
       await db.updateClientStatus(clientId, "negativado");
+      
+      // Verificar se a atualização foi bem-sucedida
+      const updatedClient = await db.getClientById(clientId);
+      console.log(`📱 [DEBUG] Cliente após negativação:`, updatedClient);
+      
       console.log('📱 Negative sale saved locally:', order);
+
       if (clientAlreadyNegated) {
         toast({
           title: "Sucesso",

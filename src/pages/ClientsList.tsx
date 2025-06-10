@@ -138,7 +138,20 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
-          if (clientLocalOrders.length > 0) {
+          // DEBUG: Verificar o status do cliente no banco
+          console.log(`🔍 [DEBUG] Cliente ${client.name}:`, {
+            clientId: client.id,
+            clientStatus: client.status,
+            localOrders: clientLocalOrders.length,
+            pendingLocal: pendingLocalOrders.length,
+            transmittedLocal: transmittedLocalOrders.length
+          });
+          
+          // Verificar primeiro se o cliente tem status 'negativado' no banco
+          if (client.status === 'negativado') {
+            console.log(`❌ [DEBUG] Cliente ${client.name} tem status 'negativado' no banco`);
+            status = 'negativado';
+          } else if (clientLocalOrders.length > 0) {
             const hasPositive = clientLocalOrders.some(order => 
               order.status === 'pending' || 
               order.status === 'processed' || 
@@ -162,11 +175,9 @@ const ClientsList = () => {
             }
           }
           
-          console.log(`🔍 Client ${client.name}:`, {
-            localOrders: clientLocalOrders.length,
-            pendingLocal: pendingLocalOrders.length,
-            transmittedLocal: transmittedLocalOrders.length,
-            status,
+          console.log(`🔍 [DEBUG] Cliente ${client.name} status final:`, {
+            originalStatus: client.status,
+            calculatedStatus: status,
             orderTotal: orderTotal.toFixed(2)
           });
           
@@ -320,3 +331,5 @@ const ClientsList = () => {
 };
 
 export default ClientsList;
+
+}

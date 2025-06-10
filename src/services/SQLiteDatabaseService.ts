@@ -288,20 +288,34 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log(`📱 Updating client status for client ID ${clientId} to ${status}...`);
+      console.log(`📱 [DEBUG] Atualizando status do cliente ${clientId} para ${status}...`);
+      
+      // Primeiro verificar se o cliente existe
+      const clientBefore = await this.getClientById(clientId);
+      console.log(`📱 [DEBUG] Cliente antes da atualização:`, clientBefore);
       
       const result = await this.db!.run(
         'UPDATE clients SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [status, clientId]
       );
       
+      console.log(`📱 [DEBUG] Resultado da atualização:`, result);
+      
       if (result.changes && result.changes.changes > 0) {
-        console.log(`✅ Client status updated for client ID ${clientId} to ${status}`);
+        console.log(`✅ [DEBUG] Cliente status atualizado para ${clientId} -> ${status}`);
+        
+        // Verificar se a atualização foi persistida
+        const clientAfter = await this.getClientById(clientId);
+        console.log(`📱 [DEBUG] Cliente após a atualização:`, clientAfter);
+        
+        if (clientAfter?.status !== status) {
+          console.error(`❌ [DEBUG] Status não foi persistido! Esperado: ${status}, Atual: ${clientAfter?.status}`);
+        }
       } else {
-        console.warn(`⚠️ Client with ID ${clientId} not found or status unchanged`);
+        console.warn(`⚠️ [DEBUG] Cliente com ID ${clientId} não encontrado ou status não foi alterado`);
       }
     } catch (error) {
-      console.error(`❌ Error updating client status for client ID ${clientId}:`, error);
+      console.error(`❌ [DEBUG] Erro ao atualizar status do cliente ${clientId}:`, error);
       throw error;
     }
   }

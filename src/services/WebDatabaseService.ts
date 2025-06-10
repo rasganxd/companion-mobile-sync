@@ -199,18 +199,31 @@ class WebDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log(`🌐 Updating client status for client ID ${clientId} to ${status}...`);
-      const client = await this.getClientById(clientId);
-      if (client) {
-        client.status = status;
-        client.updated_at = new Date().toISOString();
-        await this.db!.put('clients', client);
-        console.log(`✅ Client status updated for client ID ${clientId} to ${status}`);
+      console.log(`🌐 [DEBUG] Atualizando status do cliente ${clientId} para ${status}...`);
+      
+      // Primeiro verificar se o cliente existe
+      const clientBefore = await this.getClientById(clientId);
+      console.log(`🌐 [DEBUG] Cliente antes da atualização:`, clientBefore);
+      
+      if (clientBefore) {
+        clientBefore.status = status;
+        clientBefore.updated_at = new Date().toISOString();
+        await this.db!.put('clients', clientBefore);
+        
+        // Verificar se a atualização foi persistida
+        const clientAfter = await this.getClientById(clientId);
+        console.log(`🌐 [DEBUG] Cliente após a atualização:`, clientAfter);
+        
+        if (clientAfter?.status !== status) {
+          console.error(`❌ [DEBUG] Status não foi persistido! Esperado: ${status}, Atual: ${clientAfter?.status}`);
+        } else {
+          console.log(`✅ [DEBUG] Cliente status atualizado para ${clientId} -> ${status}`);
+        }
       } else {
-        console.warn(`⚠️ Client with ID ${clientId} not found`);
+        console.warn(`⚠️ [DEBUG] Cliente com ID ${clientId} não encontrado`);
       }
     } catch (error) {
-      console.error(`❌ Error updating client status for client ID ${clientId}:`, error);
+      console.error(`❌ [DEBUG] Erro ao atualizar status do cliente ${clientId}:`, error);
     }
   }
 
