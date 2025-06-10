@@ -120,7 +120,6 @@ serve(async (req) => {
           active,
           created_at,
           updated_at,
-          min_price,
           max_discount_percent,
           main_unit_id,
           sub_unit_id,
@@ -159,7 +158,6 @@ serve(async (req) => {
         }
         
         console.log(`🔍 Product ${product.name} pricing data:`, {
-          min_price: product.min_price,
           max_discount_percent: product.max_discount_percent,
           sale_price: product.sale_price
         });
@@ -171,8 +169,7 @@ serve(async (req) => {
           price: product.sale_price, // Map sale_price to price for compatibility
           sale_price: product.sale_price,
           cost_price: product.cost_price,
-          min_price: product.min_price, // ✅ INCLUIR min_price
-          max_discount_percent: product.max_discount_percent, // ✅ INCLUIR max_discount_percent
+          max_discount_percent: product.max_discount_percent, // ✅ MANTER max_discount_percent
           stock: product.stock,
           active: product.active,
           created_at: product.created_at,
@@ -190,11 +187,11 @@ serve(async (req) => {
       
       // Log produtos com restrições de preço para debug
       const productsWithRestrictions = transformedProducts.filter(p => 
-        (p.min_price && p.min_price > 0) || (p.max_discount_percent && p.max_discount_percent > 0)
+        (p.max_discount_percent && p.max_discount_percent > 0)
       );
       console.log(`📊 Products with pricing restrictions: ${productsWithRestrictions.length}`);
       productsWithRestrictions.forEach(p => {
-        console.log(`  - ${p.name}: min_price=${p.min_price}, max_discount=${p.max_discount_percent}%`);
+        console.log(`  - ${p.name}: max_discount=${p.max_discount_percent}%`);
       });
       
       return new Response(
