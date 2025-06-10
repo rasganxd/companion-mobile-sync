@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
@@ -87,10 +88,18 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       window.addEventListener('popstate', blockBrowserBack);
       
       const blockKeyboardNavigation = (event: KeyboardEvent) => {
+        // Verificar se estamos em um elemento editável
+        const target = event.target as HTMLElement;
+        const isEditableElement = 
+          target.tagName === 'INPUT' || 
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true' ||
+          target.isContentEditable;
+
         if (
           (event.altKey && event.key === 'ArrowLeft') ||
           (event.altKey && event.key === 'ArrowRight') ||
-          event.key === 'Backspace'
+          (event.key === 'Backspace' && !isEditableElement) // Só bloquear Backspace se NÃO estivermos em campo editável
         ) {
           console.log('🚫 Keyboard navigation blocked');
           event.preventDefault();

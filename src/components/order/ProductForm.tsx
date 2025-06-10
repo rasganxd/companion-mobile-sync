@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -204,5 +205,3 @@ const ProductForm: React.FC<ProductFormProps> = ({
 };
 
 export default ProductForm;
-
-</initial_code>
