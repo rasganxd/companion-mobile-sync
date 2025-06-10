@@ -135,73 +135,82 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const minPriceForCurrentUnit = getMinPriceForCurrentUnit(currentPrice);
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
-      <div className="space-y-4">
-        {/* Seletor de Unidade - Mais visível */}
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 border border-blue-200 shadow-sm rounded-lg">
+      <div className="space-y-5">
+        {/* Seletor de Unidade - Melhor visibilidade */}
         {hasSubunit && onUnitChange && (
-          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
-            <Label className="block mb-2 text-sm font-semibold text-gray-700">Tipo de Unidade:</Label>
+          <div className="bg-white p-4 rounded-lg border border-blue-200 shadow-sm">
+            <Label className="block mb-3 text-sm font-bold text-gray-800">Tipo de Unidade:</Label>
             <Select value={selectedUnit} onValueChange={(value: 'main' | 'sub') => onUnitChange(value)}>
-              <SelectTrigger className="w-full h-10 bg-white border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200">
+              <SelectTrigger className="w-full h-12 bg-white border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-white border border-gray-300 shadow-lg rounded-lg">
-                <SelectItem value="sub" className="hover:bg-blue-50 py-2">
+                <SelectItem value="sub" className="hover:bg-blue-50 py-3">
                   <div className="flex flex-col">
-                    <span className="font-medium">{subUnit}</span>
-                    <span className="text-xs text-gray-500">Unidade menor</span>
+                    <span className="font-semibold text-base">{subUnit}</span>
+                    <span className="text-sm text-gray-500">Unidade menor</span>
                   </div>
                 </SelectItem>
-                <SelectItem value="main" className="hover:bg-blue-50 py-2">
+                <SelectItem value="main" className="hover:bg-blue-50 py-3">
                   <div className="flex flex-col">
-                    <span className="font-medium">{mainUnit}</span>
-                    <span className="text-xs text-gray-500">Unidade principal</span>
+                    <span className="font-semibold text-base">{mainUnit}</span>
+                    <span className="text-sm text-gray-500">Unidade principal</span>
                   </div>
                 </SelectItem>
               </SelectContent>
             </Select>
             
-            {/* Informação de conversão mais clara */}
-            <div className="mt-2 text-sm text-gray-700 bg-blue-50 p-2 rounded border border-blue-200">
-              <div className="font-medium text-center">
+            {/* Informação de conversão destacada */}
+            <div className="mt-3 text-base text-gray-800 bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div className="font-bold text-center text-lg">
                 1 {mainUnit} = {ratio} {subUnit}
               </div>
-              <div className="text-center text-xs text-gray-600 mt-1">
+              <div className="text-center text-sm text-gray-600 mt-2">
                 Preço por {mainUnit}: {formatPrice(currentPrice * ratio)}
               </div>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label className="block mb-2 text-sm font-semibold text-gray-700">Quantidade ({displayUnit}):</Label>
+        {/* Grid de Quantidade e Preço - Layout melhorado */}
+        <div className="grid grid-cols-2 gap-5">
+          <div className="space-y-2">
+            <Label className="block text-sm font-bold text-gray-800">
+              Quantidade ({displayUnit}):
+            </Label>
             <Input
               type="number"
-              className="h-9 text-center text-sm font-medium border-2 border-gray-300 focus:border-app-blue focus:ring-2 focus:ring-app-blue/20 transition-all duration-200"
+              className="h-12 text-center text-base font-semibold border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
               value={quantity || ''}
               onChange={e => onQuantityChange(e.target.value)}
-              placeholder=""
+              placeholder="0"
               min="0"
               step="0.01"
             />
           </div>
           
-          <div>
-            <Label className="block mb-2 text-sm font-semibold text-gray-700">
+          <div className="space-y-2">
+            <Label className="block text-sm font-bold text-gray-800">
               Preço ({displayUnit}):
-              {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && (
-                <span className="text-xs text-red-600 ml-1">
-                  (Mín: {formatPrice(minPriceForCurrentUnit)})
-                </span>
-              )}
             </Label>
+            {/* Preço Mínimo - Destaque melhorado */}
+            {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && (
+              <div className="bg-red-100 border border-red-300 rounded-md p-2 mb-2">
+                <div className="text-center">
+                  <span className="text-xs font-medium text-red-700">PREÇO MÍNIMO:</span>
+                  <div className="text-base font-bold text-red-800">
+                    {formatPrice(minPriceForCurrentUnit)}
+                  </div>
+                </div>
+              </div>
+            )}
             <Input
               type="text"
-              className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
+              className={`h-12 text-center text-base font-semibold border-2 transition-all duration-200 ${
                 priceError 
                   ? 'border-red-500 bg-red-50 focus:border-red-500 focus:ring-red-200' 
-                  : 'border-gray-300 focus:border-app-blue focus:ring-app-blue/20'
+                  : 'border-gray-300 focus:border-blue-500 focus:ring-blue-200'
               }`}
               value={priceInputValue}
               onChange={e => handlePriceInputChange(e.target.value)}
@@ -210,76 +219,86 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
               placeholder="0.00"
             />
             {priceError && (
-              <div className="flex items-center gap-1 mt-1">
-                <AlertTriangle size={12} className="text-red-500" />
-                <span className="text-xs text-red-600">{priceError}</span>
+              <div className="flex items-center gap-2 mt-2 p-2 bg-red-100 border border-red-300 rounded-md">
+                <AlertTriangle size={16} className="text-red-600" />
+                <span className="text-sm font-medium text-red-700">{priceError}</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Informações de Desconto - Mostrar quando há restrição */}
+        {/* Informações de Desconto - Layout aprimorado */}
         {hasDiscountRestriction() && (
-          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-2">
-              <Info size={14} className="text-blue-500" />
-              <span className="text-sm font-medium text-gray-700">Controle de Desconto</span>
+          <div className="bg-white p-4 rounded-lg border-2 border-orange-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Info size={18} className="text-orange-600" />
+              <span className="text-base font-bold text-gray-800">Controle de Desconto</span>
             </div>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Preço de venda:</span>
-                <span className="font-medium">{formatPrice(salePrice)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Desconto máximo:</span>
-                <span className="font-medium text-orange-600">{maxDiscountPercent.toFixed(1)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Desconto atual:</span>
-                <span className={`font-medium ${
-                  currentDiscountPercent > maxDiscountPercent ? 'text-red-600' : 'text-green-600'
-                }`}>
-                  {currentDiscountPercent.toFixed(1)}%
-                </span>
-              </div>
-              {minPriceForCurrentUnit > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Preço mínimo ({displayUnit}):</span>
-                  <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="font-medium text-gray-700">Preço de venda:</span>
+                  <span className="font-bold text-gray-900">{formatPrice(salePrice)}</span>
                 </div>
-              )}
-              {currentDiscountPercent > maxDiscountPercent && (
-                <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
-                  ❌ Desconto excede o limite máximo permitido!
+                <div className="flex justify-between items-center p-2 bg-orange-50 rounded">
+                  <span className="font-medium text-gray-700">Desconto máximo:</span>
+                  <span className="font-bold text-orange-700">{maxDiscountPercent.toFixed(1)}%</span>
                 </div>
-              )}
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                  <span className="font-medium text-gray-700">Desconto atual:</span>
+                  <span className={`font-bold ${
+                    currentDiscountPercent > maxDiscountPercent ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {currentDiscountPercent.toFixed(1)}%
+                  </span>
+                </div>
+                {minPriceForCurrentUnit > 0 && (
+                  <div className="flex justify-between items-center p-2 bg-red-50 rounded border border-red-200">
+                    <span className="font-medium text-gray-700">Preço mínimo:</span>
+                    <span className="font-bold text-red-700">{formatPrice(minPriceForCurrentUnit)}</span>
+                  </div>
+                )}
+              </div>
             </div>
+            {currentDiscountPercent > maxDiscountPercent && (
+              <div className="mt-3 p-3 bg-red-100 border-2 border-red-300 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-red-600" />
+                  <span className="text-sm font-bold text-red-700">
+                    Desconto excede o limite máximo permitido!
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
         
-        {/* Total do item */}
+        {/* Total do item - Melhor destaque */}
         {quantity && parseFloat(quantity) > 0 && (
-          <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
+          <div className="bg-white p-4 rounded-lg border-2 border-green-200 shadow-sm">
             <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-700 text-sm">Total do Item:</span>
-              <span className={`font-bold text-base ${priceError ? 'text-red-600' : 'text-blue-700'}`}>
+              <span className="font-bold text-gray-800 text-base">Total do Item:</span>
+              <span className={`font-bold text-xl ${priceError ? 'text-red-600' : 'text-green-700'}`}>
                 R$ {calculateTotal().replace('.', ',')}
               </span>
             </div>
           </div>
         )}
         
+        {/* Botão Adicionar - Melhor visibilidade */}
         <Button
           variant="default"
-          className={`w-full h-9 text-sm font-semibold transition-all duration-200 transform hover:scale-[1.02] active:scale-98 shadow-md hover:shadow-lg ${
+          className={`w-full h-12 text-base font-bold transition-all duration-200 transform hover:scale-[1.02] active:scale-98 shadow-lg hover:shadow-xl ${
             canAddItem()
               ? 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-gray-400 text-gray-600 cursor-not-allowed'
           }`}
           onClick={handleAddItem}
           disabled={!canAddItem()}
         >
-          <Plus size={18} className="mr-2" />
+          <Plus size={20} className="mr-3" />
           {priceError ? 'Desconto Excedido' : 'Adicionar ao Pedido'}
         </Button>
       </div>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Package, AlertTriangle } from 'lucide-react';
+import { Plus, Package, AlertTriangle, Info } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 
 interface Product {
@@ -64,9 +64,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
   if (!currentProduct) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-        <Package size={32} className="mx-auto mb-2 text-gray-400" />
-        <p className="text-gray-500">Nenhum produto selecionado</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <Package size={48} className="mx-auto mb-3 text-gray-400" />
+        <p className="text-gray-500 text-base">Nenhum produto selecionado</p>
       </div>
     );
   }
@@ -93,131 +93,153 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   });
 
   return (
-    <div className="space-y-4">
-      {/* Informações do Produto */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Package className="text-blue-600" size={18} />
+    <div className="space-y-5">
+      {/* Informações do Produto - Layout melhorado */}
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Package className="text-blue-600" size={24} />
           <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 text-sm">{currentProduct.name}</h3>
-            <p className="text-xs text-blue-700">
+            <h3 className="font-bold text-blue-900 text-base">{currentProduct.name}</h3>
+            <p className="text-sm text-blue-700 mt-1">
               Código: {currentProduct.code} • Estoque: {currentProduct.stock} • Preço: {formatPrice(salePrice)}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
+      {/* Alerta de Desconto Máximo - Layout aprimorado */}
       {hasDiscountRestriction() && (
-        <div className={`border rounded-lg p-3 ${
+        <div className={`border-2 rounded-lg p-4 ${
           isDiscountExceeded 
-            ? 'bg-red-50 border-red-200' 
-            : 'bg-yellow-50 border-yellow-200'
+            ? 'bg-red-50 border-red-300' 
+            : 'bg-yellow-50 border-yellow-300'
         }`}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
-            <span className="text-sm font-medium">
+          <div className="flex items-center gap-3 mb-3">
+            <AlertTriangle size={20} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
+            <span className="text-base font-bold">
               {isDiscountExceeded ? 'DESCONTO EXCEDIDO!' : 'Controle de Desconto'}
             </span>
           </div>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span>Desconto máximo permitido:</span>
-              <span className="font-medium text-orange-600">{getMaxDiscountPercent().toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Desconto atual:</span>
-              <span className={`font-medium ${
-                isDiscountExceeded ? 'text-red-600' : 'text-green-600'
-              }`}>
-                {currentDiscountPercent.toFixed(1)}%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Preço mínimo para esta unidade:</span>
-              <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
-            </div>
-            {isDiscountExceeded && (
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
-                ❌ Não é possível vender abaixo do preço mínimo!
+          
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-white rounded border">
+                <span className="font-medium">Desconto máximo:</span>
+                <span className="font-bold text-orange-600">{getMaxDiscountPercent().toFixed(1)}%</span>
               </div>
-            )}
+              <div className="flex justify-between items-center p-2 bg-white rounded border">
+                <span className="font-medium">Desconto atual:</span>
+                <span className={`font-bold ${
+                  isDiscountExceeded ? 'text-red-600' : 'text-green-600'
+                }`}>
+                  {currentDiscountPercent.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-white rounded border">
+                <span className="font-medium">Preço de venda:</span>
+                <span className="font-bold">{formatPrice(salePrice)}</span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-red-100 rounded border border-red-200">
+                <span className="font-medium">Preço mínimo:</span>
+                <span className="font-bold text-red-700">{formatPrice(minPriceForCurrentUnit)}</span>
+              </div>
+            </div>
           </div>
+          
+          {isDiscountExceeded && (
+            <div className="mt-3 p-3 bg-red-100 border-2 border-red-300 rounded text-red-800">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} />
+                <span className="font-bold">Não é possível vender abaixo do preço mínimo!</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Formulário de Quantidade e Preço */}
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
+      {/* Formulário de Quantidade e Preço - Grid melhorado */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-bold text-gray-800">Quantidade</Label>
           <Input
             type="number"
             value={quantity || ''}
             onChange={(e) => onQuantityChange(Number(e.target.value))}
             min="1"
             step="1"
-            className="text-center h-10"
+            className="text-center h-12 text-base font-semibold border-2 border-gray-300 focus:border-blue-500"
           />
         </div>
 
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
+        <div className="space-y-2">
+          <Label className="text-sm font-bold text-gray-800">Unidade</Label>
           <Select 
             value={selectedUnitType} 
             onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
             disabled={!hasMultipleUnits}
           >
-            <SelectTrigger className="h-10">
+            <SelectTrigger className="h-12 border-2 border-gray-300 focus:border-blue-500">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {unitOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.displayText}
+                <SelectItem key={option.value} value={option.value} className="py-3">
+                  <span className="font-semibold">{option.displayText}</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">
-            Preço Unit. {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && `(Mín: ${formatPrice(minPriceForCurrentUnit)})`}
+        <div className="space-y-2">
+          <Label className="text-sm font-bold text-gray-800">
+            Preço Unit.
           </Label>
+          {/* Preço Mínimo destacado */}
+          {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && (
+            <div className="bg-red-100 border border-red-300 rounded p-1 mb-1">
+              <div className="text-center text-xs font-medium text-red-700">
+                Mín: {formatPrice(minPriceForCurrentUnit)}
+              </div>
+            </div>
+          )}
           <Input
             type="number"
             value={unitPrice || ''}
             onChange={(e) => onUnitPriceChange(Number(e.target.value))}
             min="0"
             step="0.01"
-            className={`text-center h-10 ${
-              isDiscountExceeded ? 'border-red-500 bg-red-50' : ''
+            className={`text-center h-12 text-base font-semibold border-2 ${
+              isDiscountExceeded ? 'border-red-500 bg-red-50' : 'border-gray-300 focus:border-blue-500'
             }`}
           />
         </div>
       </div>
 
-      {/* Total do Item */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+      {/* Total do Item - Layout melhorado */}
+      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-green-900">Total do Item:</span>
-          <span className="font-bold text-green-600 text-lg">
+          <span className="text-base font-bold text-green-900">Total do Item:</span>
+          <span className="font-bold text-green-700 text-xl">
             {formatPrice(quantity * unitPrice)}
           </span>
         </div>
       </div>
 
-      {/* Botão Adicionar */}
+      {/* Botão Adicionar - Layout melhorado */}
       <Button 
         onClick={onAddProduct}
         disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
-        className={`w-full h-12 ${
+        className={`w-full h-14 text-base font-bold ${
           isDiscountExceeded 
             ? 'bg-gray-400 cursor-not-allowed' 
             : 'bg-green-600 hover:bg-green-700'
-        } text-white font-medium`}
+        } text-white transition-all duration-200 hover:scale-[1.02] shadow-lg`}
       >
-        <Plus size={18} className="mr-2" />
+        <Plus size={20} className="mr-3" />
         {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
       </Button>
     </div>
