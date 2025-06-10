@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -55,15 +54,15 @@ const PlaceOrder = () => {
     unitPrice,
     searchTerm,
     selectedUnit,
-    unitOptions, // ✅ NOVO
-    selectedUnitType, // ✅ NOVO
-    hasMultipleUnits, // ✅ NOVO
+    unitOptions,
+    selectedUnitType,
+    hasMultipleUnits,
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
     setSelectedUnit,
-    handleUnitTypeChange, // ✅ NOVO
+    handleUnitTypeChange,
     addProduct,
     clearSelection
   } = useProductSelection(addOrderItem);
@@ -174,9 +173,13 @@ const PlaceOrder = () => {
             quantity={quantity}
             unitPrice={unitPrice}
             selectedUnit={selectedUnit}
+            unitOptions={unitOptions}
+            selectedUnitType={selectedUnitType}
+            hasMultipleUnits={hasMultipleUnits}
             onQuantityChange={setQuantity}
             onUnitPriceChange={setUnitPrice}
             onUnitChange={setSelectedUnit}
+            onUnitTypeChange={handleUnitTypeChange}
             onAddProduct={addProduct}
           />
         </div>

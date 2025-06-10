@@ -61,10 +61,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct
 }) => {
   const {
-    priceError,
+    validationResult,
     hasMinPriceRestriction,
     getMinPrice,
-    hasDiscountRestriction
+    hasDiscountRestriction,
+    getCurrentDiscountPercent,
+    getMinPriceByDiscount
   } = useProductPriceValidation(currentProduct);
 
   if (!currentProduct) {
@@ -74,6 +76,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       </div>
     );
   }
+
+  const priceError = validationResult.error;
+  const hasDiscountRestrictionValue = hasDiscountRestriction();
 
   return (
     <div className="space-y-3">
@@ -93,7 +98,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         selectedUnitType={selectedUnitType}
         hasMultipleUnits={hasMultipleUnits}
         priceError={priceError}
-        hasMinPriceRestriction={hasMinPriceRestriction}
+        hasMinPriceRestriction={hasMinPriceRestriction()}
         getMinPrice={getMinPrice}
         onQuantityChange={onQuantityChange}
         onUnitPriceChange={onUnitPriceChange}
@@ -108,11 +113,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         priceError={priceError}
       />
 
-      {hasDiscountRestriction() && (
+      {hasDiscountRestrictionValue && (
         <DiscountInfoCard 
-          currentPrice={unitPrice}
+          salePrice={currentProduct.sale_price || currentProduct.price || 0}
           maxDiscountPercent={currentProduct.max_discount_percent || 0}
-          originalPrice={currentProduct.sale_price || currentProduct.price || 0}
+          currentDiscountPercent={getCurrentDiscountPercent(unitPrice)}
+          getMinPriceByDiscount={getMinPriceByDiscount}
         />
       )}
 
