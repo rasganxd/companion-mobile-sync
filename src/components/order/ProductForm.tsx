@@ -56,7 +56,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
 }) => {
   const [paymentTables, setPaymentTables] = useState<PaymentTable[]>([]);
   const { unitOptions, selectedUnitType, setSelectedUnitType, hasMultipleUnits } = useUnitSelection(product);
-  const { hasMinPriceRestriction, getMinPrice } = useProductPriceValidation(product);
+  const { hasDiscountRestriction, getMaxDiscountPercent } = useProductPriceValidation(product);
 
   useEffect(() => {
     const fetchPaymentTables = async () => {
@@ -151,15 +151,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
         </div>
       </div>
 
-      {/* Preço Mínimo - Mostrar se existir */}
-      {hasMinPriceRestriction() === true && (
+      {/* Desconto Máximo - Mostrar se existir */}
+      {hasDiscountRestriction() && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
           <div className="flex items-center gap-2">
-            <span className="text-yellow-600 font-medium text-sm">⚠️ Preço Mínimo:</span>
-            <span className="font-bold text-yellow-800">R$ {getMinPrice().toFixed(2)}</span>
+            <span className="text-yellow-600 font-medium text-sm">⚠️ Desconto Máximo:</span>
+            <span className="font-bold text-yellow-800">{getMaxDiscountPercent().toFixed(1)}%</span>
           </div>
           <p className="text-xs text-yellow-700 mt-1">
-            Não é permitido vender abaixo deste valor
+            Não é permitido desconto acima deste valor
           </p>
         </div>
       )}
@@ -204,3 +204,5 @@ const ProductForm: React.FC<ProductFormProps> = ({
 };
 
 export default ProductForm;
+
+</initial_code>

@@ -53,12 +53,10 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const { 
     validatePrice, 
     validationResult, 
-    hasMinPriceRestriction, 
-    getMinPrice,
     hasDiscountRestriction,
     getMaxDiscountPercent,
     getCurrentDiscountPercent,
-    getMinPriceByDiscount
+    getMinPriceForCurrentUnit
   } = useProductPriceValidation(product);
   
   const [currentPrice, setCurrentPrice] = useState(unitPrice);
@@ -84,10 +82,8 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
 
   const handlePriceInputChange = (value: string) => {
     isUserTyping.current = true;
-    // Permite edição livre durante a digitação
     setPriceInputValue(value);
     
-    // Só aplica formatação se houver conteúdo válido
     if (value && value.trim() !== '') {
       const { numeric } = formatPriceInput(value);
       setCurrentPrice(numeric);
@@ -101,7 +97,6 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
 
   const handlePriceInputBlur = () => {
     isUserTyping.current = false;
-    // Formatar para 2 casas decimais ao sair do campo
     if (priceInputValue && priceInputValue.trim() !== '' && !isNaN(parseFloat(priceInputValue))) {
       const { formatted } = formatPriceInput(priceInputValue);
       const finalFormatted = parseFloat(formatted || '0').toFixed(2);
@@ -137,10 +132,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const currentDiscountPercent = getCurrentDiscountPercent(currentPrice);
   const maxDiscountPercent = getMaxDiscountPercent();
   const salePrice = product.sale_price || product.price || 0;
-
-  // Debug logs para verificar valores
-  console.log('🔍 QuantityInput - hasDiscountRestriction():', hasDiscountRestriction());
-  console.log('🔍 QuantityInput - hasMinPriceRestriction():', hasMinPriceRestriction());
+  const minPriceForCurrentUnit = getMinPriceForCurrentUnit(currentPrice);
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 border border-blue-200 shadow-sm px-[15px] py-[15px] rounded-md">
@@ -196,7 +188,14 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           </div>
           
           <div>
-            <Label className="block mb-2 text-sm font-semibold text-gray-700">Preço ({displayUnit}):</Label>
+            <Label className="block mb-2 text-sm font-semibold text-gray-700">
+              Preço ({displayUnit}):
+              {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && (
+                <span className="text-xs text-red-600 ml-1">
+                  (Mín: {formatPrice(minPriceForCurrentUnit)})
+                </span>
+              )}
+            </Label>
             <Input
               type="text"
               className={`h-9 text-center text-sm font-medium border-2 transition-all duration-200 ${
@@ -216,20 +215,15 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                 <span className="text-xs text-red-600">{priceError}</span>
               </div>
             )}
-            {hasMinPriceRestriction() === true && !priceError && (
-              <div className="text-xs text-gray-600 mt-1">
-                Mín: {formatPrice(getMinPrice())}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Informações de Desconto - Renderização explícita com verificação booleana */}
-        {hasDiscountRestriction() === true && (
+        {/* Informações de Desconto - Mostrar quando há restrição */}
+        {hasDiscountRestriction() && (
           <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <Info size={14} className="text-blue-500" />
-              <span className="text-sm font-medium text-gray-700">Informações de Desconto</span>
+              <span className="text-sm font-medium text-gray-700">Controle de Desconto</span>
             </div>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
@@ -248,10 +242,15 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
                   {currentDiscountPercent.toFixed(1)}%
                 </span>
               </div>
-              {getMinPriceByDiscount() > 0 && (
+              {minPriceForCurrentUnit > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Preço mín. por desconto:</span>
-                  <span className="font-medium">{formatPrice(getMinPriceByDiscount())}</span>
+                  <span className="text-gray-600">Preço mínimo ({displayUnit}):</span>
+                  <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
+                </div>
+              )}
+              {currentDiscountPercent > maxDiscountPercent && (
+                <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
+                  ❌ Desconto excede o limite máximo permitido!
                 </div>
               )}
             </div>
@@ -281,7 +280,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
           disabled={!canAddItem()}
         >
           <Plus size={18} className="mr-2" />
-          {priceError ? 'Preço Inválido' : 'Adicionar ao Pedido'}
+          {priceError ? 'Desconto Excedido' : 'Adicionar ao Pedido'}
         </Button>
       </div>
     </div>
