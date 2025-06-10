@@ -80,7 +80,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     selectedUnitType,
     unitOptions: unitOptions.length
   });
-  return <div className="space-y-4">
+  return (
+    <div className="space-y-4">
       {/* Informações do Produto */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="flex items-center gap-2 mb-2">
@@ -95,7 +96,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       </div>
 
       {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
-      {hasDiscountRestriction() && <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+      {hasDiscountRestriction() && (
+        <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
             <span className="text-sm font-medium">
@@ -109,49 +111,76 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             </div>
             <div className="flex justify-between">
               <span>Desconto atual:</span>
-              
+              <span className={`font-medium ${isDiscountExceeded ? 'text-red-600' : 'text-green-600'}`}>
+                {currentDiscountPercent.toFixed(1)}%
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Preço mínimo para esta unidade:</span>
               <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
             </div>
-            {isDiscountExceeded}
+            {isDiscountExceeded && (
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-center">
+                <strong>Preço abaixo do permitido!</strong>
+              </div>
+            )}
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Formulário de Quantidade e Preço */}
       <div className="grid grid-cols-3 gap-3">
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
-          <Input type="number" value={quantity || ''} onChange={e => onQuantityChange(Number(e.target.value))} min="1" step="1" className="text-center h-10" />
+          <Input
+            type="number"
+            value={quantity || ''}
+            onChange={(e) => onQuantityChange(Number(e.target.value))}
+            min="1"
+            step="1"
+            className="text-center h-10"
+          />
         </div>
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select value={selectedUnitType} onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)} disabled={!hasMultipleUnits}>
+          <Select 
+            value={selectedUnitType} 
+            onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
+            disabled={!hasMultipleUnits}
+          >
             <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {unitOptions.map(option => <SelectItem key={option.value} value={option.value}>
+              {unitOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>
                   {option.displayText}
-                </SelectItem>)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">
-            Preço Unit. {hasDiscountRestriction() && minPriceForCurrentUnit > 0 && `(Mín: ${formatPrice(minPriceForCurrentUnit)})`}
+            Preço
           </Label>
-          <Input type="number" value={unitPrice || ''} onChange={e => onUnitPriceChange(Number(e.target.value))} min="0" step="0.01" className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`} />
+          <Input
+            type="number"
+            value={unitPrice || ''}
+            onChange={(e) => onUnitPriceChange(Number(e.target.value))}
+            min="0"
+            step="0.01"
+            className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
+          />
         </div>
       </div>
 
       {/* Total do Item */}
       <div className="bg-green-50 border border-green-200 rounded-lg p-3">
         <div className="flex justify-between items-center">
-          
+          <span className="text-sm font-medium text-green-700">Total do Item:</span>
           <span className="font-bold text-green-600 text-lg">
             {formatPrice(quantity * unitPrice)}
           </span>
@@ -159,10 +188,15 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       </div>
 
       {/* Botão Adicionar */}
-      <Button onClick={onAddProduct} disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded} className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}>
+      <Button
+        onClick={onAddProduct}
+        disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
+        className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}
+      >
         <Plus size={18} className="mr-2" />
         {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
       </Button>
-    </div>;
+    </div>
+  );
 };
 export default NewOrderProductDetails;
