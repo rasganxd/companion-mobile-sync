@@ -43,14 +43,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
 
   const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct);
   
-  // ✅ NOVO: Usar useUnitSelection para gerenciar unidades e preços
+  // ✅ Usar useUnitSelection para gerenciar unidades e preços
   const {
     unitOptions,
     selectedUnitType,
     setSelectedUnitType,
     hasMultipleUnits,
     getCurrentPrice,
-    getCurrentUnitCode
+    getCurrentUnitCode,
+    handleUnitTypeChange
   } = useUnitSelection(selectedProduct);
 
   useEffect(() => {
@@ -65,13 +66,13 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     }
   }, [products, selectedProduct]);
 
-  // ✅ NOVO: Sincronizar preço e unidade quando o produto ou unidade muda
+  // ✅ CRÍTICO: Sincronizar preço e unidade quando o produto ou unidade muda
   useEffect(() => {
     if (selectedProduct && unitOptions.length > 0) {
       const currentPrice = getCurrentPrice();
       const currentUnitCode = getCurrentUnitCode();
       
-      console.log('🔄 Sincronizando preço e unidade:', {
+      console.log('🔄 useProductSelection - Sincronizando preço e unidade:', {
         currentPrice,
         currentUnitCode,
         selectedUnitType
@@ -240,9 +241,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setSelectedUnit('UN');
   };
 
-  // ✅ NOVO: Funções para gerenciar mudança de unidade
-  const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
-    setSelectedUnitType(unitType);
+  // ✅ NOVO: Função para gerenciar mudança de unidade com callback direto
+  const handleUnitTypeChangeWithPriceUpdate = (unitType: 'main' | 'sub') => {
+    console.log('🔄 useProductSelection - Mudança de unidade solicitada:', unitType);
+    
+    // Usar a função do useUnitSelection que inclui callback de preço
+    handleUnitTypeChange(unitType, (newPrice) => {
+      console.log('💰 useProductSelection - Atualizando preço via callback:', newPrice);
+      setUnitPrice(newPrice);
+    });
   };
 
   return {
@@ -252,7 +259,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     unitPrice,
     searchTerm,
     selectedUnit,
-    // ✅ NOVO: Expor dados e funções de unidade
+    // ✅ Expor dados e funções de unidade
     unitOptions,
     selectedUnitType,
     hasMultipleUnits,
@@ -261,7 +268,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setUnitPrice,
     setSearchTerm,
     setSelectedUnit,
-    handleUnitTypeChange,
+    handleUnitTypeChange: handleUnitTypeChangeWithPriceUpdate, // ✅ Usar versão com callback
     addProduct,
     clearSelection
   };

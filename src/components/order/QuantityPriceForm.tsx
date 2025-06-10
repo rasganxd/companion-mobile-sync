@@ -65,9 +65,12 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
   const [priceInputValue, setPriceInputValue] = useState('');
   const isUserTyping = useRef(false);
 
+  // ✅ CRÍTICO: Sincronizar input com unitPrice sempre
   useEffect(() => {
     if (!isUserTyping.current) {
-      setPriceInputValue(unitPrice.toFixed(2));
+      const formattedPrice = unitPrice.toFixed(2);
+      console.log('🔄 QuantityPriceForm - Sincronizando input com unitPrice:', formattedPrice);
+      setPriceInputValue(formattedPrice);
     }
   }, [unitPrice]);
 
@@ -103,23 +106,26 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
+  // ✅ CRÍTICO: Função simplificada para mudança de unidade
   const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
-    console.log('🔄 Mudando tipo de unidade para:', unitType);
+    console.log('🔄 QuantityPriceForm - Mudando tipo de unidade para:', unitType);
     
-    onUnitTypeChange(unitType);
-    
+    // Encontrar a unidade correspondente
     const unit = unitOptions.find(opt => opt.value === unitType);
     if (unit) {
-      console.log('💰 Novo preço da unidade:', unit.price);
+      console.log('💰 QuantityPriceForm - Novo preço da unidade:', unit.price);
+      
+      // Atualizar unidade
+      onUnitTypeChange(unitType);
       
       if (onUnitChange) {
         onUnitChange(unit.code);
       }
       
-      // ✅ CRÍTICO: Atualizar o preço automaticamente quando a unidade muda
+      // ✅ CRÍTICO: Atualizar preço IMEDIATAMENTE
       onUnitPriceChange(unit.price);
       
-      // Atualizar o campo de input visual também
+      // ✅ CRÍTICO: Atualizar campo visual IMEDIATAMENTE
       if (!isUserTyping.current) {
         setPriceInputValue(unit.price.toFixed(2));
       }

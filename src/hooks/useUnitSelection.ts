@@ -80,6 +80,20 @@ export const useUnitSelection = (product: Product | null) => {
     return selectedUnit?.code || 'UN';
   };
 
+  // ✅ NOVO: Função para mudança de unidade com callback de preço
+  const handleUnitTypeChange = (unitType: 'main' | 'sub', onPriceChange?: (price: number) => void) => {
+    console.log('🔄 useUnitSelection - Mudando tipo de unidade para:', unitType);
+    
+    setSelectedUnitType(unitType);
+    
+    // Encontrar a unidade selecionada e chamar callback imediatamente
+    const unit = unitOptions.find(opt => opt.value === unitType);
+    if (unit && onPriceChange) {
+      console.log('💰 useUnitSelection - Atualizando preço para:', unit.price);
+      onPriceChange(unit.price);
+    }
+  };
+
   return {
     unitOptions,
     selectedUnit,
@@ -87,6 +101,7 @@ export const useUnitSelection = (product: Product | null) => {
     setSelectedUnitType,
     hasMultipleUnits,
     getCurrentPrice,
-    getCurrentUnitCode
+    getCurrentUnitCode,
+    handleUnitTypeChange // ✅ NOVO: Expor função com callback
   };
 };
