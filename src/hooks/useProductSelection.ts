@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -39,7 +40,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUnit, setSelectedUnit] = useState<string>('UN');
 
-  const { checkPriceAndNotify } = useProductPriceValidation(selectedProduct);
+  const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct);
 
   useEffect(() => {
     loadProducts();
@@ -87,20 +88,17 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       
       // Log detalhado dos produtos para debug de desconto máximo
       normalizedProducts.forEach((product, index) => {
-        console.log(`📦 Produto final ${index + 1}:`, {
-          id: product.id,
-          name: product.name,
-          code: product.code,
-          sale_price: product.sale_price,
-          max_discount_percent: product.max_discount_percent,
-          max_discount_type: typeof product.max_discount_percent,
-          stock: product.stock,
-          unit: product.unit,
-          has_subunit: product.has_subunit,
-          subunit: product.subunit,
-          subunit_ratio: product.subunit_ratio,
-          hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0)
-        });
+        if (product.max_discount_percent && product.max_discount_percent > 0) {
+          console.log(`📦 Produto ${index + 1} COM DESCONTO MÁXIMO:`, {
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            sale_price: product.sale_price,
+            max_discount_percent: product.max_discount_percent,
+            stock: product.stock,
+            unit: product.unit
+          });
+        }
       });
       
     } catch (error) {
@@ -115,7 +113,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   );
 
   const selectProduct = (product: Product) => {
-    console.log('📦 Produto selecionado:', product);
+    console.log('📦 PRODUTO SELECIONADO:', {
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      sale_price: product.sale_price,
+      max_discount_percent: product.max_discount_percent,
+      hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0)
+    });
+    
     setSelectedProduct(product);
     
     // Use sale_price if available, otherwise use price
@@ -128,7 +134,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     
     console.log('💰 Preço definido:', correctPrice);
     console.log('📏 Unidade padrão definida:', defaultUnit);
-    console.log('💰 Desconto máximo:', product.max_discount_percent || 0);
+    console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
     
     // Log informações sobre unidades
     if (product.has_subunit) {
@@ -141,22 +147,36 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   };
 
   const addProduct = () => {
+    console.log('🔍 INICIANDO ADIÇÃO DE PRODUTO:', {
+      selectedProduct: selectedProduct?.name || 'Nenhum',
+      quantity,
+      unitPrice,
+      hasProduct: !!selectedProduct
+    });
+
     if (!selectedProduct || quantity <= 0) {
       toast.error('Selecione um produto e quantidade válida');
       return;
     }
 
-    // Validar desconto máximo antes de adicionar
-    console.log('🔍 Validando preço antes de adicionar:', {
+    // VALIDAÇÃO CRÍTICA: Verificar desconto máximo antes de adicionar
+    console.log('🔍 VALIDAÇÃO DE DESCONTO - Verificando:', {
       productName: selectedProduct.name,
       unitPrice,
-      maxDiscountPercent: selectedProduct.max_discount_percent
+      maxDiscountPercent: selectedProduct.max_discount_percent,
+      hasDiscountRestriction: hasDiscountRestriction()
     });
 
-    if (!checkPriceAndNotify(unitPrice)) {
-      console.log('❌ Preço inválido por desconto máximo, não adicionando produto');
+    // Esta é a validação que deve impedir a adição se o desconto for excedido
+    const priceIsValid = checkPriceAndNotify(unitPrice);
+    
+    if (!priceIsValid) {
+      console.log('❌ PREÇO INVÁLIDO - Produto NÃO será adicionado');
+      console.log('❌ Motivo: Desconto excede o limite máximo permitido');
       return;
     }
+
+    console.log('✅ PREÇO VÁLIDO - Prosseguindo com adição do produto');
 
     const newItem: OrderItem = {
       id: Date.now(),
@@ -168,12 +188,13 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       unit: selectedUnit
     };
 
-    console.log('➕ Adicionando item ao pedido com validação de desconto:', {
+    console.log('➕ ADICIONANDO ITEM AO PEDIDO:', {
       productName: newItem.productName,
       quantity: newItem.quantity,
       unit: newItem.unit,
       price: newItem.price,
-      maxDiscountPercent: selectedProduct.max_discount_percent
+      maxDiscountPercent: selectedProduct.max_discount_percent,
+      totalItem: (newItem.quantity * newItem.price).toFixed(2)
     });
     
     onAddItem(newItem);
@@ -184,6 +205,8 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setUnitPrice(0);
     setSearchTerm('');
     setSelectedUnit('UN');
+    
+    console.log('✅ PRODUTO ADICIONADO COM SUCESSO E SELEÇÃO LIMPA');
   };
 
   const clearSelection = () => {
