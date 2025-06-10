@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Package, AlertTriangle } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { useUnitSelection } from '@/hooks/useUnitSelection';
 
 interface Product {
   id: string;
@@ -50,6 +51,16 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     validationResult
   } = useProductPriceValidation(currentProduct);
 
+  // ✅ NOVO: Usar useUnitSelection para gerenciar unidades e preços
+  const {
+    unitOptions,
+    selectedUnitType,
+    setSelectedUnitType,
+    hasMultipleUnits,
+    getCurrentPrice,
+    getCurrentUnitCode
+  } = useUnitSelection(currentProduct);
+
   if (!currentProduct) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
@@ -67,20 +78,21 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  const getUnitOptions = () => {
-    const options = [{ code: currentProduct.unit || 'UN', label: currentProduct.unit || 'UN' }];
+  // ✅ NOVO: Handler para mudança de unidade que atualiza preço automaticamente
+  const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
+    console.log('🔄 Mudando unidade:', unitType);
     
-    if (currentProduct.has_subunit && currentProduct.subunit) {
-      options.push({ 
-        code: currentProduct.subunit, 
-        label: currentProduct.subunit 
-      });
+    setSelectedUnitType(unitType);
+    
+    const unit = unitOptions.find(opt => opt.value === unitType);
+    if (unit) {
+      console.log('💰 Novo preço automático:', unit.price);
+      
+      // Atualizar unidade e preço automaticamente
+      onUnitChange(unit.code);
+      onUnitPriceChange(unit.price);
     }
-    
-    return options;
   };
-
-  const unitOptions = getUnitOptions();
 
   console.log('🔍 NewOrderProductDetails - Renderizando:', {
     productName: currentProduct.name,
@@ -90,7 +102,10 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     currentPrice: unitPrice,
     currentDiscountPercent,
     isDiscountExceeded,
-    validationResult
+    validationResult,
+    selectedUnitType,
+    hasMultipleUnits,
+    unitOptionsCount: unitOptions.length
   });
 
   return (
@@ -163,18 +178,31 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select value={selectedUnit} onValueChange={onUnitChange}>
-            <SelectTrigger className="h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {unitOptions.map((option) => (
-                <SelectItem key={option.code} value={option.code}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {hasMultipleUnits ? (
+            <Select value={selectedUnitType} onValueChange={handleUnitTypeChange}>
+              <SelectTrigger className="h-10">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {unitOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{option.label}</span>
+                      <span className="text-xs text-gray-500">
+                        {formatPrice(option.price)} por {option.displayText}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={currentProduct.unit || 'UN'}
+              readOnly
+              className="text-center bg-gray-50 h-10"
+            />
+          )}
         </div>
 
         <div>

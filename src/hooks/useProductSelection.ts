@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { useUnitSelection } from '@/hooks/useUnitSelection';
 
 interface Product {
   id: string;
@@ -41,6 +42,16 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [selectedUnit, setSelectedUnit] = useState<string>('UN');
 
   const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct);
+  
+  // ✅ NOVO: Usar useUnitSelection para gerenciar unidades e preços
+  const {
+    unitOptions,
+    selectedUnitType,
+    setSelectedUnitType,
+    hasMultipleUnits,
+    getCurrentPrice,
+    getCurrentUnitCode
+  } = useUnitSelection(selectedProduct);
 
   useEffect(() => {
     loadProducts();
@@ -53,6 +64,23 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       selectProduct(products[0]);
     }
   }, [products, selectedProduct]);
+
+  // ✅ NOVO: Sincronizar preço e unidade quando o produto ou unidade muda
+  useEffect(() => {
+    if (selectedProduct && unitOptions.length > 0) {
+      const currentPrice = getCurrentPrice();
+      const currentUnitCode = getCurrentUnitCode();
+      
+      console.log('🔄 Sincronizando preço e unidade:', {
+        currentPrice,
+        currentUnitCode,
+        selectedUnitType
+      });
+      
+      setUnitPrice(currentPrice);
+      setSelectedUnit(currentUnitCode);
+    }
+  }, [selectedProduct, selectedUnitType, unitOptions, getCurrentPrice, getCurrentUnitCode]);
 
   const loadProducts = async () => {
     try {
@@ -124,16 +152,10 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     
     setSelectedProduct(product);
     
-    // Use sale_price if available, otherwise use price
-    const correctPrice = product.sale_price || product.price || 0;
-    setUnitPrice(correctPrice);
+    // Reset para unidade principal quando seleciona novo produto
+    setSelectedUnitType('main');
     
-    // Definir unidade padrão como unidade principal
-    const defaultUnit = product.unit || 'UN';
-    setSelectedUnit(defaultUnit);
-    
-    console.log('💰 Preço definido:', correctPrice);
-    console.log('📏 Unidade padrão definida:', defaultUnit);
+    console.log('💰 Produto selecionado - aguardando sincronização automática de preço e unidade');
     console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
     
     // Log informações sobre unidades
@@ -151,6 +173,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       selectedProduct: selectedProduct?.name || 'Nenhum',
       quantity,
       unitPrice,
+      selectedUnit,
       hasProduct: !!selectedProduct
     });
 
@@ -217,6 +240,11 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setSelectedUnit('UN');
   };
 
+  // ✅ NOVO: Funções para gerenciar mudança de unidade
+  const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
+    setSelectedUnitType(unitType);
+  };
+
   return {
     products: filteredProducts,
     selectedProduct,
@@ -224,11 +252,16 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     unitPrice,
     searchTerm,
     selectedUnit,
+    // ✅ NOVO: Expor dados e funções de unidade
+    unitOptions,
+    selectedUnitType,
+    hasMultipleUnits,
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
     setSelectedUnit,
+    handleUnitTypeChange,
     addProduct,
     clearSelection
   };

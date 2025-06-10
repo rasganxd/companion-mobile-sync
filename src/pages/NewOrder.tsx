@@ -54,12 +54,16 @@ const PlaceOrder = () => {
     quantity,
     unitPrice,
     searchTerm,
-    selectedUnit, // ✅ NOVO: Receber unidade selecionada
+    selectedUnit,
+    unitOptions, // ✅ NOVO
+    selectedUnitType, // ✅ NOVO
+    hasMultipleUnits, // ✅ NOVO
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
-    setSelectedUnit, // ✅ NOVO: Receber setter da unidade
+    setSelectedUnit,
+    handleUnitTypeChange, // ✅ NOVO
     addProduct,
     clearSelection
   } = useProductSelection(addOrderItem);
@@ -169,10 +173,10 @@ const PlaceOrder = () => {
             currentProduct={currentProduct}
             quantity={quantity}
             unitPrice={unitPrice}
-            selectedUnit={selectedUnit} // ✅ NOVO: Passar unidade selecionada
+            selectedUnit={selectedUnit}
             onQuantityChange={setQuantity}
             onUnitPriceChange={setUnitPrice}
-            onUnitChange={setSelectedUnit} // ✅ NOVO: Passar setter da unidade
+            onUnitChange={setSelectedUnit}
             onAddProduct={addProduct}
           />
         </div>

@@ -104,11 +104,25 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
   };
 
   const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
+    console.log('🔄 Mudando tipo de unidade para:', unitType);
+    
     onUnitTypeChange(unitType);
+    
     const unit = unitOptions.find(opt => opt.value === unitType);
-    if (unit && onUnitChange) {
-      onUnitChange(unit.code);
+    if (unit) {
+      console.log('💰 Novo preço da unidade:', unit.price);
+      
+      if (onUnitChange) {
+        onUnitChange(unit.code);
+      }
+      
+      // ✅ CRÍTICO: Atualizar o preço automaticamente quando a unidade muda
       onUnitPriceChange(unit.price);
+      
+      // Atualizar o campo de input visual também
+      if (!isUserTyping.current) {
+        setPriceInputValue(unit.price.toFixed(2));
+      }
     }
   };
 
@@ -141,7 +155,9 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex flex-col">
                     <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-gray-500">{option.displayText}</span>
+                    <span className="text-xs text-gray-500">
+                      {formatPrice(option.price)} por {option.displayText}
+                    </span>
                   </div>
                 </SelectItem>
               ))}

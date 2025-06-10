@@ -70,11 +70,23 @@ export const useUnitSelection = (product: Product | null) => {
 
   const hasMultipleUnits = unitOptions.length > 1;
 
+  // Function to get current unit price
+  const getCurrentPrice = () => {
+    return selectedUnit?.price || 0;
+  };
+
+  // Function to get current unit code
+  const getCurrentUnitCode = () => {
+    return selectedUnit?.code || 'UN';
+  };
+
   return {
     unitOptions,
     selectedUnit,
     selectedUnitType,
     setSelectedUnitType,
-    hasMultipleUnits
+    hasMultipleUnits,
+    getCurrentPrice,
+    getCurrentUnitCode
   };
 };
