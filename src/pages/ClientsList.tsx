@@ -181,25 +181,43 @@ const ClientsList = () => {
           };
         });
 
-        // Ordenar clientes por visit_sequence
+        // Smart ordering: visitados primeiro (ocultos), depois pendentes por sequência
         const sortedClients = clientsWithStatus.sort((a, b) => {
-          // Clientes sem sequência definida aparecem primeiro
-          if (a.visit_sequence == null && b.visit_sequence == null) {
-            return a.name.localeCompare(b.name); // Ordem alfabética para empate
-          }
-          if (a.visit_sequence == null) return -1; // a vem antes
-          if (b.visit_sequence == null) return 1;  // b vem antes
+          // Primeiro critério: Status (visitados vão para o início, mas serão "ocultos")
+          const aVisited = a.status === 'positivado' || a.status === 'negativado';
+          const bVisited = b.status === 'positivado' || b.status === 'negativado';
           
-          // Ambos têm sequência definida - ordenar por sequência
+          if (aVisited && !bVisited) return -1; // a (visitado) vem antes
+          if (!aVisited && bVisited) return 1;  // b (visitado) vem antes
+          
+          // Se ambos têm o mesmo status (ambos visitados ou ambos pendentes)
+          if (aVisited && bVisited) {
+            // Para visitados, ordenar por visit_sequence
+            if (a.visit_sequence != null && b.visit_sequence != null) {
+              if (a.visit_sequence !== b.visit_sequence) {
+                return a.visit_sequence - b.visit_sequence;
+              }
+            }
+            if (a.visit_sequence == null && b.visit_sequence != null) return 1;
+            if (a.visit_sequence != null && b.visit_sequence == null) return -1;
+            return a.name.localeCompare(b.name);
+          }
+          
+          // Para pendentes, aplicar lógica original de ordenação
+          if (a.visit_sequence == null && b.visit_sequence == null) {
+            return a.name.localeCompare(b.name);
+          }
+          if (a.visit_sequence == null) return -1;
+          if (b.visit_sequence == null) return 1;
+          
           if (a.visit_sequence !== b.visit_sequence) {
             return a.visit_sequence - b.visit_sequence;
           }
           
-          // Sequências iguais - ordenar por nome
           return a.name.localeCompare(b.name);
         });
         
-        console.log(`✅ Clients sorted by visit_sequence for ${day} (salesperson ${salesRep.name}):`, sortedClients);
+        console.log(`✅ Clients with smart ordering for ${day} (salesperson ${salesRep.name}):`, sortedClients);
         setClients(sortedClients);
         
       } catch (error) {

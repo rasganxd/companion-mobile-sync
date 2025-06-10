@@ -62,10 +62,25 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
     );
   });
 
-  // Reset da página quando a busca muda
+  // Encontrar primeiro cliente pendente para página inicial
+  const findFirstPendingClient = () => {
+    for (let i = 0; i < filteredClients.length; i++) {
+      if (filteredClients[i].status === 'pendente') {
+        return i;
+      }
+    }
+    return 0; // Se não há pendentes, começar do primeiro
+  };
+
+  // Reset da página quando a busca muda ou quando clientes carregam
   React.useEffect(() => {
-    setCurrentPage(0);
-  }, [searchTerm]);
+    if (filteredClients.length > 0) {
+      const firstPendingIndex = findFirstPendingClient();
+      setCurrentPage(firstPendingIndex);
+    } else {
+      setCurrentPage(0);
+    }
+  }, [searchTerm, clients]);
 
   const handleViewDetails = (client: Client) => {
     const clientIndex = filteredClients.findIndex(c => c.id === client.id);
@@ -74,7 +89,13 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
 
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'list' ? 'paginated' : 'list');
-    setCurrentPage(0);
+    if (viewMode === 'list') {
+      // Ao trocar para paginado, começar no primeiro pendente
+      const firstPendingIndex = findFirstPendingClient();
+      setCurrentPage(firstPendingIndex);
+    } else {
+      setCurrentPage(0);
+    }
   };
 
   if (loading) {
