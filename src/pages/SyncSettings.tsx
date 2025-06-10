@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff, Package } from 'lucide-react';
+import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
@@ -23,7 +23,6 @@ const SyncSettings = () => {
     lastSyncDate,
     performFullSync,
     forceResync,
-    forceProductSync, // 🆕 NOVA FUNÇÃO
     loadLastSyncDate,
     clearLocalData,
     canSync
@@ -76,42 +75,6 @@ const SyncSettings = () => {
     } catch (error) {
       console.error('❌ Erro durante sincronização rápida:', error);
       toast.error('Erro durante a sincronização. Tente novamente.');
-    }
-  };
-
-  // 🆕 NOVA FUNÇÃO: Sincronização forçada APENAS de produtos
-  const handleForceProductSync = async () => {
-    if (!salesRep || !salesRep.sessionToken) {
-      toast.error('Vendedor não identificado. Faça login novamente.');
-      return;
-    }
-
-    if (!canSync) {
-      toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
-      return;
-    }
-
-    console.log('🔄 Iniciando sincronização FORÇADA de produtos...');
-    
-    try {
-      const result = await forceProductSync(salesRep.id, salesRep.sessionToken);
-      
-      if (result.success) {
-        const { products = 0 } = result.syncedData || {};
-        toast.success(`✅ Produtos sincronizados com sucesso! ${products} produtos atualizados com dados completos`);
-        console.log('✅ Sincronização forçada de produtos bem-sucedida');
-        
-        // Mostrar notificação adicional sobre max_discount_percent
-        setTimeout(() => {
-          toast.info('📊 Dados de desconto máximo agora disponíveis nos produtos!');
-        }, 1000);
-      } else {
-        toast.error('Falha na sincronização de produtos: ' + (result.error || 'Erro desconhecido'));
-        console.error('❌ Falha na sincronização forçada de produtos:', result.error);
-      }
-    } catch (error) {
-      console.error('❌ Erro durante sincronização forçada de produtos:', error);
-      toast.error('Erro durante a sincronização de produtos. Tente novamente.');
     }
   };
 
@@ -263,26 +226,6 @@ const SyncSettings = () => {
               )}
             </Button>
 
-            {/* 🆕 NOVO BOTÃO: Sincronização Forçada de Produtos */}
-            <Button
-              onClick={handleForceProductSync}
-              disabled={isSyncing || !canSync || !salesRep}
-              className="w-full bg-orange-600 hover:bg-orange-700"
-              variant="secondary"
-            >
-              {isSyncing ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Sincronizando...
-                </>
-              ) : (
-                <>
-                  <Package className="w-4 h-4 mr-2" />
-                  Forçar Sync de Produtos
-                </>
-              )}
-            </Button>
-
             <Button
               onClick={handleFullResync}
               disabled={isSyncing || !canSync || !salesRep}
@@ -312,7 +255,6 @@ const SyncSettings = () => {
 
           <div className="text-sm text-gray-600 mt-3">
             <p><strong>Sincronização Rápida:</strong> Atualiza dados sem limpar cache local</p>
-            <p><strong>🆕 Forçar Sync de Produtos:</strong> Limpa e recarrega APENAS produtos com dados completos</p>
             <p><strong>Ressincronização Completa:</strong> Remove todos os dados e recarrega do servidor</p>
             <p><strong>Limpar Dados:</strong> Remove todos os dados locais (requer novo login)</p>
           </div>

@@ -54,16 +54,12 @@ const PlaceOrder = () => {
     quantity,
     unitPrice,
     searchTerm,
-    selectedUnit,
-    unitOptions,
-    selectedUnitType,
-    hasMultipleUnits,
+    selectedUnit, // ✅ NOVO: Receber unidade selecionada
     selectProduct,
     setQuantity,
     setUnitPrice,
     setSearchTerm,
-    setSelectedUnit,
-    handleUnitTypeChange,
+    setSelectedUnit, // ✅ NOVO: Receber setter da unidade
     addProduct,
     clearSelection
   } = useProductSelection(addOrderItem);
@@ -133,14 +129,6 @@ const PlaceOrder = () => {
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
   };
-
-  // ✅ CORREÇÃO: Criar função wrapper para converter string para 'main' | 'sub'
-  const handleUnitChange = (unit: string) => {
-    // Para compatibilidade, ignorar strings que não sejam 'main' ou 'sub'
-    if (unit === 'main' || unit === 'sub') {
-      setSelectedUnit(unit);
-    }
-  };
   
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -181,14 +169,10 @@ const PlaceOrder = () => {
             currentProduct={currentProduct}
             quantity={quantity}
             unitPrice={unitPrice}
-            selectedUnit={selectedUnit}
-            unitOptions={unitOptions}
-            selectedUnitType={selectedUnitType}
-            hasMultipleUnits={hasMultipleUnits}
+            selectedUnit={selectedUnit} // ✅ NOVO: Passar unidade selecionada
             onQuantityChange={setQuantity}
             onUnitPriceChange={setUnitPrice}
-            onUnitChange={handleUnitChange}
-            onUnitTypeChange={handleUnitTypeChange}
+            onUnitChange={setSelectedUnit} // ✅ NOVO: Passar setter da unidade
             onAddProduct={addProduct}
           />
         </div>

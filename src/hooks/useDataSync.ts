@@ -82,84 +82,6 @@ export const useDataSync = () => {
     }
   }, []);
 
-  // 🆕 NOVA FUNÇÃO: Forçar sincronização APENAS de produtos
-  const forceProductSync = useCallback(async (salesRepId: string, sessionToken: string): Promise<SyncResult> => {
-    try {
-      setIsSyncing(true);
-      console.log('🔄 Iniciando sincronização FORÇADA APENAS de produtos');
-      
-      const db = getDatabaseAdapter();
-      await db.initDatabase();
-
-      // Limpar produtos existentes primeiro
-      console.log('🗑️ Limpando produtos existentes...');
-      if ('forceCleanAllProducts' in db && typeof db.forceCleanAllProducts === 'function') {
-        await db.forceCleanAllProducts();
-      }
-
-      updateProgress('Sincronizando produtos...', 0, 1);
-
-      // Buscar produtos REAIS do Supabase
-      console.log('📥 Buscando produtos REAIS do Supabase com max_discount_percent');
-      const productsData = await supabaseService.getProducts(sessionToken);
-      console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
-      
-      // Log detalhado para verificar max_discount_percent
-      productsData.forEach((product, index) => {
-        if (product.max_discount_percent && product.max_discount_percent > 0) {
-          console.log(`🔍 Produto ${index + 1} COM max_discount_percent:`, {
-            id: product.id,
-            name: product.name,
-            code: product.code,
-            sale_price: product.sale_price,
-            max_discount_percent: product.max_discount_percent
-          });
-        }
-      });
-
-      let syncedProducts = 0;
-      if (productsData.length > 0) {
-        await db.saveProducts(productsData);
-        syncedProducts = productsData.length;
-        console.log(`✅ Salvos ${syncedProducts} produtos REAIS com dados completos`);
-      }
-
-      // Verificar se os dados foram salvos corretamente
-      console.log('🔍 Verificando produtos salvos no SQLite...');
-      const savedProducts = await db.getProducts();
-      const productsWithDiscount = savedProducts.filter(p => p.max_discount_percent && p.max_discount_percent > 0);
-      console.log(`📊 ${productsWithDiscount.length} produtos com max_discount_percent salvos no SQLite`);
-
-      updateProgress('Produtos sincronizados', 1, 1);
-
-      const syncDate = new Date();
-      localStorage.setItem('last_sync_date', syncDate.toISOString());
-      setLastSyncDate(syncDate);
-
-      console.log(`✅ Sincronização de produtos concluída: ${syncedProducts} produtos`);
-      
-      return {
-        success: true,
-        syncedData: {
-          clients: 0, // Não sincronizamos clientes nesta operação
-          products: syncedProducts,
-          paymentTables: 0 // Não sincronizamos tabelas de pagamento nesta operação
-        }
-      };
-
-    } catch (error) {
-      console.error('❌ Falha na sincronização de produtos:', error);
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro durante a sincronização de produtos.'
-      };
-    } finally {
-      setIsSyncing(false);
-      setSyncProgress(null);
-    }
-  }, [connected]);
-
   const validateSyncParams = (salesRepId: string, sessionToken: string) => {
     if (!salesRepId || salesRepId.trim() === '') {
       throw new Error('ID do vendedor é obrigatório para sincronização');
@@ -398,7 +320,6 @@ export const useDataSync = () => {
     lastSyncDate,
     performFullSync,
     forceResync,
-    forceProductSync, // 🆕 NOVA FUNÇÃO EXPORTADA
     loadLastSyncDate,
     clearLocalData,
     clearMockData,

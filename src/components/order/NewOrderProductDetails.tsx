@@ -1,11 +1,10 @@
 
 import React from 'react';
-import ProductHeader from './ProductHeader';
-import ProductDetails from './ProductDetails';
-import QuantityPriceForm from './QuantityPriceForm';
-import ItemTotalCard from './ItemTotalCard';
-import AddProductButton from './AddProductButton';
-import DiscountInfoCard from './DiscountInfoCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Package, AlertTriangle } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 
 interface Product {
@@ -16,19 +15,10 @@ interface Product {
   code: number;
   stock: number;
   unit?: string;
-  cost?: number;
   has_subunit?: boolean;
   subunit?: string;
   subunit_ratio?: number;
   max_discount_percent?: number;
-}
-
-interface UnitOption {
-  value: 'main' | 'sub';
-  label: string;
-  code: string;
-  price: number;
-  displayText: string;
 }
 
 interface NewOrderProductDetailsProps {
@@ -36,13 +26,9 @@ interface NewOrderProductDetailsProps {
   quantity: number;
   unitPrice: number;
   selectedUnit: string;
-  unitOptions: UnitOption[];
-  selectedUnitType: 'main' | 'sub';
-  hasMultipleUnits: boolean;
   onQuantityChange: (quantity: number) => void;
   onUnitPriceChange: (price: number) => void;
   onUnitChange: (unit: string) => void;
-  onUnitTypeChange: (unitType: 'main' | 'sub') => void;
   onAddProduct: () => void;
 }
 
@@ -51,86 +37,186 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   quantity,
   unitPrice,
   selectedUnit,
-  unitOptions,
-  selectedUnitType,
-  hasMultipleUnits,
   onQuantityChange,
   onUnitPriceChange,
   onUnitChange,
-  onUnitTypeChange,
   onAddProduct
 }) => {
-  const {
-    validationResult,
-    hasMinPriceRestriction,
-    getMinPrice,
-    hasDiscountRestriction,
+  const { 
+    hasDiscountRestriction, 
+    getMinPrice, 
+    getMaxDiscountPercent,
     getCurrentDiscountPercent,
-    getMinPriceByDiscount,
-    validatePrice
+    validationResult
   } = useProductPriceValidation(currentProduct);
 
   if (!currentProduct) {
     return (
-      <div className="text-center py-8 text-gray-500">
-        Nenhum produto selecionado
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <Package size={32} className="mx-auto mb-2 text-gray-400" />
+        <p className="text-gray-500">Nenhum produto selecionado</p>
       </div>
     );
   }
 
-  // ✅ CORREÇÃO: Validar preço com tipo de unidade correto
-  const currentValidation = validatePrice(unitPrice, selectedUnitType);
-  const priceError = currentValidation.error;
-  const hasDiscountRestrictionValue = hasDiscountRestriction();
+  const salePrice = currentProduct.sale_price || currentProduct.price || 0;
+  const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
+  const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
+
+  const formatPrice = (value: number): string => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  };
+
+  const getUnitOptions = () => {
+    const options = [{ code: currentProduct.unit || 'UN', label: currentProduct.unit || 'UN' }];
+    
+    if (currentProduct.has_subunit && currentProduct.subunit) {
+      options.push({ 
+        code: currentProduct.subunit, 
+        label: currentProduct.subunit 
+      });
+    }
+    
+    return options;
+  };
+
+  const unitOptions = getUnitOptions();
+
+  console.log('🔍 NewOrderProductDetails - Renderizando:', {
+    productName: currentProduct.name,
+    hasDiscountRestriction: hasDiscountRestriction(),
+    minPrice: getMinPrice(),
+    maxDiscountPercent: getMaxDiscountPercent(),
+    currentPrice: unitPrice,
+    currentDiscountPercent,
+    isDiscountExceeded,
+    validationResult
+  });
 
   return (
-    <div className="space-y-3">
-      <ProductHeader 
-        product={currentProduct}
-        currentProductIndex={0}
-      />
+    <div className="space-y-4">
+      {/* Informações do Produto */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Package className="text-blue-600" size={18} />
+          <div className="flex-1">
+            <h3 className="font-semibold text-blue-900 text-sm">{currentProduct.name}</h3>
+            <p className="text-xs text-blue-700">
+              Código: {currentProduct.code} • Estoque: {currentProduct.stock} • Preço: {formatPrice(salePrice)}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <ProductDetails product={currentProduct} />
-
-      <QuantityPriceForm
-        currentProduct={currentProduct}
-        quantity={quantity}
-        unitPrice={unitPrice}
-        selectedUnit={selectedUnit}
-        unitOptions={unitOptions}
-        selectedUnitType={selectedUnitType}
-        hasMultipleUnits={hasMultipleUnits}
-        priceError={priceError}
-        hasMinPriceRestriction={hasMinPriceRestriction()}
-        getMinPrice={getMinPrice}
-        onQuantityChange={onQuantityChange}
-        onUnitPriceChange={onUnitPriceChange}
-        onUnitChange={onUnitChange}
-        onUnitTypeChange={onUnitTypeChange}
-      />
-
-      <ItemTotalCard
-        quantity={quantity}
-        unitPrice={unitPrice}
-        selectedUnit={selectedUnit}
-        priceError={priceError}
-      />
-
-      {hasDiscountRestrictionValue && (
-        <DiscountInfoCard 
-          salePrice={currentProduct.sale_price || currentProduct.price || 0}
-          maxDiscountPercent={currentProduct.max_discount_percent || 0}
-          currentDiscountPercent={getCurrentDiscountPercent(unitPrice, selectedUnitType)}
-          getMinPriceByDiscount={getMinPriceByDiscount}
-        />
+      {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
+      {hasDiscountRestriction() && (
+        <div className={`border rounded-lg p-3 ${
+          isDiscountExceeded 
+            ? 'bg-red-50 border-red-200' 
+            : 'bg-yellow-50 border-yellow-200'
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
+            <span className="text-sm font-medium">
+              {isDiscountExceeded ? 'DESCONTO EXCEDIDO!' : 'Controle de Desconto'}
+            </span>
+          </div>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span>Desconto máximo permitido:</span>
+              <span className="font-medium text-orange-600">{getMaxDiscountPercent().toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Desconto atual:</span>
+              <span className={`font-medium ${
+                isDiscountExceeded ? 'text-red-600' : 'text-green-600'
+              }`}>
+                {currentDiscountPercent.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Preço mínimo permitido:</span>
+              <span className="font-bold text-red-600">{formatPrice(getMinPrice())}</span>
+            </div>
+            {isDiscountExceeded && (
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-xs">
+                ❌ Não é possível vender abaixo do preço mínimo!
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      <AddProductButton
-        quantity={quantity}
-        unitPrice={unitPrice}
-        priceError={priceError}
-        onAddProduct={onAddProduct}
-      />
+      {/* Formulário de Quantidade e Preço */}
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
+          <Input
+            type="number"
+            value={quantity || ''}
+            onChange={(e) => onQuantityChange(Number(e.target.value))}
+            min="1"
+            step="1"
+            className="text-center h-10"
+          />
+        </div>
+
+        <div>
+          <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
+          <Select value={selectedUnit} onValueChange={onUnitChange}>
+            <SelectTrigger className="h-10">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {unitOptions.map((option) => (
+                <SelectItem key={option.code} value={option.code}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-xs font-medium text-gray-700 mb-1 block">
+            Preço Unit. {hasDiscountRestriction() && `(Mín: ${formatPrice(getMinPrice())})`}
+          </Label>
+          <Input
+            type="number"
+            value={unitPrice || ''}
+            onChange={(e) => onUnitPriceChange(Number(e.target.value))}
+            min="0"
+            step="0.01"
+            className={`text-center h-10 ${
+              isDiscountExceeded ? 'border-red-500 bg-red-50' : ''
+            }`}
+          />
+        </div>
+      </div>
+
+      {/* Total do Item */}
+      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-green-900">Total do Item:</span>
+          <span className="font-bold text-green-600 text-lg">
+            {formatPrice(quantity * unitPrice)}
+          </span>
+        </div>
+      </div>
+
+      {/* Botão Adicionar */}
+      <Button 
+        onClick={onAddProduct}
+        disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
+        className={`w-full h-12 ${
+          isDiscountExceeded 
+            ? 'bg-gray-400 cursor-not-allowed' 
+            : 'bg-green-600 hover:bg-green-700'
+        } text-white font-medium`}
+      >
+        <Plus size={18} className="mr-2" />
+        {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
+      </Button>
     </div>
   );
 };

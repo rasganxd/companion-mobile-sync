@@ -70,38 +70,11 @@ export const useUnitSelection = (product: Product | null) => {
 
   const hasMultipleUnits = unitOptions.length > 1;
 
-  // Function to get current unit price
-  const getCurrentPrice = () => {
-    return selectedUnit?.price || 0;
-  };
-
-  // Function to get current unit code
-  const getCurrentUnitCode = () => {
-    return selectedUnit?.code || 'UN';
-  };
-
-  // ✅ NOVO: Função para mudança de unidade com callback de preço
-  const handleUnitTypeChange = (unitType: 'main' | 'sub', onPriceChange?: (price: number) => void) => {
-    console.log('🔄 useUnitSelection - Mudando tipo de unidade para:', unitType);
-    
-    setSelectedUnitType(unitType);
-    
-    // Encontrar a unidade selecionada e chamar callback imediatamente
-    const unit = unitOptions.find(opt => opt.value === unitType);
-    if (unit && onPriceChange) {
-      console.log('💰 useUnitSelection - Atualizando preço para:', unit.price);
-      onPriceChange(unit.price);
-    }
-  };
-
   return {
     unitOptions,
     selectedUnit,
     selectedUnitType,
     setSelectedUnitType,
-    hasMultipleUnits,
-    getCurrentPrice,
-    getCurrentUnitCode,
-    handleUnitTypeChange // ✅ NOVO: Expor função com callback
+    hasMultipleUnits
   };
 };

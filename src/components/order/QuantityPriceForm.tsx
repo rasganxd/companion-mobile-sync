@@ -65,12 +65,9 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
   const [priceInputValue, setPriceInputValue] = useState('');
   const isUserTyping = useRef(false);
 
-  // ✅ CRÍTICO: Sincronizar input com unitPrice sempre
   useEffect(() => {
     if (!isUserTyping.current) {
-      const formattedPrice = unitPrice.toFixed(2);
-      console.log('🔄 QuantityPriceForm - Sincronizando input com unitPrice:', formattedPrice);
-      setPriceInputValue(formattedPrice);
+      setPriceInputValue(unitPrice.toFixed(2));
     }
   }, [unitPrice]);
 
@@ -106,29 +103,12 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  // ✅ CRÍTICO: Função simplificada para mudança de unidade
   const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
-    console.log('🔄 QuantityPriceForm - Mudando tipo de unidade para:', unitType);
-    
-    // Encontrar a unidade correspondente
+    onUnitTypeChange(unitType);
     const unit = unitOptions.find(opt => opt.value === unitType);
-    if (unit) {
-      console.log('💰 QuantityPriceForm - Novo preço da unidade:', unit.price);
-      
-      // Atualizar unidade
-      onUnitTypeChange(unitType);
-      
-      if (onUnitChange) {
-        onUnitChange(unit.code);
-      }
-      
-      // ✅ CRÍTICO: Atualizar preço IMEDIATAMENTE
+    if (unit && onUnitChange) {
+      onUnitChange(unit.code);
       onUnitPriceChange(unit.price);
-      
-      // ✅ CRÍTICO: Atualizar campo visual IMEDIATAMENTE
-      if (!isUserTyping.current) {
-        setPriceInputValue(unit.price.toFixed(2));
-      }
     }
   };
 
@@ -161,9 +141,7 @@ const QuantityPriceForm: React.FC<QuantityPriceFormProps> = ({
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex flex-col">
                     <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-gray-500">
-                      {formatPrice(option.price)} por {option.displayText}
-                    </span>
+                    <span className="text-xs text-gray-500">{option.displayText}</span>
                   </div>
                 </SelectItem>
               ))}
