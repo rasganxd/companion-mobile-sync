@@ -41,10 +41,21 @@ export const usePaymentTables = () => {
       
       setPaymentTables(activeTables);
       
-      // Auto-selecionar primeira tabela como padrão
+      // Buscar especificamente a tabela "À Vista" como padrão
       if (activeTables.length > 0 && !selectedPaymentTable) {
-        console.log('💳 Auto-selecionando primeira tabela de pagamento:', activeTables[0]);
-        setSelectedPaymentTable(activeTables[0]);
+        const aVistaTable = activeTables.find(table => 
+          table.name.toLowerCase().includes('vista') || 
+          table.name.toLowerCase().includes('à vista')
+        );
+        
+        if (aVistaTable) {
+          console.log('💳 Auto-selecionando tabela "À Vista":', aVistaTable);
+          setSelectedPaymentTable(aVistaTable);
+        } else {
+          // Fallback para primeira tabela se "À Vista" não for encontrada
+          console.log('💳 "À Vista" não encontrada, selecionando primeira tabela:', activeTables[0]);
+          setSelectedPaymentTable(activeTables[0]);
+        }
       } else if (activeTables.length === 0) {
         console.log('⚠️ Nenhuma tabela de pagamento ativa encontrada');
       }
@@ -59,12 +70,6 @@ export const usePaymentTables = () => {
 
   const selectPaymentTable = (tableId: string) => {
     console.log('💳 Tentando selecionar tabela:', tableId);
-    
-    if (tableId === 'none') {
-      console.log('💳 Removendo seleção de tabela');
-      setSelectedPaymentTable(null);
-      return;
-    }
     
     const table = paymentTables.find(t => t.id === tableId);
     if (table) {

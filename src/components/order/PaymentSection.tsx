@@ -34,14 +34,13 @@ const PaymentSection: React.FC<PaymentSectionProps> = ({
       <CardContent className="p-3">
         <Label className="text-sm font-medium text-gray-600 block mb-2">Forma de Pagamento:</Label>
         <Select 
-          value={selectedPaymentTable?.id || 'none'} 
+          value={selectedPaymentTable?.id || ''} 
           onValueChange={onPaymentTableChange}
         >
           <SelectTrigger className="w-full h-9">
             <SelectValue placeholder="Selecione a forma de pagamento" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">A definir</SelectItem>
             {paymentTables.length > 0 ? (
               paymentTables.map(table => (
                 <SelectItem key={table.id} value={table.id}>
