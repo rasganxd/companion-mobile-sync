@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -257,5 +258,3 @@ const PlaceOrder = () => {
 };
 
 export default PlaceOrder;
-
-}
