@@ -66,7 +66,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     getMinPrice,
     hasDiscountRestriction,
     getCurrentDiscountPercent,
-    getMinPriceByDiscount
+    getMinPriceByDiscount,
+    validatePrice
   } = useProductPriceValidation(currentProduct);
 
   if (!currentProduct) {
@@ -77,7 +78,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     );
   }
 
-  const priceError = validationResult.error;
+  // ✅ CORREÇÃO: Validar preço com tipo de unidade correto
+  const currentValidation = validatePrice(unitPrice, selectedUnitType);
+  const priceError = currentValidation.error;
   const hasDiscountRestrictionValue = hasDiscountRestriction();
 
   return (
@@ -117,7 +120,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
         <DiscountInfoCard 
           salePrice={currentProduct.sale_price || currentProduct.price || 0}
           maxDiscountPercent={currentProduct.max_discount_percent || 0}
-          currentDiscountPercent={getCurrentDiscountPercent(unitPrice)}
+          currentDiscountPercent={getCurrentDiscountPercent(unitPrice, selectedUnitType)}
           getMinPriceByDiscount={getMinPriceByDiscount}
         />
       )}
