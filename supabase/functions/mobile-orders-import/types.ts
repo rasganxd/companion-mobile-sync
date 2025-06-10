@@ -17,6 +17,7 @@ export interface MobileOrder {
   total: number;
   notes?: string;
   payment_method?: string;
+  payment_table_id?: string; // ✅ NOVO: ID da tabela de pagamento
   items?: OrderItem[];
   test?: boolean;
   reason?: string;

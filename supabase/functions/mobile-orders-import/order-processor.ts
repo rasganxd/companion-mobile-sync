@@ -56,6 +56,9 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
 
   console.log('🔢 Generated order code:', codeData);
 
+  // Log para verificar se payment_table_id está sendo recebido
+  console.log('💳 Payment table ID received:', orderData.payment_table_id);
+
   // Preparar dados do pedido para inserção na tabela orders
   const orderToInsert = {
     customer_id: orderData.customer_id,
@@ -67,12 +70,20 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     total: orderData.total,
     notes: orderData.notes || '',
     payment_method: orderData.payment_method || '',
+    payment_table_id: orderData.payment_table_id || null, // ✅ NOVO: Incluir payment_table_id
     code: codeData,
     source_project: 'mobile',
     mobile_order_id: `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     sync_status: 'synced',
     rejection_reason: orderData.reason
   };
+
+  console.log('💳 Order data to insert:', {
+    payment_method: orderToInsert.payment_method,
+    payment_table_id: orderToInsert.payment_table_id,
+    total: orderToInsert.total,
+    status: orderToInsert.status
+  });
 
   // Inserir pedido na tabela orders principal
   const { data: createdOrder, error: orderError } = await supabase
@@ -87,6 +98,7 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
   }
 
   console.log('✅ Order created successfully:', createdOrder.id);
+  console.log('💳 Payment table ID saved:', createdOrder.payment_table_id);
   return createdOrder;
 };
 
