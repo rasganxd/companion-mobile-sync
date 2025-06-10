@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,28 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
   products,
   onSelectProduct
 }) => {
+  // Estado local para evitar conflitos com o estado controlado
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+
+  // Sincronizar com o prop searchTerm quando o diálogo abrir
+  useEffect(() => {
+    if (isOpen) {
+      setLocalSearchTerm(searchTerm);
+    }
+  }, [isOpen, searchTerm]);
+
+  // Atualizar o estado pai quando o estado local mudar
+  const handleSearchChange = (value: string) => {
+    setLocalSearchTerm(value);
+    onSearchChange(value);
+  };
+
+  // Limpar o estado local quando fechar
+  const handleClose = () => {
+    setLocalSearchTerm('');
+    onClose();
+  };
+
   const getDisplayPrice = (product: Product) => {
     // Use sale_price if available, otherwise use price
     const basePrice = product.sale_price || product.price || 0;
@@ -58,7 +80,7 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Selecionar Produto</DialogTitle>
@@ -72,8 +94,8 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
             <Input 
               placeholder="Buscar por nome ou código..." 
-              value={searchTerm} 
-              onChange={(e) => onSearchChange(e.target.value)} 
+              value={localSearchTerm} 
+              onChange={(e) => handleSearchChange(e.target.value)} 
               className="pl-10"
             />
           </div>
@@ -109,7 +131,7 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
               <div className="text-center py-8 text-gray-500">
                 <Package size={32} className="mx-auto mb-2 text-gray-300" />
                 <p>Nenhum produto encontrado</p>
-                {searchTerm && (
+                {localSearchTerm && (
                   <p className="text-sm">Tente buscar por outro termo</p>
                 )}
               </div>
