@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -97,8 +98,8 @@ const NegativeSale = () => {
       
       await db.saveOrder(order);
       
-      // Update client status locally
-      await db.updateClientStatus(clientId, "Negativado");
+      // Update client status locally - usar 'negativado' minúsculo
+      await db.updateClientStatus(clientId, "negativado");
       
       console.log('📱 Negative sale saved locally:', order);
       
@@ -114,7 +115,8 @@ const NegativeSale = () => {
         });
       }
       
-      navigate('/clientes-lista', { state: { day: location.state?.day || 'Segunda' } });
+      // Corrigir navegação para usar a rota correta e passar o day
+      navigate('/clients-list', { state: { day: location.state?.day || 'Segunda' } });
     } catch (error) {
       console.error("Error saving negative sale:", error);
       toast({

@@ -203,6 +203,7 @@ class WebDatabaseService {
       const client = await this.getClientById(clientId);
       if (client) {
         client.status = status;
+        client.updated_at = new Date().toISOString();
         await this.db!.put('clients', client);
         console.log(`✅ Client status updated for client ID ${clientId} to ${status}`);
       } else {
