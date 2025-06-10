@@ -57,34 +57,57 @@ export const useOrderTransmission = () => {
       errors.push('Nome do cliente ausente');
     }
     
-    if (!order.total || order.total <= 0) {
-      errors.push('Total do pedido inválido');
-    }
-    
-    if (!order.items || order.items.length === 0) {
-      errors.push('Pedido sem itens');
-    }
-    
-    // Validar itens do pedido
-    if (order.items) {
-      order.items.forEach((item: any, index: number) => {
-        if (!item.productId && !item.product_id) {
-          errors.push(`Item ${index + 1}: ID do produto ausente`);
-        }
-        
-        if (!item.productName && !item.product_name) {
-          errors.push(`Item ${index + 1}: Nome do produto ausente`);
-        }
-        
-        if (!item.quantity || item.quantity <= 0) {
-          errors.push(`Item ${index + 1}: Quantidade inválida`);
-        }
-        
-        if (!item.price && !item.unit_price) {
-          errors.push(`Item ${index + 1}: Preço ausente`);
-        }
+    // ✅ CORREÇÃO: Permitir pedidos cancelados (negação) com total zero
+    if (order.status === 'cancelled') {
+      // Para pedidos cancelados, validar se há motivo de negação
+      if (!order.reason) {
+        errors.push('Motivo da negação ausente para pedido cancelado');
+      }
+      // Pedidos cancelados podem ter total 0 e sem itens - isso é válido
+      console.log('🔍 Validating cancelled order (negativation):', {
+        orderId: order.id,
+        reason: order.reason,
+        total: order.total,
+        itemsCount: order.items?.length || 0
       });
+    } else {
+      // Para pedidos normais, aplicar validações tradicionais
+      if (!order.total || order.total <= 0) {
+        errors.push('Total do pedido inválido');
+      }
+      
+      if (!order.items || order.items.length === 0) {
+        errors.push('Pedido sem itens');
+      }
+      
+      // Validar itens do pedido apenas para pedidos não cancelados
+      if (order.items) {
+        order.items.forEach((item: any, index: number) => {
+          if (!item.productId && !item.product_id) {
+            errors.push(`Item ${index + 1}: ID do produto ausente`);
+          }
+          
+          if (!item.productName && !item.product_name) {
+            errors.push(`Item ${index + 1}: Nome do produto ausente`);
+          }
+          
+          if (!item.quantity || item.quantity <= 0) {
+            errors.push(`Item ${index + 1}: Quantidade inválida`);
+          }
+          
+          if (!item.price && !item.unit_price) {
+            errors.push(`Item ${index + 1}: Preço ausente`);
+          }
+        });
+      }
     }
+    
+    console.log('🔍 Order validation result:', {
+      orderId: order.id,
+      status: order.status,
+      isValid: errors.length === 0,
+      errors: errors.length > 0 ? errors : 'none'
+    });
     
     return {
       isValid: errors.length === 0,
@@ -104,14 +127,14 @@ export const useOrderTransmission = () => {
         quantity: item.quantity,
         price: item.price || item.unit_price,
         unit_price: item.price || item.unit_price,
-        unit: item.unit, // ✅ CORREÇÃO: Preservar unidade original, não forçar 'UN'
+        unit: item.unit,
         total: (item.price || item.unit_price || 0) * item.quantity
       };
       
       console.log('🔧 Normalized item:', {
         ...normalizedItem,
         originalUnit: item.unit,
-        preservedUnit: normalizedItem.unit // ✅ LOG: Verificar se unidade foi preservada
+        preservedUnit: normalizedItem.unit
       });
       
       return normalizedItem;
@@ -120,13 +143,16 @@ export const useOrderTransmission = () => {
     const normalizedOrder = {
       ...order,
       items: normalizedItems,
-      payment_table_id: order.payment_table_id // ✅ NOVO: Incluir payment_table_id na transmissão
+      payment_table_id: order.payment_table_id
     };
     
     console.log('✅ Normalized order with preserved units and payment table:', {
       orderId: normalizedOrder.id,
       customerName: normalizedOrder.customer_name,
-      paymentTableId: normalizedOrder.payment_table_id, // ✅ LOG: Verificar payment_table_id
+      status: normalizedOrder.status,
+      total: normalizedOrder.total,
+      reason: normalizedOrder.reason,
+      paymentTableId: normalizedOrder.payment_table_id,
       itemsWithUnits: normalizedItems.map(item => ({
         name: item.product_name,
         unit: item.unit,
@@ -255,7 +281,9 @@ export const useOrderTransmission = () => {
               details: { 
                 total: order.total, 
                 itemsCount: order.items?.length || 0,
-                paymentTableId: order.payment_table_id // ✅ LOG: Incluir payment_table_id nos logs
+                paymentTableId: order.payment_table_id,
+                status: order.status,
+                reason: order.reason
               }
             });
             
