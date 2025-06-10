@@ -341,12 +341,20 @@ class SQLiteDatabaseService {
   }
 
   async closeDatabase(): Promise<void> {
-    if (this.db) {
-      await this.sqlite!.closeConnection('sales-app');
-      this.db = null;
-      this.sqlite = null;
-      this.isInitialized = false;
-      console.log('📱 SQLite database closed');
+    if (this.db && this.sqlite) {
+      try {
+        await this.sqlite.closeConnection('sales-app', false);
+        this.db = null;
+        this.sqlite = null;
+        this.isInitialized = false;
+        console.log('📱 SQLite database closed');
+      } catch (error) {
+        console.error('❌ Error closing SQLite database:', error);
+        // Even if there's an error, reset the state
+        this.db = null;
+        this.sqlite = null;
+        this.isInitialized = false;
+      }
     }
   }
 
