@@ -108,7 +108,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
       
       {/* Product Details Grid */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Seletor de unidade melhorado */}
+        {/* Seletor de unidade simplificado */}
         <div>
           <Label className="block mb-1 text-sm font-semibold text-gray-700">
             {hasMultipleUnits ? 'Tipo de Unidade:' : 'Unidade de Venda:'}
@@ -125,10 +125,7 @@ const ProductForm: React.FC<ProductFormProps> = ({
                     value={option.value}
                     className="hover:bg-blue-50 py-2 transition-colors duration-150"
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{option.label}</span>
-                      <span className="text-xs text-gray-500">{option.displayText}</span>
-                    </div>
+                    <span className="font-medium">{option.displayText}</span>
                   </SelectItem>
                 ))}
               </SelectContent>

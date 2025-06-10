@@ -46,7 +46,7 @@ export const useUnitSelection = (product: Product | null) => {
       label: mainUnit,
       code: mainUnit,
       price: basePrice,
-      displayText: `${mainUnit} - R$ ${basePrice.toFixed(2)}`
+      displayText: mainUnit
     });
 
     // Add sub unit if available
@@ -57,7 +57,7 @@ export const useUnitSelection = (product: Product | null) => {
         label: product.subunit,
         code: product.subunit,
         price: subUnitPrice,
-        displayText: `${product.subunit} - R$ ${subUnitPrice.toFixed(2)} (${product.subunit_ratio}/${mainUnit})`
+        displayText: product.subunit
       });
     }
 
