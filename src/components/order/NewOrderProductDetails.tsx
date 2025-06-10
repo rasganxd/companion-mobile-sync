@@ -96,19 +96,14 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
       {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
       {hasDiscountRestriction() && <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
-            <span className="text-sm font-medium">
-              {isDiscountExceeded ? 'DESCONTO EXCEDIDO!' : 'Controle de Desconto'}
-            </span>
-          </div>
+          
           <div className="space-y-1 text-xs">
             <div className="flex justify-between">
               <span>Desconto máximo permitido:</span>
               <span className="font-medium text-orange-600">{getMaxDiscountPercent().toFixed(1)}%</span>
             </div>
             <div className="flex justify-between">
-              <span>Desconto atual:</span>
+              
               
             </div>
             <div className="flex justify-between">
