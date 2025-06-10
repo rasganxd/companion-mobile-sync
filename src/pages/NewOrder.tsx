@@ -132,6 +132,14 @@ const PlaceOrder = () => {
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
   };
+
+  // ✅ CORREÇÃO: Criar função wrapper para converter string para 'main' | 'sub'
+  const handleUnitChange = (unit: string) => {
+    // Para compatibilidade, ignorar strings que não sejam 'main' ou 'sub'
+    if (unit === 'main' || unit === 'sub') {
+      setSelectedUnit(unit);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -178,7 +186,7 @@ const PlaceOrder = () => {
             hasMultipleUnits={hasMultipleUnits}
             onQuantityChange={setQuantity}
             onUnitPriceChange={setUnitPrice}
-            onUnitChange={setSelectedUnit}
+            onUnitChange={handleUnitChange}
             onUnitTypeChange={handleUnitTypeChange}
             onAddProduct={addProduct}
           />
@@ -249,3 +257,5 @@ const PlaceOrder = () => {
 };
 
 export default PlaceOrder;
+
+}

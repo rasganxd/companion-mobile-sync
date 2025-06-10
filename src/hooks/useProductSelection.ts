@@ -1,3 +1,4 @@
+
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useUnitSelection } from './useUnitSelection';
@@ -68,19 +69,23 @@ export const useProductSelection = (addOrderItem: (item: any) => void) => {
   const handleUnitTypeChange = (unitType: 'main' | 'sub') => {
     console.log('🔄 useProductSelection - handleUnitTypeChange para:', unitType);
     
-    const newPrice = unitSelection.handleUnitTypeChange(unitType, (price) => {
+    handleUnitTypeChangeBase(unitType, (price) => {
       console.log('💰 useProductSelection - Atualizando preço para:', price);
       setUnitPrice(price);
     });
     
-    // ✅ CORREÇÃO: Validar preço com o novo tipo de unidade
-    if (selectedProduct && newPrice) {
-      console.log('🔍 useProductSelection - Validando preço com nova unidade:', {
-        price: newPrice,
-        unitType,
-        productName: selectedProduct.name
-      });
-      validatePrice(newPrice, unitType);
+    // ✅ CORREÇÃO: Validar preço após a mudança de unidade
+    if (selectedProduct) {
+      // Buscar o preço da nova unidade selecionada
+      const newUnit = unitOptions.find(opt => opt.value === unitType);
+      if (newUnit) {
+        console.log('🔍 useProductSelection - Validando preço com nova unidade:', {
+          price: newUnit.price,
+          unitType,
+          productName: selectedProduct.name
+        });
+        validatePrice(newUnit.price, unitType);
+      }
     }
   };
 
