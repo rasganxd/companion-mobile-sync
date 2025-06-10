@@ -26,6 +26,7 @@ interface MobileOrder {
   payment_method?: string;
   items?: OrderItem[];
   test?: boolean; // For connection testing
+  reason?: string; // ✅ ADICIONADO: Campo reason para negações
 }
 
 // Função para validar token de sessão mobile
@@ -142,7 +143,9 @@ serve(async (req) => {
     console.log('📦 Received order data:', { 
       customer_id: orderData.customer_id, 
       total: orderData.total, 
+      status: orderData.status,
       test: orderData.test,
+      reason: orderData.reason,
       itemsCount: orderData.items?.length || 0
     });
 
@@ -164,9 +167,37 @@ serve(async (req) => {
       );
     }
 
-    // Validar dados obrigatórios para pedidos reais
-    if (!orderData.customer_id || !orderData.total || !orderData.date) {
-      throw new Error('Missing required order fields: customer_id, total, date');
+    // ✅ CORREÇÃO: Validar dados obrigatórios com lógica específica para pedidos cancelados
+    if (!orderData.customer_id || !orderData.date) {
+      throw new Error('Missing required order fields: customer_id, date');
+    }
+
+    // ✅ NOVA LÓGICA: Validação específica baseada no status do pedido
+    if (orderData.status === 'cancelled') {
+      // Para pedidos cancelados (negações), validar apenas campos específicos
+      console.log('🔍 Validating cancelled order (negation):', {
+        customer_id: orderData.customer_id,
+        date: orderData.date,
+        reason: orderData.reason,
+        total: orderData.total
+      });
+      
+      if (!orderData.reason) {
+        throw new Error('Missing required field for cancelled order: reason');
+      }
+      
+      console.log('✅ Cancelled order validation passed');
+    } else {
+      // Para pedidos normais, aplicar validação tradicional
+      if (!orderData.total || orderData.total <= 0) {
+        throw new Error('Missing required order fields: total must be greater than 0');
+      }
+      
+      if (!orderData.items || orderData.items.length === 0) {
+        throw new Error('Missing required order fields: items');
+      }
+      
+      console.log('✅ Normal order validation passed');
     }
 
     let salesRep;
@@ -232,7 +263,8 @@ serve(async (req) => {
       code: codeData,
       source_project: 'mobile',
       mobile_order_id: `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      sync_status: 'synced'
+      sync_status: 'synced',
+      rejection_reason: orderData.reason // ✅ ADICIONADO: Salvar o motivo da negação
     };
 
     // Inserir pedido na tabela orders principal
@@ -249,7 +281,7 @@ serve(async (req) => {
 
     console.log('✅ Order created successfully:', createdOrder.id);
 
-    // Inserir itens do pedido
+    // Inserir itens do pedido (apenas se não for cancelado)
     if (orderData.items && orderData.items.length > 0) {
       console.log('📋 Creating order items...');
       
@@ -280,6 +312,8 @@ serve(async (req) => {
       }
 
       console.log('✅ Order items created successfully with preserved units');
+    } else if (orderData.status === 'cancelled') {
+      console.log('ℹ️ No items to create for cancelled order (negation)');
     }
 
     return new Response(
@@ -289,7 +323,9 @@ serve(async (req) => {
         code: createdOrder.code,
         sales_rep_id: salesRep.id,
         sales_rep_name: salesRep.name,
-        message: 'Pedido recebido e processado com sucesso',
+        message: orderData.status === 'cancelled' 
+          ? 'Negação de venda recebida e processada com sucesso'
+          : 'Pedido recebido e processado com sucesso',
         status: 'synced'
       }),
       {
