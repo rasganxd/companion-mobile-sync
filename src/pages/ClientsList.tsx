@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -331,5 +332,3 @@ const ClientsList = () => {
 };
 
 export default ClientsList;
-
-}
