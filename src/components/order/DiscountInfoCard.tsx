@@ -1,14 +1,11 @@
-
 import React from 'react';
 import { Info, AlertTriangle } from 'lucide-react';
-
 interface DiscountInfoCardProps {
   salePrice: number;
   maxDiscountPercent: number;
   currentDiscountPercent: number;
   getMinPriceByDiscount: () => number;
 }
-
 const DiscountInfoCard: React.FC<DiscountInfoCardProps> = ({
   salePrice,
   maxDiscountPercent,
@@ -18,11 +15,8 @@ const DiscountInfoCard: React.FC<DiscountInfoCardProps> = ({
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
-
   const isDiscountExceeded = maxDiscountPercent > 0 && currentDiscountPercent > maxDiscountPercent;
-
-  return (
-    <div className="bg-white border border-blue-200 rounded-lg p-3">
+  return <div className="bg-white border border-blue-200 rounded-lg p-3">
       <div className="flex items-center gap-2 mb-2">
         <Info size={16} className="text-blue-500" />
         <span className="text-sm font-medium text-gray-700">Informações de Desconto</span>
@@ -32,37 +26,21 @@ const DiscountInfoCard: React.FC<DiscountInfoCardProps> = ({
           <span className="text-gray-600">Preço de venda:</span>
           <span className="font-medium">{formatPrice(salePrice)}</span>
         </div>
-        {maxDiscountPercent > 0 && (
-          <>
+        {maxDiscountPercent > 0 && <>
             <div className="flex justify-between">
               <span className="text-gray-600">Desconto máximo:</span>
               <span className="font-medium text-orange-600">{maxDiscountPercent.toFixed(1)}%</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-gray-600">Desconto atual:</span>
-              <div className={`flex items-center gap-1 font-medium ${
-                isDiscountExceeded ? 'text-red-600' : 'text-green-600'
-              }`}>
-                {isDiscountExceeded && <AlertTriangle size={12} />}
-                {currentDiscountPercent.toFixed(1)}%
-              </div>
-            </div>
-            {getMinPriceByDiscount() > 0 && (
-              <div className="flex justify-between">
+            
+            {getMinPriceByDiscount() > 0 && <div className="flex justify-between">
                 <span className="text-gray-600">Preço mín. por desconto:</span>
                 <span className="font-medium">{formatPrice(getMinPriceByDiscount())}</span>
-              </div>
-            )}
-            {isDiscountExceeded && (
-              <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 mt-1">
+              </div>}
+            {isDiscountExceeded && <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 mt-1">
                 O desconto excede o limite máximo permitido!
-              </div>
-            )}
-          </>
-        )}
+              </div>}
+          </>}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default DiscountInfoCard;
