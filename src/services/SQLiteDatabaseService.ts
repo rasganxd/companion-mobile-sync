@@ -104,7 +104,15 @@ class SQLiteDatabaseService {
         name TEXT NOT NULL,
         description TEXT,
         price REAL NOT NULL,
+        sale_price REAL,
+        cost_price REAL,
         stock INTEGER NOT NULL,
+        code INTEGER,
+        unit TEXT DEFAULT 'UN',
+        has_subunit BOOLEAN DEFAULT FALSE,
+        subunit TEXT,
+        subunit_ratio REAL DEFAULT 1,
+        max_discount_percent REAL,
         image_url TEXT,
         sync_status TEXT DEFAULT 'pending_sync',
         updated_at TEXT
@@ -141,6 +149,43 @@ class SQLiteDatabaseService {
 
     await this.db.execute(createTablesSQL);
     console.log('✅ Tables created successfully');
+
+    // Verificar e adicionar colunas ausentes na tabela products se necessário
+    await this.updateProductsTableSchema();
+  }
+
+  private async updateProductsTableSchema(): Promise<void> {
+    if (!this.db) return;
+
+    try {
+      // Verificar se as colunas necessárias existem
+      const tableInfo = await this.db.query("PRAGMA table_info(products)");
+      const existingColumns = tableInfo.values?.map((row: any) => row.name) || [];
+
+      console.log('📋 Colunas existentes na tabela products:', existingColumns);
+
+      const requiredColumns = [
+        { name: 'sale_price', type: 'REAL' },
+        { name: 'cost_price', type: 'REAL' },
+        { name: 'code', type: 'INTEGER' },
+        { name: 'unit', type: 'TEXT DEFAULT "UN"' },
+        { name: 'has_subunit', type: 'BOOLEAN DEFAULT FALSE' },
+        { name: 'subunit', type: 'TEXT' },
+        { name: 'subunit_ratio', type: 'REAL DEFAULT 1' },
+        { name: 'max_discount_percent', type: 'REAL' }
+      ];
+
+      for (const column of requiredColumns) {
+        if (!existingColumns.includes(column.name)) {
+          console.log(`📋 Adicionando coluna ausente: ${column.name}`);
+          await this.db.run(`ALTER TABLE products ADD COLUMN ${column.name} ${column.type}`);
+        }
+      }
+
+      console.log('✅ Esquema da tabela products atualizado com sucesso');
+    } catch (error) {
+      console.error('❌ Erro ao atualizar esquema da tabela products:', error);
+    }
   }
 
   async getClients(): Promise<any[]> {
@@ -255,29 +300,44 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
     try {
       const now = new Date().toISOString();
+      
+      console.log('💾 Salvando produto no SQLite:', {
+        id: product.id,
+        name: product.name,
+        code: product.code,
+        sale_price: product.sale_price,
+        cost_price: product.cost_price,
+        max_discount_percent: product.max_discount_percent,
+        unit: product.unit,
+        has_subunit: product.has_subunit
+      });
+
       await this.db!.run(
-        'INSERT OR REPLACE INTO products (id, name, description, price, stock, image_url, sync_status, updated_at, code, unit, has_subunit, subunit, subunit_ratio, min_price, max_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO products (id, name, description, price, sale_price, cost_price, stock, code, unit, has_subunit, subunit, subunit_ratio, max_discount_percent, image_url, sync_status, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [
           product.id,
           product.name,
           product.description || '',
-          product.price,
+          product.price || product.sale_price || 0, // Usar sale_price como fallback para price
+          product.sale_price || product.price || 0,
+          product.cost_price || 0,
           product.stock || 0,
-          product.image_url || '',
-          product.sync_status || 'synced',
-          now,
           product.code || null,
           product.unit || 'UN',
-          product.has_subunit || false,
+          product.has_subunit ? 1 : 0, // SQLite usa 1/0 para boolean
           product.subunit || null,
           product.subunit_ratio || 1,
-          product.min_price || null,
-          product.max_price || null
+          product.max_discount_percent || null,
+          product.image_url || '',
+          product.sync_status || 'synced',
+          now
         ]
       );
-      console.log(`📝 SQLite: Saved product ${product.name} (${product.id})`);
+      
+      console.log(`✅ SQLite: Produto salvo com sucesso: ${product.name} (desconto máximo: ${product.max_discount_percent || 'Nenhum'}%)`);
     } catch (error) {
       console.error('❌ Error saving product to SQLite:', error);
+      console.error('❌ Produto que causou erro:', product);
     }
   }
 
@@ -325,7 +385,24 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
     try {
       const result = await this.db!.query('SELECT * FROM products');
-      return result.values || [];
+      const products = result.values || [];
+      
+      console.log(`📦 SQLite: Carregados ${products.length} produtos do banco local`);
+      
+      // Log detalhado dos primeiros produtos para debug
+      products.slice(0, 3).forEach((product, index) => {
+        console.log(`📦 Produto ${index + 1} do SQLite:`, {
+          id: product.id,
+          name: product.name,
+          code: product.code,
+          sale_price: product.sale_price,
+          max_discount_percent: product.max_discount_percent,
+          unit: product.unit,
+          has_subunit: product.has_subunit
+        });
+      });
+      
+      return products;
     } catch (error) {
       console.error('❌ Error getting products:', error);
       return [];
