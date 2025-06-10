@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Package } from 'lucide-react';
+import { Package, AlertTriangle, Info } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -26,19 +26,29 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({ product }) => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
 
-  // Debug logs para verificar valores
-  console.log('🔍 ProductInfoCard - Debug dados do produto:', {
-    id: product.id,
-    name: product.name,
-    min_price: product.min_price,
-    min_price_type: typeof product.min_price,
-    max_discount_percent: product.max_discount_percent,
-    sale_price: product.sale_price,
-    price: product.price
-  });
-
+  // Calcular se há restrições de preço
   const hasMinPrice = product.min_price && product.min_price > 0;
-  console.log('🔍 ProductInfoCard - hasMinPrice:', hasMinPrice);
+  const hasMaxDiscount = product.max_discount_percent && product.max_discount_percent > 0;
+  const hasAnyRestriction = hasMinPrice || hasMaxDiscount;
+
+  // Calcular preço mínimo baseado no desconto máximo
+  const salePrice = product.sale_price || product.price || 0;
+  const minPriceByDiscount = hasMaxDiscount 
+    ? salePrice * (1 - product.max_discount_percent! / 100)
+    : 0;
+  
+  // Usar o maior entre min_price e preço calculado por desconto
+  const effectiveMinPrice = Math.max(product.min_price || 0, minPriceByDiscount);
+
+  console.log('🔍 ProductInfoCard - Dados de restrição de preço:', {
+    productName: product.name,
+    minPrice: product.min_price,
+    maxDiscountPercent: product.max_discount_percent,
+    salePrice,
+    minPriceByDiscount,
+    effectiveMinPrice,
+    hasAnyRestriction
+  });
 
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -52,14 +62,48 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({ product }) => {
         </div>
       </div>
       
-      {/* Debug: Sempre mostrar informações de preço mínimo para testes */}
-      <div className="p-2 bg-gray-100 border border-gray-300 rounded text-xs text-gray-600 mb-2">
-        DEBUG: min_price = {product.min_price || 'undefined'} | max_discount = {product.max_discount_percent || 'undefined'}
-      </div>
-      
-      {hasMinPrice && (
-        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700">
-          ⚠️ Preço mínimo: {formatPrice(product.min_price)}
+      {/* Exibir informações de restrição de preço */}
+      {hasAnyRestriction && (
+        <div className="space-y-2">
+          {/* Preço mínimo direto */}
+          {hasMinPrice && (
+            <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+              <div className="flex items-center gap-1 text-yellow-700">
+                <AlertTriangle size={12} />
+                <span className="font-medium">Preço mínimo: {formatPrice(product.min_price!)}</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Restrição por desconto máximo */}
+          {hasMaxDiscount && (
+            <div className="p-2 bg-orange-50 border border-orange-200 rounded text-xs">
+              <div className="flex items-center gap-1 text-orange-700">
+                <Info size={12} />
+                <span className="font-medium">
+                  Desconto máximo: {product.max_discount_percent!.toFixed(1)}%
+                </span>
+              </div>
+              <div className="text-orange-600 mt-1">
+                Preço mín. por desconto: {formatPrice(minPriceByDiscount)}
+              </div>
+            </div>
+          )}
+          
+          {/* Preço mínimo efetivo (se há ambas as restrições) */}
+          {effectiveMinPrice > 0 && hasMinPrice && hasMaxDiscount && (
+            <div className="p-2 bg-red-50 border border-red-200 rounded text-xs">
+              <div className="flex items-center gap-1 text-red-700">
+                <AlertTriangle size={12} />
+                <span className="font-medium">
+                  Preço mínimo efetivo: {formatPrice(effectiveMinPrice)}
+                </span>
+              </div>
+              <div className="text-red-600 mt-1">
+                (maior entre preço mínimo e desconto máximo)
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

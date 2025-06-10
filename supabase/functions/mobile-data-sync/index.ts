@@ -106,7 +106,7 @@ serve(async (req) => {
     }
 
     if (type === 'products') {
-      console.log('📥 Fetching REAL products with units from database');
+      console.log('📥 Fetching REAL products with units and pricing restrictions from database');
       
       const { data: products, error } = await supabase
         .from('products')
@@ -120,6 +120,8 @@ serve(async (req) => {
           active,
           created_at,
           updated_at,
+          min_price,
+          max_discount_percent,
           main_unit_id,
           sub_unit_id,
           main_unit:units!main_unit_id(code, description, package_quantity),
@@ -146,7 +148,7 @@ serve(async (req) => {
         );
       }
 
-      // Transform products to include proper unit information
+      // Transform products to include proper unit information and pricing restrictions
       const transformedProducts = products.map(product => {
         const hasSubunit = product.sub_unit_id && product.sub_unit;
         let subunitRatio = 1;
@@ -156,6 +158,12 @@ serve(async (req) => {
           subunitRatio = product.main_unit.package_quantity / product.sub_unit.package_quantity;
         }
         
+        console.log(`🔍 Product ${product.name} pricing data:`, {
+          min_price: product.min_price,
+          max_discount_percent: product.max_discount_percent,
+          sale_price: product.sale_price
+        });
+        
         return {
           id: product.id,
           code: product.code,
@@ -163,6 +171,8 @@ serve(async (req) => {
           price: product.sale_price, // Map sale_price to price for compatibility
           sale_price: product.sale_price,
           cost_price: product.cost_price,
+          min_price: product.min_price, // ✅ INCLUIR min_price
+          max_discount_percent: product.max_discount_percent, // ✅ INCLUIR max_discount_percent
           stock: product.stock,
           active: product.active,
           created_at: product.created_at,
@@ -176,7 +186,17 @@ serve(async (req) => {
         };
       });
 
-      console.log(`✅ Returning ${transformedProducts.length} REAL products with unit information`);
+      console.log(`✅ Returning ${transformedProducts.length} REAL products with unit and pricing information`);
+      
+      // Log produtos com restrições de preço para debug
+      const productsWithRestrictions = transformedProducts.filter(p => 
+        (p.min_price && p.min_price > 0) || (p.max_discount_percent && p.max_discount_percent > 0)
+      );
+      console.log(`📊 Products with pricing restrictions: ${productsWithRestrictions.length}`);
+      productsWithRestrictions.forEach(p => {
+        console.log(`  - ${p.name}: min_price=${p.min_price}, max_discount=${p.max_discount_percent}%`);
+      });
+      
       return new Response(
         JSON.stringify({ products: transformedProducts }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -73,16 +73,12 @@ export const useProductPriceValidation = (product: Product | null) => {
     const minPriceExisting = product.min_price || 0;
     const maxDiscountPercent = product.max_discount_percent || 0;
     
-    // Debug detalhado
-    console.log('🔍 validatePrice - Debug detalhado:', {
-      productId: product.id,
+    console.log('🔍 Validando preço - dados do produto:', {
       productName: product.name,
       inputPrice,
       salePrice,
       minPriceExisting,
-      maxDiscountPercent,
-      'product.min_price': product.min_price,
-      'product.max_discount_percent': product.max_discount_percent
+      maxDiscountPercent
     });
     
     // Calcular preço mínimo baseado no desconto máximo
@@ -93,11 +89,10 @@ export const useProductPriceValidation = (product: Product | null) => {
     // Usar o maior entre min_price e minPriceByDiscount
     const finalMinPrice = Math.max(minPriceExisting, minPriceByDiscount);
     
-    console.log('🔍 validatePrice - Cálculos:', {
+    console.log('🔍 Cálculos de validação:', {
       minPriceByDiscount,
       finalMinPrice,
-      'minPriceExisting > 0': minPriceExisting > 0,
-      'maxDiscountPercent > 0': maxDiscountPercent > 0
+      hasMinPriceRestriction: finalMinPrice > 0
     });
     
     // Calcular informações de desconto
@@ -166,41 +161,35 @@ export const useProductPriceValidation = (product: Product | null) => {
       : 0;
     
     const result = Math.max(minPriceExisting, minPriceByDiscount);
-    
-    console.log('🔍 getMinPrice - Debug:', {
-      productId: product.id,
-      minPriceExisting,
-      maxDiscountPercent,
-      salePrice,
-      minPriceByDiscount,
-      finalResult: result
-    });
-    
     return result;
   };
 
   const hasMinPriceRestriction = (): boolean => {
-    const result = getMinPrice() > 0;
-    console.log('🔍 hasMinPriceRestriction - Debug:', {
-      productId: product?.id,
-      minPrice: getMinPrice(),
-      result,
-      'product.min_price': product?.min_price,
-      'product.max_discount_percent': product?.max_discount_percent
+    if (!product) return false;
+    
+    // Considerar que há restrição se há min_price > 0 OU max_discount_percent > 0
+    const hasMinPrice = (product.min_price || 0) > 0;
+    const hasMaxDiscount = (product.max_discount_percent || 0) > 0;
+    const result = hasMinPrice || hasMaxDiscount;
+    
+    console.log('🔍 Verificando restrições de preço:', {
+      productName: product.name,
+      minPrice: product.min_price,
+      maxDiscountPercent: product.max_discount_percent,
+      hasMinPrice,
+      hasMaxDiscount,
+      hasAnyRestriction: result
     });
+    
     return result;
   };
 
   const getMaxDiscountPercent = (): number => {
-    const result = product?.max_discount_percent || 0;
-    console.log('🔍 getMaxDiscountPercent:', result);
-    return result;
+    return product?.max_discount_percent || 0;
   };
 
-  const hasDiscountRestriction = (): boolean => {
-    const result = getMaxDiscountPercent() > 0;
-    console.log('🔍 hasDiscountRestriction:', result, 'maxDiscount:', getMaxDiscountPercent());
-    return result;
+  const hasDiscountRestriction =  (): boolean => {
+    return getMaxDiscountPercent() > 0;
   };
 
   const getCurrentDiscountPercent = (inputPrice: number): number => {
