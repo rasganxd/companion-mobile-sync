@@ -21,6 +21,7 @@ interface Client {
   city?: string;
   state?: string;
   visit_days?: string[];
+  visit_sequence?: number;
   status?: 'positivado' | 'negativado' | 'pendente';
   orderTotal?: number;
   hasLocalOrders?: boolean;
@@ -179,9 +180,27 @@ const ClientsList = () => {
             transmittedOrdersCount
           };
         });
+
+        // Ordenar clientes por visit_sequence
+        const sortedClients = clientsWithStatus.sort((a, b) => {
+          // Clientes sem sequência definida aparecem primeiro
+          if (a.visit_sequence == null && b.visit_sequence == null) {
+            return a.name.localeCompare(b.name); // Ordem alfabética para empate
+          }
+          if (a.visit_sequence == null) return -1; // a vem antes
+          if (b.visit_sequence == null) return 1;  // b vem antes
+          
+          // Ambos têm sequência definida - ordenar por sequência
+          if (a.visit_sequence !== b.visit_sequence) {
+            return a.visit_sequence - b.visit_sequence;
+          }
+          
+          // Sequências iguais - ordenar por nome
+          return a.name.localeCompare(b.name);
+        });
         
-        console.log(`✅ Clients with status for ${day} (salesperson ${salesRep.name}):`, clientsWithStatus);
-        setClients(clientsWithStatus);
+        console.log(`✅ Clients sorted by visit_sequence for ${day} (salesperson ${salesRep.name}):`, sortedClients);
+        setClients(sortedClients);
         
       } catch (error) {
         console.error('❌ Error loading clients:', error);
