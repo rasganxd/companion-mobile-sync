@@ -117,6 +117,24 @@ const PlaceOrder = () => {
     selectProduct(products[newIndex]);
   };
 
+  // New function to handle product code search
+  const handleProductCodeSearch = (code: string) => {
+    console.log('🔍 Searching for product with code:', code);
+    const foundProduct = products.find(p => p.code.toString() === code);
+    
+    if (foundProduct) {
+      console.log('✅ Product found:', foundProduct.name);
+      selectProduct(foundProduct);
+      const index = products.findIndex(p => p.id === foundProduct.id);
+      if (index !== -1) {
+        setCurrentProductIndex(index);
+      }
+    } else {
+      console.log('❌ Product not found for code:', code);
+      // You could show a toast or error message here
+    }
+  };
+
   // Sincronizar currentProductIndex com produto selecionado
   React.useEffect(() => {
     if (selectedProduct && products.length > 0) {
@@ -179,6 +197,7 @@ const PlaceOrder = () => {
             onUnitPriceChange={setUnitPrice}
             onUnitTypeChange={setSelectedUnitType}
             onAddProduct={addProduct}
+            onProductCodeSearch={handleProductCodeSearch}
           />
         </div>
 

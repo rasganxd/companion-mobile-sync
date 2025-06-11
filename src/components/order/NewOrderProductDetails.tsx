@@ -1,10 +1,13 @@
-import React from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Package, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { toast } from 'sonner';
+
 interface Product {
   id: string;
   name: string;
@@ -18,6 +21,7 @@ interface Product {
   subunit_ratio?: number;
   max_discount_percent?: number;
 }
+
 interface UnitOption {
   value: 'main' | 'sub';
   label: string;
@@ -25,6 +29,7 @@ interface UnitOption {
   price: number;
   displayText: string;
 }
+
 interface NewOrderProductDetailsProps {
   currentProduct: Product | null;
   quantity: number;
@@ -36,7 +41,9 @@ interface NewOrderProductDetailsProps {
   onUnitPriceChange: (price: number) => void;
   onUnitTypeChange: (unitType: 'main' | 'sub') => void;
   onAddProduct: () => void;
+  onProductCodeSearch?: (code: string) => void;
 }
+
 const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   currentProduct,
   quantity,
@@ -47,8 +54,13 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onQuantityChange,
   onUnitPriceChange,
   onUnitTypeChange,
-  onAddProduct
+  onAddProduct,
+  onProductCodeSearch
 }) => {
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [tempCode, setTempCode] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const {
     hasDiscountRestriction,
     getMaxDiscountPercent,
@@ -56,19 +68,64 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     getMinPriceForCurrentUnit,
     validationResult
   } = useProductPriceValidation(currentProduct);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditingCode && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditingCode]);
+
   if (!currentProduct) {
     return <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-        <Package size={32} className="mx-auto mb-2 text-gray-400" />
+        <div className="text-gray-400 mb-2 text-2xl">📦</div>
         <p className="text-gray-500">Nenhum produto selecionado</p>
       </div>;
   }
+
   const salePrice = currentProduct.sale_price || currentProduct.price || 0;
   const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
   const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
   const minPriceForCurrentUnit = getMinPriceForCurrentUnit(unitPrice);
+
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
+
+  const handleCodeClick = () => {
+    setTempCode(currentProduct.code.toString());
+    setIsEditingCode(true);
+  };
+
+  const handleCodeSubmit = () => {
+    const newCode = tempCode.trim();
+    if (newCode && newCode !== currentProduct.code.toString()) {
+      if (onProductCodeSearch) {
+        onProductCodeSearch(newCode);
+      } else {
+        toast.info(`Busca por código ${newCode} - funcionalidade será implementada`);
+      }
+    }
+    setIsEditingCode(false);
+    setTempCode('');
+  };
+
+  const handleCodeCancel = () => {
+    setIsEditingCode(false);
+    setTempCode('');
+  };
+
+  const handleCodeKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCodeSubmit();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCodeCancel();
+    }
+  };
+
   console.log('🔍 NewOrderProductDetails - Renderizando:', {
     productName: currentProduct.name,
     hasDiscountRestriction: hasDiscountRestriction(),
@@ -80,16 +137,37 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     selectedUnitType,
     unitOptions: unitOptions.length
   });
+
   return (
     <div className="space-y-4">
       {/* Informações do Produto */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="flex items-center gap-2 mb-2">
-          <Package className="text-blue-600" size={18} />
+          {isEditingCode ? (
+            <Input
+              ref={inputRef}
+              type="text"
+              value={tempCode}
+              onChange={(e) => setTempCode(e.target.value)}
+              onKeyDown={handleCodeKeyDown}
+              onBlur={handleCodeCancel}
+              className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
+              placeholder="Código"
+            />
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCodeClick}
+              className="h-7 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900"
+            >
+              {currentProduct.code}
+            </Button>
+          )}
           <div className="flex-1">
             <h3 className="font-semibold text-blue-900 text-sm">{currentProduct.name}</h3>
             <p className="text-xs text-blue-700">
-              Código: {currentProduct.code} • Estoque: {currentProduct.stock} • Preço: {formatPrice(salePrice)}
+              Estoque: {currentProduct.stock} • Preço: {formatPrice(salePrice)}
             </p>
           </div>
         </div>
@@ -199,4 +277,5 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     </div>
   );
 };
+
 export default NewOrderProductDetails;
