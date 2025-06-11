@@ -349,14 +349,7 @@ const VisitRoutes = () => {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <div className="text-xs font-medium">
-                    {route.visited}/{route.total}
-                  </div>
-                  <div className="w-12">
-                    <Progress value={route.total > 0 ? route.visited / route.total * 100 : 0} className="h-1.5" />
-                  </div>
-                </div>
+                
               </div>
             </AppButton>)}
         </div>
