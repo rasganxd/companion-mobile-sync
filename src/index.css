@@ -185,4 +185,53 @@
   .tab-error-inactive {
     @apply text-red-600 border-red-300 hover:bg-red-50;
   }
+
+  /* Client status card styling - estas são as classes que estavam faltando */
+  .tab-success-bg {
+    @apply bg-green-600;
+  }
+  
+  .tab-success-text {
+    @apply text-white;
+  }
+  
+  .tab-success-border {
+    @apply border-green-600;
+  }
+  
+  .tab-success-light {
+    @apply bg-green-50 border-green-200;
+  }
+  
+  .tab-error-bg {
+    @apply bg-red-500;
+  }
+  
+  .tab-error-text {
+    @apply text-white;
+  }
+  
+  .tab-error-border {
+    @apply border-red-500;
+  }
+  
+  .tab-error-light {
+    @apply bg-red-50 border-red-200;
+  }
+  
+  .tab-pending-bg {
+    @apply bg-orange-500;
+  }
+  
+  .tab-pending-text {
+    @apply text-white;
+  }
+  
+  .tab-pending-border {
+    @apply border-orange-500;
+  }
+  
+  .tab-pending-light {
+    @apply bg-orange-50 border-orange-200;
+  }
 }
