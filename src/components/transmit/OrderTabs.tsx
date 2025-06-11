@@ -17,29 +17,47 @@ const OrderTabs: React.FC<OrderTabsProps> = ({
   transmittedCount,
   errorCount 
 }) => {
+  const getTabClasses = (tabType: 'pending' | 'transmitted' | 'error', isActive: boolean) => {
+    const baseClasses = "flex-1 text-xs sm:text-sm px-2 py-2 h-9 border transition-all duration-200";
+    
+    switch (tabType) {
+      case 'pending':
+        return isActive 
+          ? `${baseClasses} tab-pending-active`
+          : `${baseClasses} tab-pending-inactive bg-white`;
+      case 'transmitted':
+        return isActive 
+          ? `${baseClasses} tab-success-active`
+          : `${baseClasses} tab-success-inactive bg-white`;
+      case 'error':
+        return isActive 
+          ? `${baseClasses} tab-error-active`
+          : `${baseClasses} tab-error-inactive bg-white`;
+      default:
+        return baseClasses;
+    }
+  };
+
   return (
     <div className="flex gap-1 mb-4">
-      <Button
-        variant={activeTab === 'pending' ? 'default' : 'outline'}
+      <button
         onClick={() => onTabChange('pending')}
-        className="flex-1 text-xs sm:text-sm px-2 py-2 h-9"
+        className={getTabClasses('pending', activeTab === 'pending')}
       >
         Pendentes ({pendingCount})
-      </Button>
-      <Button
-        variant={activeTab === 'transmitted' ? 'default' : 'outline'}
+      </button>
+      <button
         onClick={() => onTabChange('transmitted')}
-        className="flex-1 text-xs sm:text-sm px-2 py-2 h-9"
+        className={getTabClasses('transmitted', activeTab === 'transmitted')}
       >
         Enviados ({transmittedCount})
-      </Button>
-      <Button
-        variant={activeTab === 'error' ? 'default' : 'outline'}
+      </button>
+      <button
         onClick={() => onTabChange('error')}
-        className="flex-1 text-xs sm:text-sm px-2 py-2 h-9"
+        className={getTabClasses('error', activeTab === 'error')}
       >
         Erro ({errorCount})
-      </Button>
+      </button>
     </div>
   );
 };

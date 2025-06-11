@@ -36,20 +36,21 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Order status colors */
+    --pending: 35 91% 65%;
+    --pending-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --error: 0 84% 60%;
+    --error-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -88,6 +89,14 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Order status colors for dark mode */
+    --pending: 35 84% 55%;
+    --pending-foreground: 0 0% 100%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 100%;
+    --error: 0 84% 60%;
+    --error-foreground: 0 0% 100%;
   }
 }
 
@@ -150,5 +159,30 @@
   
   .grid-balanced {
     @apply grid grid-cols-1 sm:grid-cols-3 gap-4;
+  }
+
+  /* Order status tabs styling */
+  .tab-pending-active {
+    @apply bg-orange-500 text-white border-orange-500 hover:bg-orange-600;
+  }
+  
+  .tab-pending-inactive {
+    @apply text-orange-600 border-orange-300 hover:bg-orange-50;
+  }
+  
+  .tab-success-active {
+    @apply bg-green-600 text-white border-green-600 hover:bg-green-700;
+  }
+  
+  .tab-success-inactive {
+    @apply text-green-600 border-green-300 hover:bg-green-50;
+  }
+  
+  .tab-error-active {
+    @apply bg-red-500 text-white border-red-500 hover:bg-red-600;
+  }
+  
+  .tab-error-inactive {
+    @apply text-red-600 border-red-300 hover:bg-red-50;
   }
 }
