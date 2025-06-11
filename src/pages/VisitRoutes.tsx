@@ -360,28 +360,28 @@ const VisitRoutes = () => {
           <h2 className="text-base font-semibold mb-2">Resumo do Dia</h2>
           
           <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-green-50 rounded">
+            <div className="text-center p-2 bg-green-50 rounded border border-green-200">
               <div className="text-lg font-bold text-green-600">
                 {salesData.totalPositivados}
               </div>
-              <div className="text-xs text-gray-600">Positivados</div>
+              <div className="text-xs text-green-700 font-medium">Positivados</div>
               <div className="text-sm font-semibold text-green-700">
                 R$ {salesData.positivadosValue.toFixed(0)}
               </div>
             </div>
             
-            <div className="text-center p-2 bg-red-50 rounded">
+            <div className="text-center p-2 bg-red-50 rounded border border-red-200">
               <div className="text-lg font-bold text-red-600">
                 {salesData.totalNegativados}
               </div>
-              <div className="text-xs text-gray-600">Negativados</div>
+              <div className="text-xs text-red-700 font-medium">Negativados</div>
             </div>
             
-            <div className="text-center p-2 bg-gray-50 rounded">
-              <div className="text-lg font-bold text-gray-600">
+            <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
+              <div className="text-lg font-bold text-orange-600">
                 {salesData.totalPendentes}
               </div>
-              <div className="text-xs text-gray-600">Pendentes</div>
+              <div className="text-xs text-orange-700 font-medium">Pendentes</div>
             </div>
           </div>
         </div>
@@ -404,8 +404,12 @@ const VisitRoutes = () => {
                       ({route.total})
                     </div>
                   </div>
-                  <div className="text-xs text-gray-600 mt-0.5 leading-tight">
-                    {route.pendentes} PENDENTES • {route.positivados} POSITIVADOS • {route.negativados} NEGATIVADOS
+                  <div className="text-xs mt-0.5 leading-tight">
+                    <span className="text-orange-600 font-medium">{route.pendentes} PENDENTES</span>
+                    <span className="text-gray-400 mx-1">•</span>
+                    <span className="text-green-600 font-medium">{route.positivados} POSITIVADOS</span>
+                    <span className="text-gray-400 mx-1">•</span>
+                    <span className="text-red-600 font-medium">{route.negativados} NEGATIVADOS</span>
                   </div>
                   <div className="text-xs text-green-600 font-medium">
                     R$ {route.totalSales.toFixed(0)}
