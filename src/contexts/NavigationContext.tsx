@@ -49,28 +49,33 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
 
   // Configurar controle de navegação baseado na plataforma
   useEffect(() => {
-    console.log(`🔄 Setting up navigation for ${isNative ? 'native' : 'web'} platform...`);
+    console.log(`🔄 NavigationContext: Setting up navigation for ${isNative ? 'native' : 'web'} platform...`);
     
     if (isNative) {
-      // Para apps nativos, bloquear completamente o histórico do navegador
-      console.log('📱 Native platform: Disabling browser history completely');
+      // Para apps nativos, gerenciamento mais suave do histórico
+      console.log('📱 Native platform: Using controlled navigation with less aggressive history blocking');
       
-      // Substituir estado do histórico para evitar voltar
-      window.history.replaceState(null, '', location.pathname);
+      // Substituir estado do histórico apenas uma vez
+      window.history.replaceState({ managed: true }, '', location.pathname);
       
-      // Bloquear eventos de popstate (não deve acontecer em nativo, mas por garantia)
-      const blockBrowserBack = (event: PopStateEvent) => {
-        console.log('🚫 Browser back blocked in native app');
-        event.preventDefault();
-        event.stopPropagation();
-        window.history.replaceState(null, '', location.pathname);
-        return false;
+      // Listener mais suave para popstate em apps nativos
+      const handleNativeNavigation = (event: PopStateEvent) => {
+        console.log('📱 Native navigation event detected:', {
+          pathname: location.pathname,
+          state: event.state
+        });
+        
+        // Permitir navegação natural, mas registrar
+        if (!event.state?.managed) {
+          console.log('📱 Unmanaged navigation detected, managing state');
+          window.history.replaceState({ managed: true }, '', location.pathname);
+        }
       };
 
-      window.addEventListener('popstate', blockBrowserBack);
+      window.addEventListener('popstate', handleNativeNavigation);
       
       return () => {
-        window.removeEventListener('popstate', blockBrowserBack);
+        window.removeEventListener('popstate', handleNativeNavigation);
       };
     } else {
       // Para web, manter o comportamento anterior de bloqueio
@@ -118,7 +123,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
   }, [location.pathname, isNative]);
 
   const navigateTo = (path: string) => {
-    console.log(`🧭 Navigating to: ${path} (${isNative ? 'native' : 'web'} mode)`);
+    console.log(`🧭 NavigationContext: Navigating to: ${path} (${isNative ? 'native' : 'web'} mode)`);
     
     setNavigationState(prev => {
       const newStack = [...prev.stack, path];
@@ -128,10 +133,12 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       };
     });
     
-    // Em apps nativos, usar replace para evitar empilhamento no histórico
-    if (isNative) {
+    // Para apps nativos, usar replace apenas quando necessário (não sempre)
+    if (isNative && (path === '/login' || path === '/home')) {
+      console.log('📱 Using replace navigation for:', path);
       navigate(path, { replace: true });
     } else {
+      console.log('📱 Using push navigation for:', path);
       navigate(path);
     }
   };
@@ -147,7 +154,7 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     
     const targetPath = navigationFlows[pathKey] || '/home';
     
-    console.log(`⬅️ Going back from ${currentPath} to ${targetPath} (${isNative ? 'native' : 'web'} mode)`);
+    console.log(`⬅️ NavigationContext: Going back from ${currentPath} to ${targetPath} (${isNative ? 'native' : 'web'} mode)`);
     
     setNavigationState(prev => {
       // Se já estamos na home, não faz nada
@@ -167,12 +174,8 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
       };
     });
     
-    // Em apps nativos, sempre usar replace
-    if (isNative) {
-      navigate(targetPath, { replace: true });
-    } else {
-      navigate(targetPath);
-    }
+    // Para navegação de volta, usar push ao invés de replace para preservar histórico
+    navigate(targetPath);
   };
 
   const canGoBack = location.pathname !== '/home';

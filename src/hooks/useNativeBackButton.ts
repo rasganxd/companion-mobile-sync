@@ -20,6 +20,13 @@ export const useNativeBackButton = () => {
         return;
       }
       
+      // Se estamos na tela de login, também minimizar (evitar loop)
+      if (currentPath === '/login') {
+        console.log('📱 On login screen, minimizing app...');
+        App.minimizeApp();
+        return;
+      }
+      
       // Caso contrário, usar navegação interna
       console.log('📱 Using internal navigation...');
       goBack();
@@ -29,7 +36,12 @@ export const useNativeBackButton = () => {
     let backButtonListener: any = null;
     
     const setupListener = async () => {
-      backButtonListener = await App.addListener('backButton', handleBackButton);
+      try {
+        backButtonListener = await App.addListener('backButton', handleBackButton);
+        console.log('✅ Native back button listener registered successfully');
+      } catch (error) {
+        console.error('❌ Failed to register native back button listener:', error);
+      }
     };
     
     setupListener();
@@ -37,7 +49,12 @@ export const useNativeBackButton = () => {
     return () => {
       console.log('🧹 Cleaning up native back button handler...');
       if (backButtonListener) {
-        backButtonListener.remove();
+        try {
+          backButtonListener.remove();
+          console.log('✅ Native back button listener removed successfully');
+        } catch (error) {
+          console.error('❌ Error removing native back button listener:', error);
+        }
       }
     };
   }, [goBack, canGoBack, getCurrentPath]);

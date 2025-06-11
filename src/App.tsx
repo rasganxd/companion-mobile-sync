@@ -29,6 +29,9 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 // Initial Sync Screen
 import InitialSyncScreen from '@/components/InitialSyncScreen';
 
+// Mobile Back Button Manager
+import { MobileBackButtonManager } from '@/components/MobileBackButtonManager';
+
 const queryClient = new QueryClient();
 
 function App() {
@@ -38,6 +41,9 @@ function App() {
         <Router>
           <NavigationProvider>
             <div className="App">
+              {/* Adicionar o gerenciador do botão voltar para mobile */}
+              <MobileBackButtonManager />
+              
               <Routes>
                 {/* Login Route - não protegida */}
                 <Route path="/login" element={<Login />} />

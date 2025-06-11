@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
@@ -44,10 +45,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const { connected } = useNetworkStatus();
   const { performFullSync, loadLastSyncDate, lastSyncDate } = useDataSync();
 
-  // Log state changes
+  // Log state changes com mais detalhes
   useEffect(() => {
     console.log('🔐 AuthContext state changed:', {
       salesRep: salesRep?.name || 'null',
+      salesRepId: salesRep?.id || 'null',
       isLoading,
       needsInitialSync,
       connected,
@@ -55,50 +57,120 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
   }, [salesRep, isLoading, needsInitialSync, connected]);
 
+  // Função para verificar e recuperar estado de autenticação
+  const recoverAuthState = () => {
+    try {
+      console.log('🔐 AuthContext: Attempting to recover auth state...');
+      
+      const stored = localStorage.getItem('salesRep');
+      if (stored) {
+        const parsedSalesRep = JSON.parse(stored);
+        console.log('🔐 AuthContext: Recovered salesRep from storage:', {
+          id: parsedSalesRep.id,
+          name: parsedSalesRep.name,
+          hasSessionToken: !!parsedSalesRep.sessionToken
+        });
+        
+        // Verificar se o objeto tem os campos necessários
+        if (parsedSalesRep.id && parsedSalesRep.name) {
+          setSalesRep(parsedSalesRep);
+          return true;
+        } else {
+          console.warn('🔐 AuthContext: Invalid stored salesRep, removing...');
+          localStorage.removeItem('salesRep');
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('🔐 AuthContext: Error recovering auth state:', error);
+      localStorage.removeItem('salesRep');
+      return false;
+    }
+  };
+
   useEffect(() => {
     const loadStoredAuth = () => {
       console.log('🔐 AuthContext: Loading stored auth data...');
-      try {
-        const stored = localStorage.getItem('salesRep');
-        console.log('🔐 AuthContext: localStorage salesRep:', stored ? 'found' : 'not found');
+      
+      const recovered = recoverAuthState();
+      
+      if (recovered) {
+        // Check if needs initial sync
+        const lastSync = localStorage.getItem('last_sync_date');
+        console.log('🔐 AuthContext: last_sync_date:', lastSync ? 'found' : 'not found');
+        if (!lastSync) {
+          console.log('🔐 AuthContext: Setting needsInitialSync=true');
+          setNeedsInitialSync(true);
+        }
+      } else {
+        console.log('🔐 AuthContext: No valid stored auth found');
+      }
+      
+      loadLastSyncDate();
+      setIsLoading(false);
+    };
+
+    // Adicionar um pequeno delay para permitir que outros contextos se inicializem
+    const timer = setTimeout(loadStoredAuth, 50);
+    
+    return () => clearTimeout(timer);
+  }, [loadLastSyncDate]);
+
+  // Adicionar listener para mudanças no localStorage (para sincronização entre abas)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'salesRep') {
+        console.log('🔐 AuthContext: localStorage salesRep changed externally');
         
-        if (stored) {
-          const parsedSalesRep = JSON.parse(stored);
-          console.log('🔐 AuthContext: Parsed salesRep:', parsedSalesRep.name, 'ID:', parsedSalesRep.id);
-          setSalesRep(parsedSalesRep);
-          
-          // Check if needs initial sync
-          const lastSync = localStorage.getItem('last_sync_date');
-          console.log('🔐 AuthContext: last_sync_date:', lastSync ? 'found' : 'not found');
-          if (!lastSync) {
-            console.log('🔐 AuthContext: Setting needsInitialSync=true');
-            setNeedsInitialSync(true);
+        if (e.newValue) {
+          try {
+            const newSalesRep = JSON.parse(e.newValue);
+            console.log('🔐 AuthContext: Updating salesRep from storage change:', newSalesRep.name);
+            setSalesRep(newSalesRep);
+          } catch (error) {
+            console.error('🔐 AuthContext: Error parsing external salesRep change:', error);
           }
         } else {
-          console.log('🔐 AuthContext: No stored auth found');
+          console.log('🔐 AuthContext: salesRep removed externally');
+          setSalesRep(null);
         }
-        
-        loadLastSyncDate();
-      } catch (error) {
-        console.error('🔐 AuthContext: Error loading stored auth:', error);
-        localStorage.removeItem('salesRep');
-      } finally {
-        console.log('🔐 AuthContext: Setting isLoading=false');
-        setIsLoading(false);
       }
     };
 
-    loadStoredAuth();
-  }, [loadLastSyncDate]);
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const login = (salesRepData: SalesRep) => {
     console.log('🔐 AuthContext: login() called for:', salesRepData.name);
+    
+    // Validar dados antes de salvar
+    if (!salesRepData.id || !salesRepData.name) {
+      console.error('🔐 AuthContext: Invalid salesRep data provided to login');
+      return;
+    }
+    
     setSalesRep(salesRepData);
     
     // Persist immediately and verify
-    localStorage.setItem('salesRep', JSON.stringify(salesRepData));
-    const verification = localStorage.getItem('salesRep');
-    console.log('🔐 AuthContext: localStorage persistence verified:', verification ? 'success' : 'failed');
+    try {
+      const dataToStore = JSON.stringify(salesRepData);
+      localStorage.setItem('salesRep', dataToStore);
+      
+      // Verificar se foi salvo corretamente
+      const verification = localStorage.getItem('salesRep');
+      console.log('🔐 AuthContext: localStorage persistence verified:', verification ? 'success' : 'failed');
+      
+      if (!verification) {
+        console.error('🔐 AuthContext: Failed to persist salesRep to localStorage');
+        toast.error('Erro ao salvar dados de login');
+        return;
+      }
+    } catch (error) {
+      console.error('🔐 AuthContext: Error persisting salesRep:', error);
+      toast.error('Erro ao salvar dados de login');
+      return;
+    }
     
     // Check if needs sync
     if (!lastSyncDate) {
@@ -164,6 +236,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           try {
             const parsedRep = JSON.parse(storedRep);
             if (parsedRep.code === code) {
+              console.log('🔐 AuthContext: Offline login successful');
               setSalesRep(parsedRep);
               toast.success('Login offline realizado com sucesso');
               return true;
