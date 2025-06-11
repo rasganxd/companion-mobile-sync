@@ -328,7 +328,7 @@ const VisitRoutes = () => {
 
         {/* Lista Compacta de Rotas */}
         <div className="space-y-2">
-          {routes.map(route => <AppButton key={route.day} variant="gray" fullWidth onClick={() => handleVisitDay(route.day)} className="text-left p-3 h-auto">
+          {routes.map(route => <AppButton key={route.day} variant="gray" fullWidth onClick={() => handleVisitDay(route.day)} className="text-left p-3 h-auto py-[9px]">
               <div className="flex justify-between items-center">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
