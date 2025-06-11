@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, User } from 'lucide-react';
 import ClientCard from './ClientCard';
-import ClientsListHeader from './ClientsListHeader';
 import ClientPaginatedView from './ClientPaginatedView';
 import AppButton from '@/components/AppButton';
 
@@ -110,13 +109,6 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
   if (clients.length > 0 && salesRep) {
     return (
       <div className="space-y-4">
-        <ClientsListHeader 
-          clientsCount={filteredClients.length}
-          totalClients={clients.length}
-          day={day}
-          salesRep={salesRep}
-        />
-        
         {/* Search bar */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="relative">
