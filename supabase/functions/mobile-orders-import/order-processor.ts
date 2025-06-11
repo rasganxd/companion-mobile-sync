@@ -59,10 +59,11 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
   // Log para verificar se payment_table_id está sendo recebido
   console.log('💳 Payment table ID received:', orderData.payment_table_id);
 
-  // Preparar dados do pedido para inserção na tabela orders
+  // Preparar dados do pedido para inserção na tabela mobile_orders
   const orderToInsert = {
     customer_id: orderData.customer_id,
     customer_name: orderData.customer_name || customer.company_name || customer.name,
+    customer_code: customer.code || null,
     sales_rep_id: salesRep.id,
     sales_rep_name: salesRep.name,
     date: orderData.date,
@@ -70,45 +71,49 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     total: orderData.total,
     notes: orderData.notes || '',
     payment_method: orderData.payment_method || '',
-    payment_table_id: orderData.payment_table_id || null, // ✅ NOVO: Incluir payment_table_id
+    payment_table_id: orderData.payment_table_id || null,
     code: codeData,
-    source_project: 'mobile',
     mobile_order_id: `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    sync_status: 'synced',
-    rejection_reason: orderData.reason
+    sync_status: 'pending',
+    rejection_reason: orderData.reason,
+    imported_to_orders: false,
+    imported_at: null,
+    imported_by: null,
+    visit_notes: orderData.notes || ''
   };
 
-  console.log('💳 Order data to insert:', {
+  console.log('💳 Mobile order data to insert:', {
     payment_method: orderToInsert.payment_method,
     payment_table_id: orderToInsert.payment_table_id,
     total: orderToInsert.total,
-    status: orderToInsert.status
+    status: orderToInsert.status,
+    table: 'mobile_orders'
   });
 
-  // Inserir pedido na tabela orders principal
+  // Inserir pedido na tabela mobile_orders
   const { data: createdOrder, error: orderError } = await supabase
-    .from('orders')
+    .from('mobile_orders')
     .insert(orderToInsert)
     .select()
     .single();
 
   if (orderError) {
-    console.error('❌ Error creating order:', orderError);
-    throw new Error(`Failed to create order: ${orderError.message}`);
+    console.error('❌ Error creating mobile order:', orderError);
+    throw new Error(`Failed to create mobile order: ${orderError.message}`);
   }
 
-  console.log('✅ Order created successfully:', createdOrder.id);
-  console.log('💳 Payment table ID saved:', createdOrder.payment_table_id);
+  console.log('✅ Mobile order created successfully:', createdOrder.id);
+  console.log('💳 Payment table ID saved in mobile_orders:', createdOrder.payment_table_id);
   return createdOrder;
 };
 
 export const createOrderItems = async (orderData: MobileOrder, orderId: string, supabase: any) => {
   // Inserir itens do pedido (apenas se não for cancelado)
   if (orderData.items && orderData.items.length > 0) {
-    console.log('📋 Creating order items...');
+    console.log('📋 Creating mobile order items...');
     
     const itemsToInsert = orderData.items.map(item => ({
-      order_id: orderId,
+      mobile_order_id: orderId,
       product_name: item.product_name,
       product_code: item.product_code,
       quantity: item.quantity,
@@ -118,23 +123,23 @@ export const createOrderItems = async (orderData: MobileOrder, orderId: string, 
       unit: item.unit || 'UN'
     }));
 
-    console.log(`🔍 Inserting ${itemsToInsert.length} items with units:`, 
+    console.log(`🔍 Inserting ${itemsToInsert.length} items into mobile_order_items with units:`, 
       itemsToInsert.map(item => ({ name: item.product_name, unit: item.unit }))
     );
 
     const { error: itemsError } = await supabase
-      .from('order_items')
+      .from('mobile_order_items')
       .insert(itemsToInsert);
 
     if (itemsError) {
-      console.error('❌ Error creating order items:', itemsError);
+      console.error('❌ Error creating mobile order items:', itemsError);
       // Tentar deletar o pedido criado se os itens falharam
-      await supabase.from('orders').delete().eq('id', orderId);
-      throw new Error(`Failed to create order items: ${itemsError.message}`);
+      await supabase.from('mobile_orders').delete().eq('id', orderId);
+      throw new Error(`Failed to create mobile order items: ${itemsError.message}`);
     }
 
-    console.log('✅ Order items created successfully with preserved units');
+    console.log('✅ Mobile order items created successfully with preserved units');
   } else if (orderData.status === 'cancelled') {
-    console.log('ℹ️ No items to create for cancelled order (negation)');
+    console.log('ℹ️ No items to create for cancelled mobile order (negation)');
   }
 };

@@ -63,23 +63,24 @@ serve(async (req) => {
     // Validar cliente
     const customer = await validateCustomer(orderData.customer_id, salesRep.id, supabase);
 
-    // Criar pedido
+    // Criar pedido mobile
     const createdOrder = await createOrder(orderData, salesRep, customer, supabase);
 
-    // Criar itens do pedido
+    // Criar itens do pedido mobile
     await createOrderItems(orderData, createdOrder.id, supabase);
 
     return new Response(
       JSON.stringify({
         success: true,
-        order_id: createdOrder.id,
+        mobile_order_id: createdOrder.id,
         code: createdOrder.code,
         sales_rep_id: salesRep.id,
         sales_rep_name: salesRep.name,
         message: orderData.status === 'cancelled' 
-          ? 'Negação de venda recebida e processada com sucesso'
-          : 'Pedido recebido e processado com sucesso',
-        status: 'synced'
+          ? 'Negação de venda recebida e salva em mobile_orders com sucesso'
+          : 'Pedido mobile recebido e salvo em mobile_orders com sucesso',
+        status: 'pending',
+        table: 'mobile_orders'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

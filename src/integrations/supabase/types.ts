@@ -335,6 +335,170 @@ export type Database = {
           },
         ]
       }
+      mobile_order_items: {
+        Row: {
+          created_at: string
+          discount: number | null
+          id: string
+          mobile_order_id: string | null
+          price: number
+          product_code: number | null
+          product_id: string | null
+          product_name: string | null
+          quantity: number
+          total: number
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount?: number | null
+          id?: string
+          mobile_order_id?: string | null
+          price: number
+          product_code?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity: number
+          total: number
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount?: number | null
+          id?: string
+          mobile_order_id?: string | null
+          price?: number
+          product_code?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity?: number
+          total?: number
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobile_order_items_mobile_order_id_fkey"
+            columns: ["mobile_order_id"]
+            isOneToOne: false
+            referencedRelation: "mobile_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobile_orders: {
+        Row: {
+          code: number
+          created_at: string
+          customer_code: number | null
+          customer_id: string | null
+          customer_name: string | null
+          date: string
+          delivery_address: string | null
+          delivery_city: string | null
+          delivery_date: string | null
+          delivery_state: string | null
+          delivery_zip: string | null
+          discount: number | null
+          due_date: string | null
+          id: string
+          imported_at: string | null
+          imported_by: string | null
+          imported_to_orders: boolean | null
+          mobile_order_id: string | null
+          notes: string | null
+          payment_method: string | null
+          payment_method_id: string | null
+          payment_status: string | null
+          payment_table: string | null
+          payment_table_id: string | null
+          payments: Json | null
+          rejection_reason: string | null
+          sales_rep_id: string | null
+          sales_rep_name: string | null
+          status: string
+          sync_status: string | null
+          total: number
+          updated_at: string
+          visit_notes: string | null
+        }
+        Insert: {
+          code?: number
+          created_at?: string
+          customer_code?: number | null
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_date?: string | null
+          delivery_state?: string | null
+          delivery_zip?: string | null
+          discount?: number | null
+          due_date?: string | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          imported_to_orders?: boolean | null
+          mobile_order_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_table?: string | null
+          payment_table_id?: string | null
+          payments?: Json | null
+          rejection_reason?: string | null
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string
+          sync_status?: string | null
+          total?: number
+          updated_at?: string
+          visit_notes?: string | null
+        }
+        Update: {
+          code?: number
+          created_at?: string
+          customer_code?: number | null
+          customer_id?: string | null
+          customer_name?: string | null
+          date?: string
+          delivery_address?: string | null
+          delivery_city?: string | null
+          delivery_date?: string | null
+          delivery_state?: string | null
+          delivery_zip?: string | null
+          discount?: number | null
+          due_date?: string | null
+          id?: string
+          imported_at?: string | null
+          imported_by?: string | null
+          imported_to_orders?: boolean | null
+          mobile_order_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          payment_method_id?: string | null
+          payment_status?: string | null
+          payment_table?: string | null
+          payment_table_id?: string | null
+          payments?: Json | null
+          rejection_reason?: string | null
+          sales_rep_id?: string | null
+          sales_rep_name?: string | null
+          status?: string
+          sync_status?: string | null
+          total?: number
+          updated_at?: string
+          visit_notes?: string | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
