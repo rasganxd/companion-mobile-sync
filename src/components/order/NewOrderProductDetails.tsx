@@ -1,12 +1,11 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Package, Tag, Box, Award } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, AlertTriangle } from 'lucide-react';
-import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
-import { toast } from 'sonner';
 
 interface Product {
   id: string;
@@ -20,6 +19,9 @@ interface Product {
   subunit?: string;
   subunit_ratio?: number;
   max_discount_percent?: number;
+  category_name?: string;
+  group_name?: string;
+  brand_name?: string;
 }
 
 interface UnitOption {
@@ -41,7 +43,7 @@ interface NewOrderProductDetailsProps {
   onUnitPriceChange: (price: number) => void;
   onUnitTypeChange: (unitType: 'main' | 'sub') => void;
   onAddProduct: () => void;
-  onProductCodeSearch?: (code: string) => void;
+  onProductCodeSearch: (code: string) => void;
 }
 
 const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
@@ -57,223 +59,182 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   onAddProduct,
   onProductCodeSearch
 }) => {
-  const [isEditingCode, setIsEditingCode] = useState(false);
-  const [tempCode, setTempCode] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [codeInput, setCodeInput] = React.useState('');
 
-  const {
-    hasDiscountRestriction,
-    getMaxDiscountPercent,
-    getCurrentDiscountPercent,
-    getMinPriceForCurrentUnit,
-    validationResult
-  } = useProductPriceValidation(currentProduct);
-
-  // Focus input when entering edit mode
-  useEffect(() => {
-    if (isEditingCode && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+  const handleCodeSearch = () => {
+    if (codeInput.trim()) {
+      onProductCodeSearch(codeInput.trim());
+      setCodeInput('');
     }
-  }, [isEditingCode]);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleCodeSearch();
+    }
+  };
 
   if (!currentProduct) {
-    return <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-        <div className="text-gray-400 mb-2 text-2xl">📦</div>
-        <p className="text-gray-500">Nenhum produto selecionado</p>
-      </div>;
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <Package size={32} className="mx-auto mb-2 text-gray-300" />
+        <p>Nenhum produto selecionado</p>
+      </div>
+    );
   }
 
-  const salePrice = currentProduct.sale_price || currentProduct.price || 0;
-  const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
-  const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
-  const minPriceForCurrentUnit = getMinPriceForCurrentUnit(unitPrice);
-
-  const formatPrice = (value: number): string => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`;
-  };
-
-  const handleCodeClick = () => {
-    setTempCode(currentProduct.code.toString());
-    setIsEditingCode(true);
-  };
-
-  const handleCodeSubmit = () => {
-    const newCode = tempCode.trim();
-    if (newCode && newCode !== currentProduct.code.toString()) {
-      if (onProductCodeSearch) {
-        onProductCodeSearch(newCode);
-      } else {
-        toast.info(`Busca por código ${newCode} - funcionalidade será implementada`);
-      }
-    }
-    setIsEditingCode(false);
-    setTempCode('');
-  };
-
-  const handleCodeCancel = () => {
-    setIsEditingCode(false);
-    setTempCode('');
-  };
-
-  const handleCodeKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleCodeSubmit();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      handleCodeCancel();
-    }
-  };
-
-  console.log('🔍 NewOrderProductDetails - Renderizando:', {
-    productName: currentProduct.name,
-    hasDiscountRestriction: hasDiscountRestriction(),
-    minPriceForCurrentUnit,
-    maxDiscountPercent: getMaxDiscountPercent(),
-    currentPrice: unitPrice,
-    currentDiscountPercent,
-    isDiscountExceeded,
-    selectedUnitType,
-    unitOptions: unitOptions.length
-  });
+  const currentUnit = unitOptions.find(opt => opt.value === selectedUnitType);
+  const displayPrice = currentUnit?.price || currentProduct.sale_price || currentProduct.price || 0;
 
   return (
     <div className="space-y-4">
       {/* Informações do Produto */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-center gap-2 mb-2">
-          {isEditingCode ? (
-            <Input
-              ref={inputRef}
-              type="text"
-              value={tempCode}
-              onChange={(e) => setTempCode(e.target.value)}
-              onKeyDown={handleCodeKeyDown}
-              onBlur={handleCodeCancel}
-              className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
-              placeholder="Código"
-            />
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCodeClick}
-              className="h-7 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900"
-            >
-              {currentProduct.code}
-            </Button>
-          )}
+      <div className="bg-white p-4 rounded-lg border border-gray-200">
+        <div className="flex items-start gap-3 mb-3">
+          <Package size={24} className="text-blue-600 mt-1" />
           <div className="flex-1">
-            <h3 className="font-semibold text-blue-900 text-sm">{currentProduct.name}</h3>
-            <p className="text-xs text-blue-700">
-              Estoque: {currentProduct.stock} • Preço: {formatPrice(salePrice)}
+            <h3 className="font-semibold text-gray-900">{currentProduct.name}</h3>
+            <p className="text-sm text-gray-600">
+              Código: {currentProduct.code} • Estoque: {currentProduct.stock}
+            </p>
+            
+            {/* Badges para Grupo, Categoria e Marca */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {currentProduct.group_name && (
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Box size={12} className="mr-1" />
+                  {currentProduct.group_name}
+                </Badge>
+              )}
+              {currentProduct.category_name && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Tag size={12} className="mr-1" />
+                  {currentProduct.category_name}
+                </Badge>
+              )}
+              {currentProduct.brand_name && (
+                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                  <Award size={12} className="mr-1" />
+                  {currentProduct.brand_name}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desconto Máximo - Mostrar se existir */}
+        {currentProduct.max_discount_percent && currentProduct.max_discount_percent > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-600 font-medium text-sm">⚠️ Desconto Máximo:</span>
+              <span className="font-bold text-yellow-800">{currentProduct.max_discount_percent.toFixed(1)}%</span>
+            </div>
+            <p className="text-xs text-yellow-700 mt-1">
+              Não é permitido desconto acima deste valor
             </p>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
-      {hasDiscountRestriction() && (
-        <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
-            <span className="text-sm font-medium">
-              {isDiscountExceeded ? 'DESCONTO EXCEDIDO!' : 'Controle de Desconto'}
-            </span>
+        {/* Busca por Código */}
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          <div className="col-span-3">
+            <Label className="text-xs text-gray-600 mb-1 block">Buscar por Código</Label>
+            <Input
+              type="number"
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Digite o código"
+              className="text-sm"
+            />
           </div>
-          <div className="space-y-1 text-xs">
-            <div className="flex justify-between">
-              <span>Desconto máximo permitido:</span>
-              <span className="font-medium text-orange-600">{getMaxDiscountPercent().toFixed(1)}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Desconto atual:</span>
-              <span className={`font-medium ${isDiscountExceeded ? 'text-red-600' : 'text-green-600'}`}>
-                {currentDiscountPercent.toFixed(1)}%
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Preço mínimo para esta unidade:</span>
-              <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
-            </div>
-            {isDiscountExceeded && (
-              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-center">
-                <strong>Preço abaixo do permitido!</strong>
-              </div>
+          <div className="flex items-end">
+            <Button 
+              onClick={handleCodeSearch}
+              variant="outline"
+              className="w-full h-9 text-sm"
+              disabled={!codeInput.trim()}
+            >
+              Buscar
+            </Button>
+          </div>
+        </div>
+
+        {/* Campos de Unidade e Preço */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <Label className="text-xs text-gray-600 mb-1 block">
+              {hasMultipleUnits ? 'Tipo de Unidade:' : 'Unidade de Venda:'}
+            </Label>
+            {hasMultipleUnits ? (
+              <Select value={selectedUnitType} onValueChange={onUnitTypeChange}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Selecione unidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <span className="font-medium">{option.displayText}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                value={currentProduct.unit || 'UN'}
+                readOnly
+                className="h-9 text-sm bg-gray-50 cursor-not-allowed"
+              />
             )}
           </div>
-        </div>
-      )}
-
-      {/* Formulário de Quantidade e Preço */}
-      <div className="grid grid-cols-3 gap-3">
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
-          <Input
-            type="number"
-            value={quantity || ''}
-            onChange={(e) => onQuantityChange(Number(e.target.value))}
-            min="1"
-            step="1"
-            className="text-center h-10"
-          />
-        </div>
-
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select 
-            value={selectedUnitType} 
-            onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
-            disabled={!hasMultipleUnits}
-          >
-            <SelectTrigger className="h-10">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {unitOptions.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.displayText}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          
+          <div>
+            <Label className="text-xs text-gray-600 mb-1 block">
+              Preço {currentUnit?.code || currentProduct.unit || 'UN'}:
+            </Label>
+            <Input
+              type="number"
+              value={unitPrice}
+              onChange={(e) => onUnitPriceChange(Number(e.target.value))}
+              min="0"
+              step="0.01"
+              className="text-sm text-center"
+            />
+          </div>
         </div>
 
-        <div>
-          <Label className="text-xs font-medium text-gray-700 mb-1 block">
-            Preço
-          </Label>
-          <Input
-            type="number"
-            value={unitPrice || ''}
-            onChange={(e) => onUnitPriceChange(Number(e.target.value))}
-            min="0"
-            step="0.01"
-            className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
-          />
+        {/* Quantidade e Total */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <Label className="text-xs text-gray-600 mb-1 block">Quantidade</Label>
+            <Input
+              type="number"
+              value={quantity || ''}
+              onChange={(e) => onQuantityChange(Number(e.target.value))}
+              min="1"
+              step="1"
+              className="text-sm text-center"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-600 mb-1 block">Total do Item</Label>
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-2 text-center">
+              <span className="font-bold text-blue-600">
+                R$ {(quantity * unitPrice).toFixed(2)}
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Botão Adicionar */}
+        <Button 
+          onClick={onAddProduct}
+          disabled={!currentProduct || quantity <= 0}
+          className="w-full bg-green-600 hover:bg-green-700 text-white"
+        >
+          Adicionar ao Pedido
+        </Button>
       </div>
-
-      {/* Total do Item */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-green-700">Total do Item:</span>
-          <span className="font-bold text-green-600 text-lg">
-            {formatPrice(quantity * unitPrice)}
-          </span>
-        </div>
-      </div>
-
-      {/* Botão Adicionar */}
-      <Button
-        onClick={onAddProduct}
-        disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
-        className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}
-      >
-        <Plus size={18} className="mr-2" />
-        {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
-      </Button>
     </div>
   );
 };

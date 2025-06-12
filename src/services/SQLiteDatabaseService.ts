@@ -1,7 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
-class SQLiteDatabaseService {
+class SQLiteDatabaseService implements DatabaseAdapter {
   private static instance: SQLiteDatabaseService | null = null;
   private sqlite: SQLiteConnection | null = null;
   private db: SQLiteDBConnection | null = null;
@@ -206,14 +206,36 @@ class SQLiteDatabaseService {
   }
 
   async getProducts(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
+    console.log('🔍 SQLiteDatabaseService - Getting products from SQLite');
+    
     try {
-      console.log('📱 Getting products from SQLite database...');
-      const result = await this.db!.query('SELECT * FROM products');
+      const query = `
+        SELECT 
+          p.*,
+          pc.name as category_name,
+          pg.name as group_name,
+          pb.name as brand_name
+        FROM products p
+        LEFT JOIN product_categories pc ON p.category_id = pc.id
+        LEFT JOIN product_groups pg ON p.group_id = pg.id
+        LEFT JOIN product_brands pb ON p.brand_id = pb.id
+        WHERE p.active = 1
+        ORDER BY 
+          pg.name NULLS LAST, 
+          pc.name NULLS LAST, 
+          p.name
+      `;
+      
+      const result = await CapacitorSQLite.query({
+        database: this.dbName,
+        statement: query,
+        values: []
+      });
+      
+      console.log('📦 SQLiteDatabaseService - Products loaded with categories/groups:', result.values?.length || 0);
       return result.values || [];
     } catch (error) {
-      console.error('❌ Error getting products:', error);
+      console.error('❌ Error getting products from SQLite:', error);
       return [];
     }
   }

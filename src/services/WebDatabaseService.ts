@@ -1,7 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
 
-class WebDatabaseService {
+class WebDatabaseService implements DatabaseAdapter {
   private static instance: WebDatabaseService | null = null;
   private db: DatabaseInstance | null = null;
   private isInitialized = false;
@@ -112,13 +112,37 @@ class WebDatabaseService {
   }
 
   async getProducts(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
+    console.log('🔍 WebDatabaseService - Getting products from IndexedDB');
+    
     try {
-      console.log('🌐 Getting products from Web database...');
-      return await this.db!.getAll('products');
+      const tx = this.db!.transaction(['products', 'product_categories', 'product_groups', 'product_brands'], 'readonly');
+      const productStore = tx.objectStore('products');
+      const categoryStore = tx.objectStore('product_categories');
+      const groupStore = tx.objectStore('product_groups');
+      const brandStore = tx.objectStore('product_brands');
+      
+      const products = await productStore.getAll();
+      const categories = await categoryStore.getAll();
+      const groups = await groupStore.getAll();
+      const brands = await brandStore.getAll();
+      
+      // Create lookup maps
+      const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
+      const groupMap = new Map(groups.map(group => [group.id, group.name]));
+      const brandMap = new Map(brands.map(brand => [brand.id, brand.name]));
+      
+      // Enrich products with category, group, and brand names
+      const enrichedProducts = products.map(product => ({
+        ...product,
+        category_name: product.category_id ? categoryMap.get(product.category_id) : null,
+        group_name: product.group_id ? groupMap.get(product.group_id) : null,
+        brand_name: product.brand_id ? brandMap.get(product.brand_id) : null
+      }));
+      
+      console.log('📦 WebDatabaseService - Products loaded with categories/groups:', enrichedProducts.length);
+      return enrichedProducts;
     } catch (error) {
-      console.error('❌ Error getting products:', error);
+      console.error('❌ Error getting products from IndexedDB:', error);
       return [];
     }
   }
