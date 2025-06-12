@@ -10,7 +10,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, Search, Tag, Box } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface Product {
   id: string;
@@ -158,24 +157,16 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
                                     Código: {product.code} • Estoque: {product.stock}
                                   </div>
                                   
-                                  {/* Badges para Grupo, Categoria e Marca */}
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {product.group_name && (
-                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                        {product.group_name}
-                                      </Badge>
-                                    )}
-                                    {product.category_name && (
-                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                        {product.category_name}
-                                      </Badge>
-                                    )}
-                                    {product.brand_name && (
-                                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                        {product.brand_name}
-                                      </Badge>
-                                    )}
-                                  </div>
+                                  {/* Informações de categoria/grupo sem badges */}
+                                  {(product.group_name || product.category_name || product.brand_name) && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {product.group_name && product.category_name 
+                                        ? `${product.group_name} > ${product.category_name}`
+                                        : product.group_name || product.category_name
+                                      }
+                                      {product.brand_name && ` • ${product.brand_name}`}
+                                    </div>
+                                  )}
                                   
                                   <div className="text-xs text-gray-500 mt-1">
                                     Unidade: {getUnitInfo(product)}

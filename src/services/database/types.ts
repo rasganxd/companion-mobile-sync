@@ -19,6 +19,18 @@ export interface SalesAppDBSchema extends DBSchema {
     key: string;
     value: any;
   };
+  product_categories: {
+    key: string;
+    value: any;
+  };
+  product_groups: {
+    key: string;
+    value: any;
+  };
+  product_brands: {
+    key: string;
+    value: any;
+  };
   payment_tables: {
     key: string;
     value: any;
@@ -31,10 +43,10 @@ export interface SalesAppDBSchema extends DBSchema {
 
 export type DatabaseInstance = IDBPDatabase<SalesAppDBSchema>;
 
-export type ValidTableName = 'clients' | 'visit_routes' | 'orders' | 'products' | 'payment_tables' | 'sync_log';
+export type ValidTableName = 'clients' | 'visit_routes' | 'orders' | 'products' | 'product_categories' | 'product_groups' | 'product_brands' | 'payment_tables' | 'sync_log';
 
 export function isValidTableName(table: string): table is ValidTableName {
-  return ['clients', 'visit_routes', 'orders', 'products', 'payment_tables', 'sync_log'].includes(table);
+  return ['clients', 'visit_routes', 'orders', 'products', 'product_categories', 'product_groups', 'product_brands', 'payment_tables', 'sync_log'].includes(table);
 }
 
 interface DBSchema {

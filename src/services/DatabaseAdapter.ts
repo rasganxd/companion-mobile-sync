@@ -3,7 +3,7 @@ import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
-interface DatabaseAdapter {
+export interface DatabaseAdapter {
   initDatabase(): Promise<void>;
   getClients(): Promise<any[]>;
   getVisitRoutes(): Promise<any[]>;

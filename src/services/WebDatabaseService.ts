@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
+import { DatabaseAdapter } from './DatabaseAdapter';
 
 class WebDatabaseService implements DatabaseAdapter {
   private static instance: WebDatabaseService | null = null;
@@ -24,7 +25,7 @@ class WebDatabaseService implements DatabaseAdapter {
     try {
       console.log('🌐 Initializing Web IndexedDB database...');
       
-      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 2, {
+      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 3, {
         upgrade(db, oldVersion) {
           console.log('🔧 Creating/updating database schema...');
           
@@ -47,6 +48,24 @@ class WebDatabaseService implements DatabaseAdapter {
           // Create products table
           if (!db.objectStoreNames.contains('products')) {
             db.createObjectStore('products', { keyPath: 'id' });
+          }
+
+          // Create product_categories table
+          if (!db.objectStoreNames.contains('product_categories')) {
+            db.createObjectStore('product_categories', { keyPath: 'id' });
+            console.log('✅ Criada tabela product_categories no IndexedDB');
+          }
+
+          // Create product_groups table
+          if (!db.objectStoreNames.contains('product_groups')) {
+            db.createObjectStore('product_groups', { keyPath: 'id' });
+            console.log('✅ Criada tabela product_groups no IndexedDB');
+          }
+
+          // Create product_brands table
+          if (!db.objectStoreNames.contains('product_brands')) {
+            db.createObjectStore('product_brands', { keyPath: 'id' });
+            console.log('✅ Criada tabela product_brands no IndexedDB');
           }
           
           // Create payment_tables table (NEW)

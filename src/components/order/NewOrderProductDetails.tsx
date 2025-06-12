@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Package, Tag, Box, Award } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Package } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -98,27 +97,16 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               Código: {currentProduct.code} • Estoque: {currentProduct.stock}
             </p>
             
-            {/* Badges para Grupo, Categoria e Marca */}
-            <div className="flex flex-wrap gap-2 mt-2">
-              {currentProduct.group_name && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                  <Box size={12} className="mr-1" />
-                  {currentProduct.group_name}
-                </Badge>
-              )}
-              {currentProduct.category_name && (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <Tag size={12} className="mr-1" />
-                  {currentProduct.category_name}
-                </Badge>
-              )}
-              {currentProduct.brand_name && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                  <Award size={12} className="mr-1" />
-                  {currentProduct.brand_name}
-                </Badge>
-              )}
-            </div>
+            {/* Informações de Categoria e Grupo sem badges visuais */}
+            {(currentProduct.group_name || currentProduct.category_name) && (
+              <p className="text-xs text-gray-500 mt-1">
+                {currentProduct.group_name && currentProduct.category_name 
+                  ? `${currentProduct.group_name} > ${currentProduct.category_name}`
+                  : currentProduct.group_name || currentProduct.category_name
+                }
+                {currentProduct.brand_name && ` • ${currentProduct.brand_name}`}
+              </p>
+            )}
           </div>
         </div>
 

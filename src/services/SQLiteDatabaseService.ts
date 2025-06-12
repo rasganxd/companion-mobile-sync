@@ -1,11 +1,13 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
+import { DatabaseAdapter } from './DatabaseAdapter';
 
 class SQLiteDatabaseService implements DatabaseAdapter {
   private static instance: SQLiteDatabaseService | null = null;
   private sqlite: SQLiteConnection | null = null;
   private db: SQLiteDBConnection | null = null;
   private isInitialized = false;
+  private dbName = 'sales-app';
 
   private constructor() {}
 
@@ -32,7 +34,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
       this.sqlite = new SQLiteConnection(CapacitorSQLite);
       
       // Create or open database
-      this.db = await this.sqlite.createConnection('sales-app', false, 'no-encryption', 1, false);
+      this.db = await this.sqlite.createConnection(this.dbName, false, 'no-encryption', 1, false);
       await this.db.open();
 
       // Create tables
@@ -118,7 +120,48 @@ class SQLiteDatabaseService implements DatabaseAdapter {
           sale_price REAL DEFAULT 0,
           cost_price REAL DEFAULT 0,
           stock REAL DEFAULT 0,
+          category_id TEXT,
+          group_id TEXT,
+          brand_id TEXT,
+          unit TEXT,
+          has_subunit BOOLEAN DEFAULT 0,
+          subunit TEXT,
+          subunit_ratio REAL,
+          max_discount_percent REAL,
           active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Product categories table
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS product_categories (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Product groups table
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS product_groups (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Product brands table
+      await this.db.execute(`
+        CREATE TABLE IF NOT EXISTS product_brands (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -226,11 +269,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
           p.name
       `;
       
-      const result = await CapacitorSQLite.query({
-        database: this.dbName,
-        statement: query,
-        values: []
-      });
+      const result = await this.db!.query(query);
       
       console.log('📦 SQLiteDatabaseService - Products loaded with categories/groups:', result.values?.length || 0);
       return result.values || [];
@@ -376,7 +415,7 @@ class SQLiteDatabaseService implements DatabaseAdapter {
   async closeDatabase(): Promise<void> {
     if (this.db && this.sqlite) {
       try {
-        await this.sqlite.closeConnection('sales-app', false);
+        await this.sqlite.closeConnection(this.dbName, false);
         this.db = null;
         this.sqlite = null;
         this.isInitialized = false;
@@ -551,11 +590,14 @@ class SQLiteDatabaseService implements DatabaseAdapter {
       for (const product of productsArray) {
         await this.db!.run(
           `INSERT OR REPLACE INTO products (
-            id, name, code, sale_price, cost_price, stock, active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            id, name, code, sale_price, cost_price, stock, category_id, group_id, brand_id,
+            unit, has_subunit, subunit, subunit_ratio, max_discount_percent, active
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             product.id, product.name, product.code, product.sale_price,
-            product.cost_price, product.stock, product.active
+            product.cost_price, product.stock, product.category_id, product.group_id, product.brand_id,
+            product.unit, product.has_subunit, product.subunit, product.subunit_ratio, 
+            product.max_discount_percent, product.active
           ]
         );
       }
@@ -595,11 +637,14 @@ class SQLiteDatabaseService implements DatabaseAdapter {
       console.log('📱 Saving product to SQLite database:', product);
       await this.db!.run(
         `INSERT OR REPLACE INTO products (
-          id, name, code, sale_price, cost_price, stock, active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          id, name, code, sale_price, cost_price, stock, category_id, group_id, brand_id,
+          unit, has_subunit, subunit, subunit_ratio, max_discount_percent, active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           product.id, product.name, product.code, product.sale_price,
-          product.cost_price, product.stock, product.active
+          product.cost_price, product.stock, product.category_id, product.group_id, product.brand_id,
+          product.unit, product.has_subunit, product.subunit, product.subunit_ratio, 
+          product.max_discount_percent, product.active
         ]
       );
       console.log('✅ Product saved to SQLite database');
