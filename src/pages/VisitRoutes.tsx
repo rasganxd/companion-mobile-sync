@@ -317,7 +317,7 @@ const VisitRoutes = () => {
               <div className="text-xs text-red-700 font-medium">Negativados</div>
             </div>
             
-            <div className="text-center p-2 bg-orange-50 rounded border border-orange-200">
+            <div className="text-center p-2 rounded border border-orange-200 bg-cyan-50">
               <div className="text-lg font-bold text-orange-600">
                 {salesData.totalPendentes}
               </div>
@@ -338,7 +338,7 @@ const VisitRoutes = () => {
                     </div>
                   </div>
                   <div className="text-xs mt-0.5 leading-tight">
-                    <span className="text-orange-600 font-medium text-xs">{route.pendentes} PENDENTES</span>
+                    <span className="font-medium text-xs text-cyan-600">{route.pendentes} PENDENTES</span>
                     <span className="text-gray-400 mx-1">•</span>
                     <span className="text-green-600 font-medium text-xs">{route.positivados} POSITIVADOS</span>
                     <span className="text-gray-400 mx-1">•</span>
