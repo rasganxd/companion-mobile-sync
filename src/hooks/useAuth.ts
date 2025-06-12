@@ -1,7 +1,14 @@
 
-import { useAuth as useAuthContext } from '@/contexts/AuthContext';
+import { useContext } from 'react';
+import { AuthContext } from '@/contexts/AuthContext';
 
 export const useAuth = () => {
+  const context = useContext(AuthContext);
+  
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+
   const { 
     salesRep, 
     isLoading, 
@@ -10,7 +17,7 @@ export const useAuth = () => {
     needsInitialSync, 
     isOnline, 
     lastSyncDate 
-  } = useAuthContext();
+  } = context;
 
   const isAuthenticated = () => {
     const authenticated = salesRep !== null;
