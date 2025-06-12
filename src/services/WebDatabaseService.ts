@@ -5,6 +5,7 @@ class WebDatabaseService {
   private static instance: WebDatabaseService | null = null;
   private db: DatabaseInstance | null = null;
   private isInitialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   private constructor() {}
 
@@ -16,11 +17,27 @@ class WebDatabaseService {
   }
 
   async initDatabase(): Promise<void> {
+    // Prevent multiple simultaneous initialization attempts
+    if (this.initializationPromise) {
+      console.log('🌐 Database initialization already in progress, waiting...');
+      return this.initializationPromise;
+    }
+
     if (this.isInitialized && this.db) {
       console.log('🌐 Web database already initialized');
       return;
     }
 
+    this.initializationPromise = this._initDatabaseInternal();
+    
+    try {
+      await this.initializationPromise;
+    } finally {
+      this.initializationPromise = null;
+    }
+  }
+
+  private async _initDatabaseInternal(): Promise<void> {
     try {
       console.log('🌐 Initializing Web IndexedDB database using DatabaseInitializer...');
       this.db = await DatabaseInitializer.initialize();
@@ -33,11 +50,15 @@ class WebDatabaseService {
       this.db = null;
       this.isInitialized = false;
       
-      // If it's a version error, try to clear and reinitialize
-      if (error instanceof Error && error.message.includes('version')) {
-        console.log('🔄 Attempting recovery from version conflict...');
+      // If it's an upgrade/version error, try force cleanup and retry once
+      if (error instanceof Error && (
+        error.message.includes('version') || 
+        error.message.includes('aborted') ||
+        error.message.includes('upgradeneeded')
+      )) {
+        console.log('🔄 Attempting recovery from database error...');
         try {
-          await DatabaseInitializer.clearDatabase();
+          await DatabaseInitializer.forceCleanDatabase();
           this.db = await DatabaseInitializer.initialize();
           this.isInitialized = true;
           console.log('✅ Database recovered successfully');
@@ -569,18 +590,44 @@ class WebDatabaseService {
     
     console.log('🧹 Clearing mock data from Web database...');
     
-    const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products', 'payment_tables'], 'readwrite');
+    try {
+      const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products', 'payment_tables'], 'readwrite');
+      
+      await Promise.all([
+        tx.objectStore('clients').clear(),
+        tx.objectStore('visit_routes').clear(),
+        tx.objectStore('orders').clear(),
+        tx.objectStore('products').clear(),
+        tx.objectStore('payment_tables').clear()
+      ]);
+      
+      await tx.done;
+      console.log('✅ Mock data cleared from Web database');
+    } catch (error) {
+      console.error('❌ Error clearing mock data:', error);
+      throw error;
+    }
+  }
+
+  async forceClearMockData(): Promise<void> {
+    console.log('🗑️ Force clearing mock data...');
+    await this.clearMockData();
+  }
+
+  async forceCleanAllProducts(): Promise<void> {
+    if (!this.db) await this.initDatabase();
     
-    await Promise.all([
-      tx.objectStore('clients').clear(),
-      tx.objectStore('visit_routes').clear(),
-      tx.objectStore('orders').clear(),
-      tx.objectStore('products').clear(),
-      tx.objectStore('payment_tables').clear()
-    ]);
+    console.log('🗑️ Force cleaning ALL products from Web database...');
     
-    await tx.done;
-    console.log('✅ Mock data cleared from Web database');
+    try {
+      const tx = this.db!.transaction(['products'], 'readwrite');
+      await tx.objectStore('products').clear();
+      await tx.done;
+      console.log('✅ ALL products force cleaned from Web database');
+    } catch (error) {
+      console.error('❌ Error force cleaning products:', error);
+      throw error;
+    }
   }
 }
 
