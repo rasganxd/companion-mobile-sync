@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -83,18 +82,30 @@ export const useDataSync = () => {
   }, []);
 
   const validateSyncParams = (salesRepId: string, sessionToken: string) => {
+    console.log('🔍 [SYNC_VALIDATION] Validating sync parameters:', {
+      salesRepId: salesRepId ? `${salesRepId.substring(0, 8)}...` : 'UNDEFINED/NULL',
+      salesRepIdType: typeof salesRepId,
+      salesRepIdIsEmpty: !salesRepId,
+      salesRepIdTrimEmpty: salesRepId?.trim() === '',
+      sessionToken: sessionToken ? (sessionToken.startsWith('local_') ? 'LOCAL_TOKEN' : 'SUPABASE_TOKEN') : 'UNDEFINED/NULL',
+      sessionTokenType: typeof sessionToken,
+      sessionTokenIsEmpty: !sessionToken,
+      sessionTokenTrimEmpty: sessionToken?.trim() === ''
+    });
+
     if (!salesRepId || salesRepId.trim() === '') {
-      throw new Error('ID do vendedor é obrigatório para sincronização');
+      const error = 'ID do vendedor é obrigatório para sincronização';
+      console.error('❌ [SYNC_VALIDATION] Sales rep ID validation failed:', error);
+      throw new Error(error);
     }
     
     if (!sessionToken || sessionToken.trim() === '') {
-      throw new Error('Token de sessão é obrigatório para sincronização');
+      const error = 'Token de sessão é obrigatório para sincronização';
+      console.error('❌ [SYNC_VALIDATION] Session token validation failed:', error);
+      throw new Error(error);
     }
     
-    console.log('✅ Parâmetros de sincronização validados:', {
-      salesRepId: salesRepId.substring(0, 8) + '...',
-      tokenType: sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE'
-    });
+    console.log('✅ [SYNC_VALIDATION] Sync parameters validated successfully');
   };
 
   const validateSyncedData = (clients: any[], products: any[], paymentTables: any[]) => {
@@ -130,13 +141,20 @@ export const useDataSync = () => {
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
     try {
       setIsSyncing(true);
-      console.log('🔄 Iniciando sincronização COMPLETA - APENAS DADOS REAIS');
+      console.log('🔄 [SYNC] Starting COMPLETE sync - REAL DATA ONLY');
+      console.log('🔄 [SYNC] Input parameters received:', {
+        salesRepId: salesRepId ? `${salesRepId.substring(0, 8)}...` : 'UNDEFINED/NULL',
+        salesRepIdType: typeof salesRepId,
+        sessionToken: sessionToken ? (sessionToken.startsWith('local_') ? 'LOCAL_TOKEN' : 'SUPABASE_TOKEN') : 'UNDEFINED/NULL',
+        sessionTokenType: typeof sessionToken,
+        forceClear
+      });
       
-      // Validar parâmetros de entrada
+      // ✅ CORREÇÃO: Validar parâmetros antes de prosseguir
       try {
         validateSyncParams(salesRepId, sessionToken);
       } catch (validationError) {
-        console.error('❌ Falha na validação dos parâmetros:', validationError);
+        console.error('❌ [SYNC] Parameter validation failed:', validationError);
         return {
           success: false,
           error: validationError instanceof Error ? validationError.message : 'Parâmetros inválidos'
@@ -165,20 +183,24 @@ export const useDataSync = () => {
       // Etapa 1: Buscar clientes REAIS
       updateProgress('Carregando clientes...', 0, 4);
       try {
-        console.log('📥 Buscando clientes REAIS do Supabase');
+        console.log('📥 [SYNC] Fetching REAL clients from Supabase with params:', {
+          salesRepId: salesRepId.substring(0, 8) + '...',
+          sessionTokenType: sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE'
+        });
+        
         clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
-        console.log(`📥 Recebidos ${clientsData.length} clientes do serviço`);
+        console.log(`📥 [SYNC] Received ${clientsData.length} clients from service`);
         
         if (clientsData.length > 0) {
           await db.saveClients(clientsData);
           syncedClients = clientsData.length;
-          console.log(`✅ Salvos ${syncedClients} clientes REAIS`);
+          console.log(`✅ [SYNC] Saved ${syncedClients} REAL clients`);
         } else {
-          console.log('ℹ️ Nenhum cliente encontrado no banco de dados');
+          console.log('ℹ️ [SYNC] No clients found in database for this sales rep');
           syncedClients = 0;
         }
       } catch (error) {
-        console.error('❌ Falha ao sincronizar clientes:', error);
+        console.error('❌ [SYNC] Failed to sync clients:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
         throw new Error(`Erro ao carregar clientes: ${errorMessage}`);
       }
@@ -186,13 +208,13 @@ export const useDataSync = () => {
       // Etapa 2: Buscar produtos REAIS com limpeza completa
       updateProgress('Carregando produtos...', 1, 4);
       try {
-        console.log('📥 Buscando produtos REAIS do Supabase');
+        console.log('📥 [SYNC] Fetching REAL products from Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
-        console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
+        console.log(`📥 [SYNC] Received ${productsData.length} products from service`);
         
         // Log detalhado dos produtos recebidos
         productsData.forEach((product, index) => {
-          console.log(`📦 Produto ${index + 1} do Supabase:`, {
+          console.log(`📦 [SYNC] Product ${index + 1} from Supabase:`, {
             id: product.id,
             name: product.name,
             code: product.code,
@@ -204,13 +226,13 @@ export const useDataSync = () => {
           // O saveProducts já faz a limpeza completa antes de salvar
           await db.saveProducts(productsData);
           syncedProducts = productsData.length;
-          console.log(`✅ Salvos ${syncedProducts} produtos REAIS após limpeza completa`);
+          console.log(`✅ [SYNC] Saved ${syncedProducts} REAL products after complete cleanup`);
         } else {
-          console.log('ℹ️ Nenhum produto encontrado no banco de dados');
+          console.log('ℹ️ [SYNC] No products found in database');
           syncedProducts = 0;
         }
       } catch (error) {
-        console.error('❌ Falha ao sincronizar produtos:', error);
+        console.error('❌ [SYNC] Failed to sync products:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
         throw new Error(`Erro ao carregar produtos: ${errorMessage}`);
       }
@@ -218,13 +240,13 @@ export const useDataSync = () => {
       // Etapa 3: Buscar tabelas de pagamento REAIS
       updateProgress('Carregando tabelas de pagamento...', 2, 4);
       try {
-        console.log('📥 Buscando tabelas de pagamento REAIS do Supabase');
+        console.log('📥 [SYNC] Fetching REAL payment tables from Supabase');
         paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
-        console.log(`📥 Recebidas ${paymentTablesData.length} tabelas de pagamento`);
+        console.log(`📥 [SYNC] Received ${paymentTablesData.length} payment tables`);
         
         // Log detalhado das tabelas de pagamento recebidas
         paymentTablesData.forEach((paymentTable, index) => {
-          console.log(`💳 Tabela de pagamento ${index + 1} do Supabase:`, {
+          console.log(`💳 [SYNC] Payment table ${index + 1} from Supabase:`, {
             id: paymentTable.id,
             name: paymentTable.name,
             type: paymentTable.type,
@@ -235,13 +257,13 @@ export const useDataSync = () => {
         if (paymentTablesData.length > 0) {
           await db.savePaymentTables(paymentTablesData);
           syncedPaymentTables = paymentTablesData.length;
-          console.log(`✅ Salvas ${syncedPaymentTables} tabelas de pagamento REAIS`);
+          console.log(`✅ [SYNC] Saved ${syncedPaymentTables} REAL payment tables`);
         } else {
-          console.log('ℹ️ Nenhuma tabela de pagamento encontrada no banco de dados');
+          console.log('ℹ️ [SYNC] No payment tables found in database');
           syncedPaymentTables = 0;
         }
       } catch (error) {
-        console.warn('⚠️ Falha ao sincronizar tabelas de pagamento:', error);
+        console.warn('⚠️ [SYNC] Failed to sync payment tables:', error);
         syncedPaymentTables = 0;
       }
 
@@ -290,7 +312,7 @@ export const useDataSync = () => {
       };
 
     } catch (error) {
-      console.error('❌ Falha na sincronização:', error);
+      console.error('❌ [SYNC] Sync failed:', error);
       
       return {
         success: false,
