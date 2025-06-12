@@ -1,4 +1,4 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
 
 class WebDatabaseService {
@@ -22,51 +22,32 @@ class WebDatabaseService {
     }
 
     try {
-      console.log('🌐 Initializing Web IndexedDB database...');
-      
-      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 2, {
-        upgrade(db, oldVersion) {
-          console.log('🔧 Creating/updating database schema...');
-          
-          // Create clients table
-          if (!db.objectStoreNames.contains('clients')) {
-            db.createObjectStore('clients', { keyPath: 'id' });
-          }
-          
-          // Create visit_routes table
-          if (!db.objectStoreNames.contains('visit_routes')) {
-            db.createObjectStore('visit_routes', { keyPath: 'id' });
-          }
-          
-          // Create orders table with customer_id index
-          if (!db.objectStoreNames.contains('orders')) {
-            const orderStore = db.createObjectStore('orders', { keyPath: 'id' });
-            orderStore.createIndex('customer_id', 'customer_id');
-          }
-          
-          // Create products table
-          if (!db.objectStoreNames.contains('products')) {
-            db.createObjectStore('products', { keyPath: 'id' });
-          }
-          
-          // Create payment_tables table (NEW)
-          if (!db.objectStoreNames.contains('payment_tables')) {
-            db.createObjectStore('payment_tables', { keyPath: 'id' });
-            console.log('✅ Criada tabela payment_tables no IndexedDB');
-          }
-          
-          // Create sync_log table
-          if (!db.objectStoreNames.contains('sync_log')) {
-            db.createObjectStore('sync_log', { keyPath: 'id' });
-          }
-        },
-      });
-
+      console.log('🌐 Initializing Web IndexedDB database using DatabaseInitializer...');
+      this.db = await DatabaseInitializer.initialize();
       this.isInitialized = true;
       console.log('✅ Web database initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Web database:', error);
-      throw error;
+      
+      // Reset state on failure
+      this.db = null;
+      this.isInitialized = false;
+      
+      // If it's a version error, try to clear and reinitialize
+      if (error instanceof Error && error.message.includes('version')) {
+        console.log('🔄 Attempting recovery from version conflict...');
+        try {
+          await DatabaseInitializer.clearDatabase();
+          this.db = await DatabaseInitializer.initialize();
+          this.isInitialized = true;
+          console.log('✅ Database recovered successfully');
+        } catch (recoveryError) {
+          console.error('❌ Failed to recover database:', recoveryError);
+          throw recoveryError;
+        }
+      } else {
+        throw error;
+      }
     }
   }
 

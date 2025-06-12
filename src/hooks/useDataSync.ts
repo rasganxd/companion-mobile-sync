@@ -1,9 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
+import { DatabaseInitializer } from '@/services/database/DatabaseInitializer';
 
 interface SyncProgress {
   stage: string;
@@ -32,6 +32,17 @@ export const useDataSync = () => {
     const percentage = Math.round((current / total) * 100);
     setSyncProgress({ stage, current, total, percentage });
   };
+
+  const handleDatabaseVersionError = useCallback(async () => {
+    try {
+      console.log('🔄 Handling database version conflict...');
+      await DatabaseInitializer.clearDatabase();
+      console.log('✅ Database cleared, will reinitialize on next sync attempt');
+    } catch (error) {
+      console.error('❌ Error clearing database:', error);
+      throw new Error('Falha ao limpar banco de dados corrompido');
+    }
+  }, []);
 
   const clearLocalData = useCallback(async () => {
     try {
@@ -144,7 +155,22 @@ export const useDataSync = () => {
       }
 
       const db = getDatabaseAdapter();
-      await db.initDatabase();
+      
+      try {
+        await db.initDatabase();
+      } catch (dbError) {
+        console.error('❌ Erro ao inicializar banco de dados:', dbError);
+        
+        // Se for erro de versão, tentar limpar e reinicializar
+        if (dbError instanceof Error && dbError.message.includes('version')) {
+          console.log('🔄 Conflito de versão detectado, executando limpeza...');
+          await handleDatabaseVersionError();
+          // Tentar inicializar novamente após limpeza
+          await db.initDatabase();
+        } else {
+          throw dbError;
+        }
+      }
 
       // SEMPRE executar limpeza de dados mock primeiro
       await clearMockData();
@@ -292,6 +318,14 @@ export const useDataSync = () => {
     } catch (error) {
       console.error('❌ Falha na sincronização:', error);
       
+      // Se for erro de versão, sugerir limpeza
+      if (error instanceof Error && error.message.includes('version')) {
+        return {
+          success: false,
+          error: 'Conflito de versão do banco de dados detectado. Tentando corrigir automaticamente...'
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Erro durante a sincronização. Tente novamente.'
@@ -300,7 +334,7 @@ export const useDataSync = () => {
       setIsSyncing(false);
       setSyncProgress(null);
     }
-  }, [connected, clearLocalData, clearMockData, forceCleanAllProducts]);
+  }, [connected, clearLocalData, clearMockData, forceCleanAllProducts, handleDatabaseVersionError]);
 
   const loadLastSyncDate = useCallback(() => {
     const saved = localStorage.getItem('last_sync_date');
