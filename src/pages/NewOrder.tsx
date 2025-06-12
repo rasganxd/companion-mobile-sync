@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -50,7 +51,6 @@ const PlaceOrder = () => {
   const {
     products,
     selectedProduct,
-    currentProductIndex,
     quantity,
     unitPrice,
     searchTerm,
@@ -64,8 +64,7 @@ const PlaceOrder = () => {
     setSearchTerm,
     setSelectedUnitType,
     addProduct,
-    clearSelection,
-    navigateToProduct
+    clearSelection
   } = useProductSelection(addOrderItem);
 
   const {
@@ -94,6 +93,7 @@ const PlaceOrder = () => {
   } = usePaymentTables();
 
   const [showProductSearch, setShowProductSearch] = React.useState(false);
+  const [currentProductIndex, setCurrentProductIndex] = React.useState(0);
 
   // Product navigation functions
   const handleProductNavigation = (direction: 'prev' | 'next' | 'first' | 'last') => {
@@ -113,7 +113,8 @@ const PlaceOrder = () => {
         newIndex = products.length - 1;
         break;
     }
-    navigateToProduct(newIndex);
+    setCurrentProductIndex(newIndex);
+    selectProduct(products[newIndex]);
   };
 
   // New function to handle product code search
@@ -123,15 +124,26 @@ const PlaceOrder = () => {
     
     if (foundProduct) {
       console.log('✅ Product found:', foundProduct.name);
+      selectProduct(foundProduct);
       const index = products.findIndex(p => p.id === foundProduct.id);
       if (index !== -1) {
-        navigateToProduct(index);
+        setCurrentProductIndex(index);
       }
     } else {
       console.log('❌ Product not found for code:', code);
       // You could show a toast or error message here
     }
   };
+
+  // Sincronizar currentProductIndex com produto selecionado
+  React.useEffect(() => {
+    if (selectedProduct && products.length > 0) {
+      const index = products.findIndex(p => p.id === selectedProduct.id);
+      if (index !== -1 && index !== currentProductIndex) {
+        setCurrentProductIndex(index);
+      }
+    }
+  }, [selectedProduct, products, currentProductIndex]);
   
   const currentProduct = selectedProduct || products[currentProductIndex];
   
@@ -228,9 +240,10 @@ const PlaceOrder = () => {
         onSearchChange={setSearchTerm} 
         products={products} 
         onSelectProduct={product => {
+          selectProduct(product);
           const index = products.findIndex(p => p.id === product.id);
           if (index !== -1) {
-            navigateToProduct(index);
+            setCurrentProductIndex(index);
           }
           setShowProductSearch(false);
         }} 

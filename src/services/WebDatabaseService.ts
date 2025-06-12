@@ -1,8 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
-import { DatabaseAdapter } from './DatabaseAdapter';
 
-class WebDatabaseService implements DatabaseAdapter {
+class WebDatabaseService {
   private static instance: WebDatabaseService | null = null;
   private db: DatabaseInstance | null = null;
   private isInitialized = false;
@@ -25,7 +24,7 @@ class WebDatabaseService implements DatabaseAdapter {
     try {
       console.log('🌐 Initializing Web IndexedDB database...');
       
-      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 3, {
+      this.db = await openDB<SalesAppDBSchema>('sales-app-db', 2, {
         upgrade(db, oldVersion) {
           console.log('🔧 Creating/updating database schema...');
           
@@ -48,24 +47,6 @@ class WebDatabaseService implements DatabaseAdapter {
           // Create products table
           if (!db.objectStoreNames.contains('products')) {
             db.createObjectStore('products', { keyPath: 'id' });
-          }
-
-          // Create product_categories table
-          if (!db.objectStoreNames.contains('product_categories')) {
-            db.createObjectStore('product_categories', { keyPath: 'id' });
-            console.log('✅ Criada tabela product_categories no IndexedDB');
-          }
-
-          // Create product_groups table
-          if (!db.objectStoreNames.contains('product_groups')) {
-            db.createObjectStore('product_groups', { keyPath: 'id' });
-            console.log('✅ Criada tabela product_groups no IndexedDB');
-          }
-
-          // Create product_brands table
-          if (!db.objectStoreNames.contains('product_brands')) {
-            db.createObjectStore('product_brands', { keyPath: 'id' });
-            console.log('✅ Criada tabela product_brands no IndexedDB');
           }
           
           // Create payment_tables table (NEW)
@@ -131,37 +112,13 @@ class WebDatabaseService implements DatabaseAdapter {
   }
 
   async getProducts(): Promise<any[]> {
-    console.log('🔍 WebDatabaseService - Getting products from IndexedDB');
-    
+    if (!this.db) await this.initDatabase();
+
     try {
-      const tx = this.db!.transaction(['products', 'product_categories', 'product_groups', 'product_brands'], 'readonly');
-      const productStore = tx.objectStore('products');
-      const categoryStore = tx.objectStore('product_categories');
-      const groupStore = tx.objectStore('product_groups');
-      const brandStore = tx.objectStore('product_brands');
-      
-      const products = await productStore.getAll();
-      const categories = await categoryStore.getAll();
-      const groups = await groupStore.getAll();
-      const brands = await brandStore.getAll();
-      
-      // Create lookup maps
-      const categoryMap = new Map(categories.map(cat => [cat.id, cat.name]));
-      const groupMap = new Map(groups.map(group => [group.id, group.name]));
-      const brandMap = new Map(brands.map(brand => [brand.id, brand.name]));
-      
-      // Enrich products with category, group, and brand names
-      const enrichedProducts = products.map(product => ({
-        ...product,
-        category_name: product.category_id ? categoryMap.get(product.category_id) : null,
-        group_name: product.group_id ? groupMap.get(product.group_id) : null,
-        brand_name: product.brand_id ? brandMap.get(product.brand_id) : null
-      }));
-      
-      console.log('📦 WebDatabaseService - Products loaded with categories/groups:', enrichedProducts.length);
-      return enrichedProducts;
+      console.log('🌐 Getting products from Web database...');
+      return await this.db!.getAll('products');
     } catch (error) {
-      console.error('❌ Error getting products from IndexedDB:', error);
+      console.error('❌ Error getting products:', error);
       return [];
     }
   }

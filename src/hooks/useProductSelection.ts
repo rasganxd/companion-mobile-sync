@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -21,12 +20,6 @@ interface Product {
   main_unit_id?: string;
   sub_unit_id?: string;
   max_discount_percent?: number;
-  category_id?: string;
-  category_name?: string;
-  group_id?: string;
-  group_name?: string;
-  brand_id?: string;
-  brand_name?: string;
 }
 
 interface OrderItem {
@@ -42,7 +35,6 @@ interface OrderItem {
 export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [currentProductIndex, setCurrentProductIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,7 +58,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   useEffect(() => {
     if (products.length > 0 && !selectedProduct) {
       console.log('📦 Auto-selecionando primeiro produto:', products[0]);
-      selectProduct(products[0], 0);
+      selectProduct(products[0]);
     }
   }, [products, selectedProduct]);
 
@@ -124,9 +116,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
             sale_price: product.sale_price,
             max_discount_percent: product.max_discount_percent,
             stock: product.stock,
-            unit: product.unit,
-            category_name: product.category_name,
-            group_name: product.group_name
+            unit: product.unit
           });
         }
       });
@@ -139,12 +129,10 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toString().includes(searchTerm) ||
-    (product.category_name && product.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (product.group_name && product.group_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    product.code.toString().includes(searchTerm)
   );
 
-  const selectProduct = (product: Product, index?: number) => {
+  const selectProduct = (product: Product) => {
     console.log('📦 PRODUTO SELECIONADO:', {
       id: product.id,
       name: product.name,
@@ -154,16 +142,13 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       hasDiscountRestriction: (product.max_discount_percent && product.max_discount_percent > 0),
       hasSubunit: product.has_subunit,
       subunit: product.subunit,
-      subunitRatio: product.subunit_ratio,
-      category_name: product.category_name,
-      group_name: product.group_name
+      subunitRatio: product.subunit_ratio
     });
     
     setSelectedProduct(product);
     
-    if (index !== undefined) {
-      setCurrentProductIndex(index);
-    }
+    // O preço será definido automaticamente pelo useEffect que monitora selectedUnit
+    // Não definir unitPrice aqui para evitar conflitos
     
     console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
     
@@ -231,42 +216,25 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     
     onAddItem(newItem);
     
-    // NOVA LÓGICA: Avançar para o próximo produto ao invés de limpar seleção
-    const nextIndex = currentProductIndex < products.length - 1 ? currentProductIndex + 1 : 0;
-    const nextProduct = products[nextIndex];
+    // Limpar seleção
+    setSelectedProduct(null);
+    setQuantity(1);
+    setUnitPrice(0);
+    setSearchTerm('');
     
-    if (nextProduct) {
-      console.log('🔄 AVANÇANDO PARA PRÓXIMO PRODUTO:', {
-        currentIndex: currentProductIndex,
-        nextIndex,
-        nextProduct: nextProduct.name
-      });
-      
-      selectProduct(nextProduct, nextIndex);
-      setQuantity(1); // Reset apenas a quantidade
-    }
-    
-    console.log('✅ PRODUTO ADICIONADO COM SUCESSO E AVANÇADO PARA PRÓXIMO');
+    console.log('✅ PRODUTO ADICIONADO COM SUCESSO E SELEÇÃO LIMPA');
   };
 
   const clearSelection = () => {
     setSelectedProduct(null);
-    setCurrentProductIndex(0);
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
   };
 
-  const navigateToProduct = (index: number) => {
-    if (index >= 0 && index < products.length) {
-      selectProduct(products[index], index);
-    }
-  };
-
   return {
     products: filteredProducts,
     selectedProduct,
-    currentProductIndex,
     quantity,
     unitPrice,
     searchTerm,
@@ -280,7 +248,6 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setSearchTerm,
     setSelectedUnitType,
     addProduct,
-    clearSelection,
-    navigateToProduct
+    clearSelection
   };
 };
