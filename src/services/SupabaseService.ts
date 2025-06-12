@@ -97,7 +97,7 @@ class SupabaseService {
     // Dados reais do vendedor Candatti para fallback
     return [
       {
-        id: '1',
+        id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
         code: '1',
         name: 'Candatti',
         email: 'candatti@empresa.com',
@@ -111,6 +111,20 @@ class SupabaseService {
   async getClientsForSalesRep(salesRepId: string, sessionToken: string) {
     console.log('📥 Fetching clients for sales rep:', salesRepId);
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
+    
+    // Extrair código do vendedor do localStorage ou do salesRep
+    const salesRepData = localStorage.getItem('salesRep');
+    let salesRepCode = null;
+    
+    if (salesRepData) {
+      try {
+        const parsedData = JSON.parse(salesRepData);
+        salesRepCode = parsedData.code;
+        console.log('📋 Sales rep code extracted from localStorage:', salesRepCode);
+      } catch (error) {
+        console.error('❌ Error parsing salesRep data:', error);
+      }
+    }
     
     // Validar parâmetros antes de fazer a requisição
     if (!salesRepId) {
@@ -126,10 +140,11 @@ class SupabaseService {
     try {
       const requestBody = { 
         type: 'clients',
-        sales_rep_id: salesRepId 
+        sales_rep_id: salesRepId,
+        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
       };
       
-      console.log('📤 Sending request body:', requestBody);
+      console.log('📤 Sending request body with sales_rep_code:', requestBody);
 
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
@@ -186,6 +201,20 @@ class SupabaseService {
     console.log('📥 Fetching products from Supabase');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
+    // Extrair código do vendedor do localStorage
+    const salesRepData = localStorage.getItem('salesRep');
+    let salesRepCode = null;
+    
+    if (salesRepData) {
+      try {
+        const parsedData = JSON.parse(salesRepData);
+        salesRepCode = parsedData.code;
+        console.log('📋 Sales rep code extracted for products:', salesRepCode);
+      } catch (error) {
+        console.error('❌ Error parsing salesRep data:', error);
+      }
+    }
+    
     // Validar parâmetros antes de fazer a requisição
     if (!sessionToken) {
       console.error('❌ Session token is required');
@@ -193,8 +222,11 @@ class SupabaseService {
     }
     
     try {
-      const requestBody = { type: 'products' };
-      console.log('📤 Sending request body:', requestBody);
+      const requestBody = { 
+        type: 'products',
+        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
+      };
+      console.log('📤 Sending request body with sales_rep_code:', requestBody);
 
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
@@ -251,6 +283,20 @@ class SupabaseService {
     console.log('📥 Fetching payment tables from Supabase');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
+    // Extrair código do vendedor do localStorage
+    const salesRepData = localStorage.getItem('salesRep');
+    let salesRepCode = null;
+    
+    if (salesRepData) {
+      try {
+        const parsedData = JSON.parse(salesRepData);
+        salesRepCode = parsedData.code;
+        console.log('📋 Sales rep code extracted for payment tables:', salesRepCode);
+      } catch (error) {
+        console.error('❌ Error parsing salesRep data:', error);
+      }
+    }
+    
     // Validar parâmetros antes de fazer a requisição
     if (!sessionToken) {
       console.error('❌ Session token is required');
@@ -258,8 +304,11 @@ class SupabaseService {
     }
     
     try {
-      const requestBody = { type: 'payment_tables' };
-      console.log('📤 Sending request body:', requestBody);
+      const requestBody = { 
+        type: 'payment_tables',
+        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
+      };
+      console.log('📤 Sending request body with sales_rep_code:', requestBody);
 
       const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
         method: 'POST',
@@ -285,7 +334,7 @@ class SupabaseService {
         }
         
         // For local tokens, return empty array instead of throwing error
-        if (sessionToken.startsWith('local_')) {
+        if (sessionToken.startsWith('local_') ) {
           console.log('🔄 Local token detected, returning empty array for graceful degradation');
           return [];
         }

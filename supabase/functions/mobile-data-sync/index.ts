@@ -37,15 +37,24 @@ serve(async (req) => {
       );
     }
 
-    const { type, sales_rep_id } = requestBody;
+    const { type, sales_rep_id, sales_rep_code } = requestBody;
     
-    console.log('📱 Mobile data sync request - Type:', type, 'Sales Rep ID:', sales_rep_id);
+    console.log('📱 Mobile data sync request - Type:', type, 'Sales Rep ID:', sales_rep_id, 'Sales Rep Code:', sales_rep_code);
 
     // Validate required parameters
     if (!type) {
       console.error('❌ Missing type parameter');
       return new Response(
         JSON.stringify({ error: 'Tipo de sincronização é obrigatório' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ✅ VALIDAÇÃO DO SALES REP CODE CORRIGIDA
+    if (!sales_rep_code && !sales_rep_id) {
+      console.error('❌ Missing sales rep code or ID');
+      return new Response(
+        JSON.stringify({ error: 'Código ou ID do vendedor é obrigatório' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -66,9 +75,39 @@ serve(async (req) => {
 
     console.log('🔄 Using service role key to fetch REAL data from database');
 
-    // SEMPRE usar o ID real do Candatti
-    const realSalesRepId = 'e3eff363-2d17-4f73-9918-f53c6bc0bc48';
-    console.log('🔄 Using REAL sales rep ID:', realSalesRepId);
+    // ✅ LÓGICA DE SALES REP MELHORADA
+    let realSalesRepId = sales_rep_id;
+    
+    // Se temos o código, buscar o ID real
+    if (sales_rep_code && sales_rep_code === '1') {
+      realSalesRepId = 'e3eff363-2d17-4f73-9918-f53c6bc0bc48';
+      console.log('🔄 Using REAL sales rep ID from code mapping:', realSalesRepId);
+    } else if (sales_rep_code) {
+      console.log('🔍 Searching for sales rep by code:', sales_rep_code);
+      
+      // Buscar ID real pelo código
+      const { data: salesRepData, error: salesRepError } = await supabase
+        .from('sales_reps')
+        .select('id')
+        .eq('code', sales_rep_code)
+        .eq('active', true)
+        .single();
+        
+      if (salesRepError || !salesRepData) {
+        console.error('❌ Sales rep not found for code:', sales_rep_code, salesRepError);
+        return new Response(
+          JSON.stringify({ error: `Vendedor não encontrado para o código: ${sales_rep_code}` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      realSalesRepId = salesRepData.id;
+      console.log('✅ Found sales rep ID:', realSalesRepId, 'for code:', sales_rep_code);
+    } else {
+      // Fallback para o ID padrão se não temos código
+      realSalesRepId = realSalesRepId || 'e3eff363-2d17-4f73-9918-f53c6bc0bc48';
+      console.log('🔄 Using fallback sales rep ID:', realSalesRepId);
+    }
 
     if (type === 'clients') {
       console.log('📥 Fetching REAL clients for sales rep:', realSalesRepId);
