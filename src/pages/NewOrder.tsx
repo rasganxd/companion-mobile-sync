@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -50,10 +49,12 @@ const PlaceOrder = () => {
 
   const {
     products,
+    productsByCategory,
     selectedProduct,
     quantity,
     unitPrice,
     searchTerm,
+    currentProductIndex,
     unitOptions,
     selectedUnit,
     selectedUnitType,
@@ -63,8 +64,10 @@ const PlaceOrder = () => {
     setUnitPrice,
     setSearchTerm,
     setSelectedUnitType,
+    setCurrentProductIndex,
     addProduct,
-    clearSelection
+    clearSelection,
+    getCurrentCategoryInfo
   } = useProductSelection(addOrderItem);
 
   const {
@@ -93,7 +96,6 @@ const PlaceOrder = () => {
   } = usePaymentTables();
 
   const [showProductSearch, setShowProductSearch] = React.useState(false);
-  const [currentProductIndex, setCurrentProductIndex] = React.useState(0);
 
   // Product navigation functions
   const handleProductNavigation = (direction: 'prev' | 'next' | 'first' | 'last') => {
@@ -146,6 +148,7 @@ const PlaceOrder = () => {
   }, [selectedProduct, products, currentProductIndex]);
   
   const currentProduct = selectedProduct || products[currentProductIndex];
+  const categoryInfo = getCurrentCategoryInfo();
   
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
@@ -174,14 +177,16 @@ const PlaceOrder = () => {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Produto</h2>
+            {/* Mostra total geral de produtos e categorias */}
             <div className="text-sm text-gray-600">
-              {products.length > 0 && `${currentProductIndex + 1} de ${products.length}`}
+              {productsByCategory.length > 0 && `${productsByCategory.length} categorias`}
             </div>
           </div>
 
           <NewOrderProductNavigation
             currentProductIndex={currentProductIndex}
             totalProducts={products.length}
+            categoryInfo={categoryInfo}
             onNavigate={handleProductNavigation}
             onShowProductSearch={() => setShowProductSearch(true)}
           />

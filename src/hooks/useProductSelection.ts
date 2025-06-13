@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -20,6 +21,8 @@ interface Product {
   main_unit_id?: string;
   sub_unit_id?: string;
   max_discount_percent?: number;
+  category_id?: string;
+  category_name?: string;
 }
 
 interface OrderItem {
@@ -32,12 +35,20 @@ interface OrderItem {
   unit: string;
 }
 
+interface ProductsByCategory {
+  categoryId: string;
+  categoryName: string;
+  products: Product[];
+}
+
 export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsByCategory, setProductsByCategory] = useState<ProductsByCategory[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentProductIndex, setCurrentProductIndex] = useState(0);
 
   // Usar o hook de seleção de unidades
   const { 
@@ -101,17 +112,52 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         ...product,
         price: product.sale_price || product.price || 0,
         sale_price: product.sale_price || product.price || 0,
-        max_discount_percent: product.max_discount_percent || 0
+        max_discount_percent: product.max_discount_percent || 0,
+        category_name: product.category_name || 'Sem Categoria'
       }));
       
-      setProducts(normalizedProducts);
+      // Agrupar produtos por categoria
+      const groupedByCategory = normalizedProducts.reduce((acc, product) => {
+        const categoryId = product.category_id || 'no-category';
+        const categoryName = product.category_name || 'Sem Categoria';
+        
+        if (!acc[categoryId]) {
+          acc[categoryId] = {
+            categoryId,
+            categoryName,
+            products: []
+          };
+        }
+        
+        acc[categoryId].products.push(product);
+        return acc;
+      }, {} as Record<string, ProductsByCategory>);
+
+      // Converter para array e ordenar categorias
+      const categoriesArray = Object.values(groupedByCategory).sort((a, b) => 
+        a.categoryName.localeCompare(b.categoryName)
+      );
+
+      // Ordenar produtos dentro de cada categoria
+      categoriesArray.forEach(category => {
+        category.products.sort((a, b) => a.name.localeCompare(b.name));
+      });
+
+      console.log('📂 Produtos agrupados por categoria:', categoriesArray);
+      
+      setProductsByCategory(categoriesArray);
+      
+      // Criar lista plana para navegação mantendo ordem por categoria
+      const flatProducts = categoriesArray.flatMap(category => category.products);
+      setProducts(flatProducts);
       
       // Log detalhado dos produtos para debug de desconto máximo
-      normalizedProducts.forEach((product, index) => {
+      flatProducts.forEach((product, index) => {
         if (product.max_discount_percent && product.max_discount_percent > 0) {
           console.log(`📦 Produto ${index + 1} COM DESCONTO MÁXIMO:`, {
             id: product.id,
             name: product.name,
+            category: product.category_name,
             code: product.code,
             sale_price: product.sale_price,
             max_discount_percent: product.max_discount_percent,
@@ -129,13 +175,15 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code.toString().includes(searchTerm)
+    product.code.toString().includes(searchTerm) ||
+    (product.category_name && product.category_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const selectProduct = (product: Product) => {
     console.log('📦 PRODUTO SELECIONADO:', {
       id: product.id,
       name: product.name,
+      category: product.category_name,
       code: product.code,
       sale_price: product.sale_price,
       max_discount_percent: product.max_discount_percent,
@@ -147,10 +195,14 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     
     setSelectedProduct(product);
     
-    // O preço será definido automaticamente pelo useEffect que monitora selectedUnit
-    // Não definir unitPrice aqui para evitar conflitos
+    // Atualizar índice do produto atual
+    const index = products.findIndex(p => p.id === product.id);
+    if (index !== -1) {
+      setCurrentProductIndex(index);
+    }
     
     console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
+    console.log('📂 Categoria:', product.category_name || 'Sem categoria');
     
     // Log informações sobre unidades
     if (product.has_subunit) {
@@ -160,6 +212,42 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         ratio: product.subunit_ratio
       });
     }
+  };
+
+  const moveToNextProduct = () => {
+    if (products.length === 0) return;
+
+    const nextIndex = currentProductIndex < products.length - 1 ? currentProductIndex + 1 : 0;
+    const nextProduct = products[nextIndex];
+    
+    console.log('➡️ Movendo para próximo produto:', {
+      from: { index: currentProductIndex, name: selectedProduct?.name },
+      to: { index: nextIndex, name: nextProduct.name, category: nextProduct.category_name }
+    });
+    
+    setCurrentProductIndex(nextIndex);
+    selectProduct(nextProduct);
+  };
+
+  const getCurrentCategoryInfo = () => {
+    if (!selectedProduct) return null;
+    
+    const category = productsByCategory.find(cat => 
+      cat.products.some(p => p.id === selectedProduct.id)
+    );
+    
+    if (!category) return null;
+    
+    const productIndexInCategory = category.products.findIndex(p => p.id === selectedProduct.id);
+    const categoryIndex = productsByCategory.findIndex(cat => cat.categoryId === category.categoryId);
+    
+    return {
+      categoryName: category.categoryName,
+      categoryIndex: categoryIndex + 1,
+      totalCategories: productsByCategory.length,
+      productIndexInCategory: productIndexInCategory + 1,
+      totalProductsInCategory: category.products.length
+    };
   };
 
   const addProduct = () => {
@@ -210,19 +298,22 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       quantity: newItem.quantity,
       unit: newItem.unit,
       price: newItem.price,
+      category: selectedProduct.category_name,
       maxDiscountPercent: selectedProduct.max_discount_percent,
       totalItem: (newItem.quantity * newItem.price).toFixed(2)
     });
     
     onAddItem(newItem);
     
-    // Limpar seleção
-    setSelectedProduct(null);
+    // Em vez de limpar completamente, mover para o próximo produto
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
     
-    console.log('✅ PRODUTO ADICIONADO COM SUCESSO E SELEÇÃO LIMPA');
+    // Mover para próximo produto automaticamente
+    moveToNextProduct();
+    
+    console.log('✅ PRODUTO ADICIONADO E MOVIDO PARA O PRÓXIMO');
   };
 
   const clearSelection = () => {
@@ -230,14 +321,17 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setQuantity(1);
     setUnitPrice(0);
     setSearchTerm('');
+    setCurrentProductIndex(0);
   };
 
   return {
     products: filteredProducts,
+    productsByCategory,
     selectedProduct,
     quantity,
     unitPrice,
     searchTerm,
+    currentProductIndex,
     unitOptions,
     selectedUnit,
     selectedUnitType,
@@ -247,7 +341,10 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     setUnitPrice,
     setSearchTerm,
     setSelectedUnitType,
+    setCurrentProductIndex,
     addProduct,
-    clearSelection
+    clearSelection,
+    moveToNextProduct,
+    getCurrentCategoryInfo
   };
 };
