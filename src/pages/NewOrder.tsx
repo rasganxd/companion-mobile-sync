@@ -16,6 +16,7 @@ import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
 import PaymentSection from '@/components/order/PaymentSection';
 import ActionButtons from '@/components/order/ActionButtons';
+
 const PlaceOrder = () => {
   const {
     goBack
@@ -149,52 +150,118 @@ const PlaceOrder = () => {
   const handleFinishOrder = () => {
     finishOrder(selectedClient, selectedPaymentTable?.id);
   };
-  return <div className="min-h-screen bg-gray-100 flex flex-col">
+
+  return (
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       <NewOrderHeader onGoBack={goBack} />
 
-      <NewOrderClientInfo selectedClient={selectedClient} onShowClientSelection={() => setShowClientSelection(true)} />
+      <NewOrderClientInfo 
+        selectedClient={selectedClient} 
+        onShowClientSelection={() => setShowClientSelection(true)} 
+      />
 
-      <div className="flex-1 p-4 space-y-4">
+      {/* Container principal com margem superior para evitar colagem */}
+      <div className="flex-1 p-4 pt-6 space-y-4">
         {/* Seção de Pagamento - Agora após cliente */}
-        {selectedClient && <PaymentSection paymentTables={paymentTables} selectedPaymentTable={selectedPaymentTable} onPaymentTableChange={selectPaymentTable} />}
+        {selectedClient && (
+          <PaymentSection 
+            paymentTables={paymentTables} 
+            selectedPaymentTable={selectedPaymentTable} 
+            onPaymentTableChange={selectPaymentTable} 
+          />
+        )}
 
         {/* Produto atual e navegação */}
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
-            
             {/* Mostra total geral de produtos e categorias */}
-            
           </div>
 
-          <NewOrderProductNavigation currentProductIndex={currentProductIndex} totalProducts={products.length} categoryInfo={categoryInfo} onNavigate={handleProductNavigation} onShowProductSearch={() => setShowProductSearch(true)} />
+          <NewOrderProductNavigation 
+            currentProductIndex={currentProductIndex} 
+            totalProducts={products.length} 
+            categoryInfo={categoryInfo} 
+            onNavigate={handleProductNavigation} 
+            onShowProductSearch={() => setShowProductSearch(true)} 
+          />
 
-          <NewOrderProductDetails currentProduct={currentProduct} quantity={quantity} unitPrice={unitPrice} unitOptions={unitOptions} selectedUnitType={selectedUnitType} hasMultipleUnits={hasMultipleUnits} onQuantityChange={setQuantity} onUnitPriceChange={setUnitPrice} onUnitTypeChange={setSelectedUnitType} onAddProduct={addProduct} onProductCodeSearch={handleProductCodeSearch} />
+          <NewOrderProductDetails 
+            currentProduct={currentProduct} 
+            quantity={quantity} 
+            unitPrice={unitPrice} 
+            unitOptions={unitOptions} 
+            selectedUnitType={selectedUnitType} 
+            hasMultipleUnits={hasMultipleUnits} 
+            onQuantityChange={setQuantity} 
+            onUnitPriceChange={setUnitPrice} 
+            onUnitTypeChange={setSelectedUnitType} 
+            onAddProduct={addProduct} 
+            onProductCodeSearch={handleProductCodeSearch} 
+          />
         </div>
 
-        <NewOrderItemsList orderItems={orderItems} onRemoveItem={removeOrderItem} />
+        <NewOrderItemsList 
+          orderItems={orderItems} 
+          onRemoveItem={removeOrderItem} 
+        />
 
         {/* Totais */}
-        {orderItems.length > 0 && <NewOrderTotals total={calculateTotal()} />}
+        {orderItems.length > 0 && (
+          <NewOrderTotals total={calculateTotal()} />
+        )}
       </div>
 
       {/* Botões de ação */}
-      <ActionButtons orderItems={orderItems} onClearCart={clearCart} onGoBack={goBack} onSaveAsDraft={() => saveAsDraft(selectedClient)} onFinishOrder={handleFinishOrder} selectedClient={selectedClient || {
-      id: ''
-    }} isSubmitting={isSubmitting} />
+      <ActionButtons 
+        orderItems={orderItems} 
+        onClearCart={clearCart} 
+        onGoBack={goBack} 
+        onSaveAsDraft={() => saveAsDraft(selectedClient)} 
+        onFinishOrder={handleFinishOrder} 
+        selectedClient={selectedClient || { id: '' }} 
+        isSubmitting={isSubmitting} 
+      />
 
       {/* Modals */}
-      <ClientSelectionModal showClientSelection={showClientSelection} clientSearchTerm={clientSearchTerm} filteredClients={filteredClients} onClose={() => setShowClientSelection(false)} onSearchChange={setClientSearchTerm} onSelectClient={selectClient} />
+      <ClientSelectionModal 
+        showClientSelection={showClientSelection}
+        clientSearchTerm={clientSearchTerm}
+        filteredClients={filteredClients}
+        onClose={() => setShowClientSelection(false)}
+        onSearchChange={setClientSearchTerm}
+        onSelectClient={selectClient}
+      />
 
-      <ProductSearchDialog isOpen={showProductSearch} onClose={() => setShowProductSearch(false)} searchTerm={searchTerm} onSearchChange={setSearchTerm} products={products} onSelectProduct={product => {
-      selectProduct(product);
-      const index = products.findIndex(p => p.id === product.id);
-      if (index !== -1) {
-        setCurrentProductIndex(index);
-      }
-      setShowProductSearch(false);
-    }} />
+      <ProductSearchDialog 
+        isOpen={showProductSearch}
+        onClose={() => setShowProductSearch(false)}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        products={products}
+        onSelectProduct={(product) => {
+          selectProduct(product);
+          const index = products.findIndex(p => p.id === product.id);
+          if (index !== -1) {
+            setCurrentProductIndex(index);
+          }
+          setShowProductSearch(false);
+        }}
+      />
 
-      {existingOrder && <OrderChoiceModal isOpen={showOrderChoice} onClose={() => setShowOrderChoice(false)} onEditOrder={handleEditOrder} onCreateNew={handleCreateNew} onDeleteOrder={handleDeleteOrder} clientName={selectedClient?.company_name || selectedClient?.name || ''} orderTotal={existingOrder.total || 0} orderItemsCount={existingOrder.items?.length || 0} />}
-    </div>;
+      {existingOrder && (
+        <OrderChoiceModal 
+          isOpen={showOrderChoice}
+          onClose={() => setShowOrderChoice(false)}
+          onEditOrder={handleEditOrder}
+          onCreateNew={handleCreateNew}
+          onDeleteOrder={handleDeleteOrder}
+          clientName={selectedClient?.company_name || selectedClient?.name || ''}
+          orderTotal={existingOrder.total || 0}
+          orderItemsCount={existingOrder.items?.length || 0}
+        />
+      )}
+    </div>
+  );
 };
+
 export default PlaceOrder;
