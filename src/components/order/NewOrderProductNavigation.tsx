@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ const NewOrderProductNavigation: React.FC<NewOrderProductNavigationProps> = ({
   onNavigate,
   onShowProductSearch
 }) => {
-  return <div className="space-y-3">
+  return <div className="space-y-3 mt-4">
       {/* Indicadores de Posição */}
       <div className="flex justify-between items-center text-sm text-gray-600">
         <div>

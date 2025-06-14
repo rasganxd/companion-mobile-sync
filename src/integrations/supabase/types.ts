@@ -210,6 +210,48 @@ export type Database = {
           },
         ]
       }
+      import_reports: {
+        Row: {
+          created_at: string
+          id: string
+          operation_type: string
+          operator: string
+          orders_count: number
+          report_data: Json
+          sales_reps_count: number
+          summary_data: Json
+          timestamp: string
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          operation_type: string
+          operator?: string
+          orders_count?: number
+          report_data?: Json
+          sales_reps_count?: number
+          summary_data?: Json
+          timestamp?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          operation_type?: string
+          operator?: string
+          orders_count?: number
+          report_data?: Json
+          sales_reps_count?: number
+          summary_data?: Json
+          timestamp?: string
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       load_items: {
         Row: {
           created_at: string
