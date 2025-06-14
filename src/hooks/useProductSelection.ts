@@ -117,7 +117,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       }));
       
       // Agrupar produtos por categoria
-      const groupedByCategory = normalizedProducts.reduce((acc, product) => {
+      const groupedByCategory: Record<string, ProductsByCategory> = normalizedProducts.reduce((acc, product) => {
         const categoryId = product.category_id || 'no-category';
         const categoryName = product.category_name || 'Sem Categoria';
         
