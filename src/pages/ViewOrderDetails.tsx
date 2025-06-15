@@ -106,7 +106,7 @@ const ViewOrderDetails = () => {
 
   const getSyncStatusLabel = (syncStatus: string): string => {
     const syncStatusLabels: { [key: string]: string } = {
-      pending_sync: 'Pendente',
+      pending_sync: 'A Sincronizar',
       transmitted: 'Transmitido',
       synced: 'Sincronizado',
       error: 'Erro'

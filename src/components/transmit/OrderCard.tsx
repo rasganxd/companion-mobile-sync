@@ -72,7 +72,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
   const getSyncStatusLabel = (syncStatus: string): string => {
     switch (syncStatus) {
       case 'pending_sync':
-        return 'Pendente';
+        return 'A Sincronizar';
       case 'transmitted':
         return 'Transmitido';
       case 'synced':
