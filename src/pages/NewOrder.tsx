@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -161,7 +162,7 @@ const PlaceOrder = () => {
       />
 
       {/* Container principal com margem superior para evitar colagem */}
-      <div className="flex-1 p-4 pt-6 space-y-4">
+      <div className="flex-1 p-4 pt-6 space-y-6">
         {/* Seção de Pagamento - Agora após cliente */}
         {selectedClient && (
           <PaymentSection 
