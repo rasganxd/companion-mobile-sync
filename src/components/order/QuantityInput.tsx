@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -57,7 +56,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
     getMaxDiscountPercent,
     getCurrentDiscountPercent,
     getMinPriceForCurrentUnit
-  } = useProductPriceValidation(product);
+  } = useProductPriceValidation(product, selectedUnit);
   
   const [currentPrice, setCurrentPrice] = useState(unitPrice);
   const [priceInputValue, setPriceInputValue] = useState('');
@@ -132,7 +131,7 @@ const QuantityInput: React.FC<QuantityInputProps> = ({
   const currentDiscountPercent = getCurrentDiscountPercent(currentPrice);
   const maxDiscountPercent = getMaxDiscountPercent();
   const salePrice = product.sale_price || product.price || 0;
-  const minPriceForCurrentUnit = getMinPriceForCurrentUnit(currentPrice);
+  const minPriceForCurrentUnit = getMinPriceForCurrentUnit();
 
   return (
     <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 border border-blue-200 shadow-sm rounded-lg">
