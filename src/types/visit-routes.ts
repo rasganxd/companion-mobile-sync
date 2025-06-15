@@ -1,4 +1,3 @@
-
 export interface RouteData {
   day: string;
   visited: number;
@@ -31,6 +30,7 @@ export interface Client {
   city?: string;
   state?: string;
   visit_days?: string[];
+  visit_sequence?: number;
   status?: 'positivado' | 'negativado' | 'pendente';
   orderTotal?: number;
   hasLocalOrders?: boolean;

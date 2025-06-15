@@ -1,28 +1,9 @@
-
 import React from 'react';
 import { ChevronLeft, ChevronRight, List, User } from 'lucide-react';
 import AppButton from '@/components/AppButton';
 import ClientPageCard from './ClientPageCard';
 import ClientPageNavigation from './ClientPageNavigation';
-
-interface Client {
-  id: string;
-  name: string;
-  company_name?: string;
-  code?: number;
-  active: boolean;
-  phone?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  visit_days?: string[];
-  status?: 'positivado' | 'negativado' | 'pendente';
-  orderTotal?: number;
-  hasLocalOrders?: boolean;
-  localOrdersCount?: number;
-  hasTransmittedOrders?: boolean;
-  transmittedOrdersCount?: number;
-}
+import { Client } from '@/types/visit-routes';
 
 interface ClientPaginatedViewProps {
   clients: Client[];

@@ -1,26 +1,7 @@
 import React from 'react';
 import { User, Phone, MapPin, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
-
-interface Client {
-  id: string;
-  name: string;
-  company_name?: string;
-  code?: number;
-  active: boolean;
-  phone?: string;
-  address?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-  visit_days?: string[];
-  status?: 'positivado' | 'negativado' | 'pendente';
-  orderTotal?: number;
-  hasLocalOrders?: boolean;
-  localOrdersCount?: number;
-  hasTransmittedOrders?: boolean;
-  transmittedOrdersCount?: number;
-}
+import { Client } from '@/types/visit-routes';
 
 interface ClientCardProps {
   client: Client;
