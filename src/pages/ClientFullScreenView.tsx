@@ -88,8 +88,7 @@ const ClientFullScreenView = () => {
       (order) => {
         setExistingOrder(order);
         setShowOrderModal(true);
-      },
-      { backPath: '/client-fullscreen' }
+      }
     );
   };
   

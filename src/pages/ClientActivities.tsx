@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package2, ThumbsDown, Box, Mail } from 'lucide-react';
@@ -11,23 +10,13 @@ import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ClientActivities = () => {
-  const { goBack: contextGoBack, navigateTo } = useAppNavigation();
+  const { goBack } = useAppNavigation();
   const navigate = useNavigate();
   const location = useLocation();
   const { salesRep } = useAuth();
   
-  const { clientName, clientId, day, backPath } = location.state || {};
+  const { clientName, clientId, day } = location.state || {};
   const [loading, setLoading] = useState(false);
-
-  const handleGoBack = () => {
-    if (backPath) {
-      console.log(`↩️ Custom back navigation to: ${backPath}`);
-      navigateTo(backPath);
-    } else {
-      console.log('↩️ Default back navigation');
-      contextGoBack();
-    }
-  };
 
   if (!clientId || !clientName) {
     return (
@@ -52,25 +41,25 @@ const ClientActivities = () => {
             icon={<Package2 size={32} />}
             title="Fazer Pedidos"
             to="/new-order"
-            state={{ clientName, clientId, day, backPath: '/client-activities' }}
+            state={{ clientName, clientId, day }}
           />
           <MenuCard
             icon={<ThumbsDown size={32} color="red" />}
             title="Negativar Venda"
             to="/negativar-venda"
-            state={{ clientName, clientId, day, backPath: '/client-activities' }}
+            state={{ clientName, clientId, day }}
           />
           <MenuCard
             icon={<Box size={32} color="orange" />}
             title="Últimas Compras"
             to="/ultimas-compras"
-            state={{ clientName, clientId, day, backPath: '/client-activities' }}
+            state={{ clientName, clientId, day }}
           />
           <MenuCard
             icon={<Mail size={32} color="gold" />}
             title="Mensagem"
             to="/mensagem"
-            state={{ clientName, clientId, day, backPath: '/client-activities' }}
+            state={{ clientName, clientId, day }}
           />
         </div>
       </div>
@@ -79,7 +68,7 @@ const ClientActivities = () => {
         <AppButton 
           variant="gray"
           fullWidth
-          onClick={handleGoBack}
+          onClick={goBack}
           className="flex items-center justify-center gap-2"
         >
           <ArrowLeft size={18} />

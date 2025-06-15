@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -17,7 +18,6 @@ import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
 import ViewOrderDetails from '@/pages/ViewOrderDetails';
-import ClientFullScreenView from '@/pages/ClientFullScreenView';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -71,12 +71,6 @@ function App() {
                 <Route path="/clients-list" element={
                   <ProtectedRoute>
                     <ClientsList />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/client-fullscreen" element={
-                  <ProtectedRoute>
-                    <ClientFullScreenView />
                   </ProtectedRoute>
                 } />
                 
