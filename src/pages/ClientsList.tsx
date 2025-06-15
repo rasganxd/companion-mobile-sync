@@ -39,12 +39,24 @@ const ClientsList = () => {
   
   const getDayFromState = () => {
     if (location.state?.day) {
+      if (location.state.day === 'Domingo') {
+        console.log('⚠️ State continha "Domingo", redirecionando para Segunda-feira.');
+        return 'Segunda';
+      }
       return location.state.day;
     }
     
     const today = new Date();
+    const dayIndex = today.getDay(); // 0 = Domingo, 1 = Segunda, ...
+    
+    // Se for domingo (índice 0), usa Segunda-feira como padrão
+    if (dayIndex === 0) {
+      console.log('⚠️ Nenhum dia especificado no state e hoje é Domingo, usando Segunda-feira como padrão.');
+      return 'Segunda';
+    }
+
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const currentDay = dayNames[today.getDay()];
+    const currentDay = dayNames[dayIndex];
     
     console.log('⚠️ Nenhum dia especificado no state, usando dia atual:', currentDay);
     return currentDay;
@@ -62,8 +74,7 @@ const ClientsList = () => {
     'wednesday': 'Quarta',
     'thursday': 'Quinta',
     'friday': 'Sexta',
-    'saturday': 'Sábado',
-    'sunday': 'Domingo'
+    'saturday': 'Sábado'
   };
   
   useEffect(() => {

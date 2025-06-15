@@ -67,8 +67,7 @@ const VisitRoutes = () => {
     'wednesday': 'Quarta',
     'thursday': 'Quinta',
     'friday': 'Sexta',
-    'saturday': 'Sábado',
-    'sunday': 'Domingo'
+    'saturday': 'Sábado'
   };
   useEffect(() => {
     const loadRoutesData = async () => {
