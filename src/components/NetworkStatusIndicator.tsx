@@ -2,7 +2,8 @@ import React from 'react';
 import { Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
+
 const NetworkStatusIndicator: React.FC = () => {
   const {
     connected,

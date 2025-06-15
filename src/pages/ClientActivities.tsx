@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package2, ThumbsDown, Box, Mail } from 'lucide-react';
@@ -8,7 +7,7 @@ import AppButton from '@/components/AppButton';
 import { toast } from 'sonner';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ClientActivities = () => {
   const { goBack } = useAppNavigation();

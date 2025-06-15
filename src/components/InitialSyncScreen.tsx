@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { RefreshCw, CheckCircle, AlertCircle, Wifi, Trash2 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useDataSync } from '@/hooks/useDataSync';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { toast } from 'sonner';

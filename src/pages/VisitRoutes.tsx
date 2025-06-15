@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Progress } from '@/components/ui/progress';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 interface RouteData {
   day: string;

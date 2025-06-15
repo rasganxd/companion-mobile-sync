@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { LocalOrder } from '@/types/order';
 import { logOrderAction } from '@/utils/orderAuditLogger';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
 

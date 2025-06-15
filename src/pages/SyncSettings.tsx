@@ -4,13 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
 import { useDataSync } from '@/hooks/useDataSync';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+
 const SyncSettings = () => {
   const navigate = useNavigate();
   const {
