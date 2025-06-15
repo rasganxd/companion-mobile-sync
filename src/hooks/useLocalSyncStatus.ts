@@ -17,12 +17,27 @@ export const useLocalSyncStatus = () => {
 
   useEffect(() => {
     loadSyncStatus();
+
+    // Adiciona um listener para atualizar o status quando o localStorage mudar
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'last_sync_date') {
+        console.log('Capturada alteração em last_sync_date, atualizando status...');
+        loadSyncStatus();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    // Limpa o listener quando o componente for desmontado
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const loadSyncStatus = async () => {
     try {
-      // Load last sync time from localStorage
-      const lastSyncString = localStorage.getItem('last_sync');
+      // ✅ CORRIGIDO: Carrega a data da última sincronização usando a chave correta
+      const lastSyncString = localStorage.getItem('last_sync_date');
       const lastSync = lastSyncString ? new Date(lastSyncString) : null;
 
       // Count pending orders
@@ -48,3 +63,4 @@ export const useLocalSyncStatus = () => {
     refreshStatus
   };
 };
+
