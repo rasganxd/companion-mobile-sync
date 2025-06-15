@@ -229,6 +229,78 @@ class WebDatabaseService {
     }
   }
 
+  async updateClientStatusAfterOrderDeletion(clientId: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🔄 Verificando status do cliente ${clientId} após exclusão de pedido...`);
+      
+      const client = await this.getClientById(clientId);
+      if (!client) {
+        console.warn(`⚠️ Cliente ${clientId} não encontrado`);
+        return;
+      }
+
+      // Buscar pedidos restantes do cliente
+      const clientOrders = await this.getClientOrders(clientId);
+      console.log(`📋 Cliente ${clientId} tem ${clientOrders.length} pedidos restantes`);
+
+      if (clientOrders.length === 0) {
+        // Se não tem pedidos e estava negativado, voltar para pendente
+        if (client.status === 'negativado') {
+          console.log(`🔄 Cliente ${clientId} não tem mais pedidos, mudando de 'negativado' para 'pendente'`);
+          await this.updateClientStatus(clientId, 'pendente');
+        }
+      } else {
+        // Verificar o tipo de pedidos restantes
+        const hasPositiveOrders = clientOrders.some(order => 
+          order.status === 'pending' || 
+          order.status === 'processed' || 
+          order.status === 'delivered'
+        );
+        const hasNegativeOrders = clientOrders.some(order => 
+          order.status === 'negativado' || 
+          order.status === 'cancelled'
+        );
+
+        if (hasPositiveOrders) {
+          console.log(`✅ Cliente ${clientId} tem pedidos positivos, status deve ser 'positivado'`);
+          await this.updateClientStatus(clientId, 'positivado');
+        } else if (hasNegativeOrders) {
+          console.log(`❌ Cliente ${clientId} tem apenas pedidos negativos, mantendo 'negativado'`);
+          await this.updateClientStatus(clientId, 'negativado');
+        } else {
+          console.log(`🔄 Cliente ${clientId} sem pedidos válidos, mudando para 'pendente'`);
+          await this.updateClientStatus(clientId, 'pendente');
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Erro ao verificar status do cliente ${clientId}:`, error);
+    }
+  }
+
+  async resetAllNegatedClientsStatus(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🔄 Resetando status de todos os clientes negativados...');
+      
+      const allClients = await this.getClients();
+      const negatedClients = allClients.filter(client => client.status === 'negativado');
+      
+      console.log(`📋 Encontrados ${negatedClients.length} clientes negativados`);
+      
+      for (const client of negatedClients) {
+        console.log(`🔄 Resetando status do cliente ${client.name} (${client.id}) para 'pendente'`);
+        await this.updateClientStatus(client.id, 'pendente');
+      }
+      
+      console.log('✅ Status de todos os clientes negativados resetado para pendente');
+    } catch (error) {
+      console.error('❌ Erro ao resetar status dos clientes negativados:', error);
+    }
+  }
+
   async getClientById(clientId: string): Promise<any | null> {
     if (!this.db) await this.initDatabase();
 
@@ -320,8 +392,18 @@ class WebDatabaseService {
 
     try {
       console.log(`🌐 Deleting order with ID: ${orderId}`);
+      
+      // Primeiro, obter informações do pedido antes de deletar
+      const order = await this.db!.get('orders', orderId);
+      const clientId = order?.customer_id;
+      
       await this.db!.delete('orders', orderId);
       console.log(`✅ Order with ID ${orderId} deleted`);
+      
+      // Verificar e atualizar status do cliente após exclusão
+      if (clientId) {
+        await this.updateClientStatusAfterOrderDeletion(clientId);
+      }
     } catch (error) {
       console.error(`❌ Error deleting order with ID ${orderId}:`, error);
       throw error;
@@ -337,6 +419,9 @@ class WebDatabaseService {
       await tx.objectStore('orders').clear();
       await tx.done;
       console.log(`✅ All orders deleted`);
+      
+      // Resetar status de todos os clientes negativados após exclusão de todos os pedidos
+      await this.resetAllNegatedClientsStatus();
     } catch (error) {
       console.error(`❌ Error deleting all orders:`, error);
       throw error;

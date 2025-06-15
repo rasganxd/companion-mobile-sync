@@ -49,6 +49,9 @@ interface DatabaseAdapter {
   getOrderById(orderId: string): Promise<any | null>;
   // ✅ NOVO: Método para limpar dados mock
   clearMockData?(): Promise<void>;
+  // ✅ NOVOS: Métodos para atualização inteligente de status
+  updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
+  resetAllNegatedClientsStatus?(): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
