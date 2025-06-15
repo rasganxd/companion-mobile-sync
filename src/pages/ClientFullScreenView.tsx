@@ -51,12 +51,22 @@ const ClientFullScreenView = () => {
   
   useEffect(() => {
     if (!clients || clients.length === 0) {
-      goBack();
+      console.log('🔙 ClientFullScreenView: No clients data, redirecting to routes');
+      window.location.href = '/rotas';
     }
-  }, [clients, goBack]);
+  }, [clients]);
   
   if (!clients || clients.length === 0) {
-    return null;
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        <Header title="Carregando..." showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-lg">Redirecionando...</div>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   const currentClient = currentClients[currentIndex];

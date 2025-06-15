@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -29,6 +28,19 @@ const PlaceOrder = () => {
     clientName,
     clientId
   } = location.state || {};
+
+  // ✅ MELHORADA: Função de voltar mais inteligente
+  const handleGoBack = () => {
+    // Se temos dados do cliente, voltar para atividades do cliente
+    if (clientId && clientName) {
+      console.log('🔙 NewOrder: Going back to client activities with client data');
+      goBack(); // Usar o contexto de navegação que agora mapeia corretamente
+    } else {
+      console.log('🔙 NewOrder: No client data, going back to routes');
+      // Se não temos dados do cliente, voltar para rotas
+      window.history.back();
+    }
+  };
 
   // Create initial client object if data is available
   const initialClient = React.useMemo(() => {
@@ -154,7 +166,7 @@ const PlaceOrder = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <NewOrderHeader onGoBack={goBack} />
+      <NewOrderHeader onGoBack={handleGoBack} />
 
       <NewOrderClientInfo 
         selectedClient={selectedClient} 
@@ -216,7 +228,7 @@ const PlaceOrder = () => {
       <ActionButtons 
         orderItems={orderItems} 
         onClearCart={clearCart} 
-        onGoBack={goBack} 
+        onGoBack={handleGoBack} 
         onSaveAsDraft={() => saveAsDraft(selectedClient)} 
         onFinishOrder={handleFinishOrder} 
         selectedClient={selectedClient || { id: '' }} 
