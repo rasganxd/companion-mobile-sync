@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import AppButton from '@/components/AppButton';
-import { Progress } from '@/components/ui/progress';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { CheckCircle2, XCircle, Clock, CalendarDays, DollarSign } from 'lucide-react';
+
 interface RouteData {
   day: string;
   visited: number;
@@ -294,59 +294,76 @@ const VisitRoutes = () => {
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Rotas de Visita" showBackButton backgroundColor="blue" />
       
-      <div className="p-3 flex-1">
-        {/* Resumo Compacto de Vendas */}
-        <div className="bg-white rounded-lg shadow p-3 mb-3">
-          <h2 className="text-base font-semibold mb-2">Resumo do Dia</h2>
-          
-          <div className="grid grid-cols-3 gap-2">
-            <div className="text-center p-2 bg-green-50 rounded border border-green-200">
-              <div className="text-lg font-bold text-green-600">
-                {salesData.totalPositivados}
-              </div>
-              <div className="text-xs text-green-700 font-medium">Positivados</div>
-              <div className="text-sm font-semibold text-green-700">
-                R$ {salesData.positivadosValue.toFixed(0)}
-              </div>
-            </div>
-            
-            <div className="text-center p-2 bg-red-50 rounded border border-red-200">
-              <div className="text-lg font-bold text-red-600">
-                {salesData.totalNegativados}
-              </div>
-              <div className="text-xs text-red-700 font-medium">Negativados</div>
-            </div>
-            
-            
-          </div>
-        </div>
-
-        {/* Lista Compacta de Rotas */}
-        <div className="space-y-2">
-          {routes.map(route => <AppButton key={route.day} variant="gray" fullWidth onClick={() => handleVisitDay(route.day)} className="text-left p-3 h-auto py-[10px]">
-              <div className="flex justify-between items-center">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-semibold text-base">{route.day}</div>
-                    <div className="text-xs text-gray-500">
-                      ({route.total})
-                    </div>
-                  </div>
-                  <div className="text-xs mt-0.5 leading-tight">
-                    <span className="font-medium text-xs text-cyan-600">{route.pendentes} PENDENTES</span>
-                    <span className="text-gray-400 mx-1">•</span>
-                    <span className="text-green-600 font-medium text-xs">{route.positivados} POSITIVADOS</span>
-                    <span className="text-gray-400 mx-1">•</span>
-                    <span className="text-red-600 font-medium text-xs">{route.negativados} NEGATIVADOS</span>
-                  </div>
-                  <div className="text-xs text-green-600 font-medium">
-                    R$ {route.totalSales.toFixed(0)}
-                  </div>
+      <div className="p-4 flex-1">
+        {/* Resumo do Dia */}
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-4">
+            <h2 className="text-lg font-semibold mb-3 text-gray-800">Resumo do Dia</h2>
+            <div className="grid grid-cols-3 gap-3">
+                {/* Card Positivados */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center flex flex-col justify-center h-full">
+                    <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-1" />
+                    <div className="text-xl font-bold text-green-700">{salesData.totalPositivados}</div>
+                    <div className="text-xs font-medium text-green-600">Positivados</div>
+                    <div className="text-xs font-semibold text-green-700 mt-1">R$ {salesData.positivadosValue.toFixed(0)}</div>
                 </div>
                 
+                {/* Card Negativados */}
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center flex flex-col justify-center h-full">
+                    <XCircle className="h-6 w-6 text-red-500 mx-auto mb-1" />
+                    <div className="text-xl font-bold text-red-600">{salesData.totalNegativados}</div>
+                    <div className="text-xs font-medium text-red-500">Negativados</div>
+                </div>
                 
-              </div>
-            </AppButton>)}
+                {/* Card Pendentes */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center flex flex-col justify-center h-full">
+                    <Clock className="h-6 w-6 text-blue-600 mx-auto mb-1" />
+                    <div className="text-xl font-bold text-blue-700">{salesData.totalPendentes}</div>
+                    <div className="text-xs font-medium text-blue-600">Pendentes</div>
+                </div>
+            </div>
+        </div>
+
+        {/* Lista de Rotas */}
+        <div>
+            <h2 className="text-lg font-semibold mb-3 text-gray-700">Rotas da Semana</h2>
+            {routes.map(route => (
+                <div key={route.day} onClick={() => handleVisitDay(route.day)} className="bg-white rounded-xl shadow-sm p-4 mb-3 cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-all duration-200">
+                    <div className="flex items-center mb-3">
+                        <CalendarDays className="h-5 w-5 text-gray-500 mr-3" />
+                        <h3 className="font-bold text-lg text-gray-800">{route.day}</h3>
+                        <span className="text-sm text-gray-500 ml-2">({route.total} clientes)</span>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                        <div className="flex items-center">
+                            <Clock className="h-4 w-4 text-blue-500 mr-3 flex-shrink-0" />
+                            <span className="font-medium text-gray-600">Pendentes</span>
+                            <span className="font-bold text-blue-600 ml-auto">{route.pendentes}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <CheckCircle2 className="h-4 w-4 text-green-500 mr-3 flex-shrink-0" />
+                            <span className="font-medium text-gray-600">Positivados</span>
+                            <span className="font-bold text-green-600 ml-auto">{route.positivados}</span>
+                        </div>
+                        <div className="flex items-center">
+                            <XCircle className="h-4 w-4 text-red-500 mr-3 flex-shrink-0" />
+                            <span className="font-medium text-gray-600">Negativados</span>
+                            <span className="font-bold text-red-600 ml-auto">{route.negativados}</span>
+                        </div>
+                    </div>
+                    {route.totalSales > 0 && (
+                        <>
+                            <div className="border-t my-3"></div>
+                            <div className="flex items-center">
+                                <DollarSign className="h-5 w-5 text-green-600 mr-3 flex-shrink-0" />
+                                <span className="text-sm font-medium text-gray-600">Valor Positivado</span>
+                                <span className="font-bold text-lg text-green-700 ml-auto">
+                                    R$ {route.totalSales.toFixed(0)}
+                                </span>
+                            </div>
+                        </>
+                    )}
+                </div>
+            ))}
         </div>
       </div>
     </div>;
