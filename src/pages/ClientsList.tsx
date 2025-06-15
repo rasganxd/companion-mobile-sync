@@ -274,7 +274,7 @@ const ClientsList = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-500">
@@ -287,7 +287,7 @@ const ClientsList = () => {
 
   if (!salesRep) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center text-gray-500">
@@ -300,7 +300,7 @@ const ClientsList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header title={`Clientes de ${day}`} showBackButton backgroundColor="blue" />
       
       <div className="flex-1 p-4">
@@ -316,12 +316,12 @@ const ClientsList = () => {
         </ScrollArea>
       </div>
       
-      <div className="p-3 bg-white border-t">
+      <div className="p-3 bg-white border-t border-gray-200 shadow-lg">
         <AppButton 
           variant="gray"
           fullWidth
           onClick={handleGoBack}
-          className="flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 shadow-md"
         >
           <ArrowLeft size={18} />
           <span>Voltar para Rotas</span>
