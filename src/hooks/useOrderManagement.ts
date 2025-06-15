@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -20,6 +21,16 @@ interface Client {
   name: string;
   company_name?: string;
   sales_rep_id?: string;
+}
+
+interface PaymentTable {
+  id: string;
+  name: string;
+  description?: string;
+  type?: string;
+  payable_to?: string;
+  payment_location?: string;
+  active: boolean;
 }
 
 export const useOrderManagement = () => {
@@ -128,6 +139,12 @@ export const useOrderManagement = () => {
       return;
     }
 
+    // ✅ NOVO: Validação obrigatória de método de pagamento
+    if (!paymentTableId) {
+      toast.error('Selecione uma forma de pagamento antes de finalizar o pedido');
+      return;
+    }
+
     // Validar todos os itens antes de finalizar
     const isValid = await validateOrderItems();
     if (!isValid) {
@@ -139,6 +156,19 @@ export const useOrderManagement = () => {
     try {
       const db = getDatabaseAdapter();
       
+      // ✅ NOVO: Buscar dados completos da tabela de pagamento
+      console.log('💳 Buscando dados da tabela de pagamento:', paymentTableId);
+      const paymentTables = await db.getPaymentTables();
+      const selectedPaymentTable = paymentTables.find(table => table.id === paymentTableId);
+      
+      if (!selectedPaymentTable) {
+        console.error('❌ Tabela de pagamento não encontrada:', paymentTableId);
+        toast.error('Erro: Forma de pagamento não encontrada. Tente selecionar novamente.');
+        return;
+      }
+
+      console.log('✅ Tabela de pagamento encontrada:', selectedPaymentTable);
+
       const orderData = {
         id: uuidv4(),
         customer_id: selectedClient.id,
@@ -149,12 +179,15 @@ export const useOrderManagement = () => {
         sync_status: 'pending_sync' as const,
         items: orderItems,
         sales_rep_id: salesRep?.id,
-        payment_table_id: paymentTableId
+        // ✅ NOVO: Enviar tanto o UUID quanto o nome da tabela de pagamento
+        payment_table_id: paymentTableId,
+        payment_method: selectedPaymentTable.name
       };
 
-      console.log('💾 Salvando pedido com tabela de pagamento:', {
+      console.log('💾 Salvando pedido com dados completos de pagamento:', {
         orderId: orderData.id,
         paymentTableId: orderData.payment_table_id,
+        paymentMethod: orderData.payment_method,
         customerName: orderData.customer_name,
         total: orderData.total,
         itemsCount: orderData.items.length

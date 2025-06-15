@@ -56,8 +56,33 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
 
   console.log('🔢 Generated order code:', codeData);
 
-  // Log para verificar se payment_table_id está sendo recebido
-  console.log('💳 Payment table ID received:', orderData.payment_table_id);
+  // ✅ NOVO: Validação obrigatória de payment_table_id
+  if (!orderData.payment_table_id) {
+    console.error('❌ Payment table ID is required but missing');
+    throw new Error('Payment table ID is required');
+  }
+
+  // ✅ NOVO: Buscar dados da tabela de pagamento se só temos o ID
+  let paymentMethodName = orderData.payment_method;
+  
+  if (!paymentMethodName && orderData.payment_table_id) {
+    console.log('🔍 Payment method name missing, searching by payment_table_id:', orderData.payment_table_id);
+    
+    const { data: paymentTable, error: paymentError } = await supabase
+      .from('payment_tables')
+      .select('name, description')
+      .eq('id', orderData.payment_table_id)
+      .eq('active', true)
+      .single();
+    
+    if (paymentError || !paymentTable) {
+      console.error('❌ Payment table not found:', orderData.payment_table_id, paymentError);
+      throw new Error(`Payment table not found for ID: ${orderData.payment_table_id}`);
+    }
+    
+    paymentMethodName = paymentTable.name;
+    console.log('✅ Payment method name found:', paymentMethodName);
+  }
 
   // Preparar dados do pedido para inserção na tabela mobile_orders
   const orderToInsert = {
@@ -70,8 +95,9 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     status: orderData.status,
     total: orderData.total,
     notes: orderData.notes || '',
-    payment_method: orderData.payment_method || '',
-    payment_table_id: orderData.payment_table_id || null,
+    // ✅ CORRIGIDO: Garantir que ambos os campos sejam salvos
+    payment_method: paymentMethodName,
+    payment_table_id: orderData.payment_table_id,
     code: codeData,
     mobile_order_id: `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     sync_status: 'pending',
@@ -82,11 +108,12 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     visit_notes: orderData.notes || ''
   };
 
-  console.log('💳 Mobile order data to insert:', {
+  console.log('💳 Mobile order data to insert with validated payment:', {
     payment_method: orderToInsert.payment_method,
     payment_table_id: orderToInsert.payment_table_id,
     total: orderToInsert.total,
     status: orderToInsert.status,
+    customer_name: orderToInsert.customer_name,
     table: 'mobile_orders'
   });
 
@@ -103,7 +130,7 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
   }
 
   console.log('✅ Mobile order created successfully:', createdOrder.id);
-  console.log('💳 Payment table ID saved in mobile_orders:', createdOrder.payment_table_id);
+  console.log('💳 Payment data saved - Method:', createdOrder.payment_method, 'Table ID:', createdOrder.payment_table_id);
   return createdOrder;
 };
 

@@ -41,23 +41,26 @@ export const usePaymentTables = () => {
       
       setPaymentTables(activeTables);
       
-      // Buscar especificamente a tabela "À Vista" como padrão
+      // ✅ MELHORADO: Auto-seleção mais inteligente
       if (activeTables.length > 0 && !selectedPaymentTable) {
+        // Buscar especificamente a tabela "À Vista" como padrão
         const aVistaTable = activeTables.find(table => 
           table.name.toLowerCase().includes('vista') || 
-          table.name.toLowerCase().includes('à vista')
+          table.name.toLowerCase().includes('à vista') ||
+          table.name.toLowerCase() === 'a vista'
         );
         
         if (aVistaTable) {
           console.log('💳 Auto-selecionando tabela "À Vista":', aVistaTable);
           setSelectedPaymentTable(aVistaTable);
         } else {
-          // Fallback para primeira tabela se "À Vista" não for encontrada
-          console.log('💳 "À Vista" não encontrada, selecionando primeira tabela:', activeTables[0]);
-          setSelectedPaymentTable(activeTables[0]);
+          // ✅ ALTERADO: Não auto-selecionar mais para forçar escolha consciente
+          console.log('💳 "À Vista" não encontrada. Usuário deve selecionar manualmente.');
+          console.log('💳 Tabelas disponíveis:', activeTables.map(t => t.name));
         }
       } else if (activeTables.length === 0) {
         console.log('⚠️ Nenhuma tabela de pagamento ativa encontrada');
+        toast.warning('Nenhuma forma de pagamento disponível. Verifique a sincronização.');
       }
       
     } catch (error) {
@@ -75,8 +78,10 @@ export const usePaymentTables = () => {
     if (table) {
       console.log('💳 Tabela de pagamento selecionada:', table);
       setSelectedPaymentTable(table);
+      toast.success(`Forma de pagamento selecionada: ${table.name}`);
     } else {
       console.log('⚠️ Tabela não encontrada para ID:', tableId);
+      toast.error('Forma de pagamento não encontrada');
     }
   };
 
