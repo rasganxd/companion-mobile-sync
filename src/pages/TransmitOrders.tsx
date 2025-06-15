@@ -7,9 +7,12 @@ import OrderTabs from '@/components/transmit/OrderTabs';
 import OrderActionButtons from '@/components/transmit/OrderActionButtons';
 import OrdersList from '@/components/transmit/OrdersList';
 import TransmissionErrorDialog from '@/components/transmit/TransmissionErrorDialog';
+import { useConfirm } from '@/hooks/useConfirm';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const TransmitOrders = () => {
   const [activeTab, setActiveTab] = useState<'pending' | 'transmitted' | 'error'>('pending');
+  const { confirm, isOpen, options, handleConfirm, handleCancel } = useConfirm();
   
   const {
     pendingOrders,
@@ -37,6 +40,30 @@ const TransmitOrders = () => {
         return errorOrders;
       default:
         return [];
+    }
+  };
+
+  const handleTransmitAll = async () => {
+    const confirmed = await confirm({
+      title: 'Confirmar Transmissão',
+      description: `Tem certeza que deseja transmitir ${pendingOrders.length} pedido(s)?`,
+      confirmText: 'Transmitir',
+      cancelText: 'Cancelar'
+    });
+    if (confirmed) {
+      await transmitAllOrders();
+    }
+  };
+
+  const handleRetryAllErrors = async () => {
+    const confirmed = await confirm({
+      title: 'Confirmar Nova Tentativa',
+      description: `Tem certeza que deseja reenviar ${errorOrders.length} pedido(s) com erro?`,
+      confirmText: 'Reenviar',
+      cancelText: 'Cancelar'
+    });
+    if (confirmed) {
+      await retryAllErrorOrders();
     }
   };
 
@@ -68,8 +95,8 @@ const TransmitOrders = () => {
           isLoading={isLoading}
           pendingCount={pendingOrders.length}
           errorCount={errorOrders.length}
-          onTransmitAll={transmitAllOrders}
-          onRetryAllErrors={retryAllErrorOrders}
+          onTransmitAll={handleTransmitAll}
+          onRetryAllErrors={handleRetryAllErrors}
           onRefresh={loadOrders}
         />
 
@@ -90,6 +117,16 @@ const TransmitOrders = () => {
         error={transmissionError || ''}
         onRetry={retryTransmission}
         isRetrying={isTransmitting}
+      />
+
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        description={options.description}
+        confirmText={options.confirmText || 'Confirmar'}
+        cancelText={options.cancelText || 'Cancelar'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
       />
     </div>
   );

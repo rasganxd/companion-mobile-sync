@@ -206,10 +206,6 @@ export const useOrderTransmission = () => {
       return;
     }
 
-    if (!confirm(`Transmitir ${pendingOrders.length} pedido(s) para o servidor?`)) {
-      return;
-    }
-
     try {
       validateSalesRep();
       setTransmissionError(null);
@@ -380,10 +376,6 @@ export const useOrderTransmission = () => {
   const retryAllErrorOrders = async () => {
     if (errorOrders.length === 0) {
       toast.warning('Não há pedidos com erro para tentar novamente');
-      return;
-    }
-
-    if (!confirm(`Tentar transmitir novamente ${errorOrders.length} pedido(s) com erro?`)) {
       return;
     }
 
