@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -19,26 +20,28 @@ import ActionButtons from '@/components/order/ActionButtons';
 
 const PlaceOrder = () => {
   const {
-    goBack
+    goBack,
+    navigateToClientActivities
   } = useAppNavigation();
   const location = useLocation();
 
   // Extract client data from navigation state
   const {
     clientName,
-    clientId
+    clientId,
+    day
   } = location.state || {};
 
   // ✅ MELHORADA: Função de voltar mais inteligente
   const handleGoBack = () => {
-    // Se temos dados do cliente, voltar para atividades do cliente
+    // Se temos dados do cliente, voltar para atividades do cliente com estado
     if (clientId && clientName) {
-      console.log('🔙 NewOrder: Going back to client activities with client data');
-      goBack(); // Usar o contexto de navegação que agora mapeia corretamente
+      console.log('🔙 NewOrder: Going back to client activities with client data', { clientName, clientId, day });
+      navigateToClientActivities(clientName, clientId, day);
     } else {
-      console.log('🔙 NewOrder: No client data, going back to routes');
-      // Se não temos dados do cliente, voltar para rotas
-      window.history.back();
+      console.log('🔙 NewOrder: No client data, using default goBack');
+      // Se não temos dados do cliente, usar o goBack padrão do contexto
+      goBack();
     }
   };
 

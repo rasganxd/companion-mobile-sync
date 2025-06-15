@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
@@ -20,7 +19,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // Mapeamento de fluxos de navegação - define para onde cada tela "volta"
 const navigationFlows: { [key: string]: string } = {
   '/home': '/home', // Home é a tela raiz - não volta para lugar nenhum
-  '/client-activities': '/client-fullscreen', // Lista de atividades volta para fullscreen
+  '/client-activities': '/clients-list', // Lista de atividades volta para a lista de clientes
   '/client-fullscreen': '/rotas', // Visualização full-screen volta para rotas
   '/clients-list': '/rotas', // Lista de clientes volta para rotas
   '/rotas': '/home',
