@@ -1,3 +1,4 @@
+
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
 
@@ -670,16 +671,62 @@ class WebDatabaseService {
     if (!this.db) await this.initDatabase();
     
     try {
-      console.log(`🔍 Getting order by ID: ${orderId}`);
+      console.log(`🌐 Getting order by ID: ${orderId}`);
+      
+      // Buscar dados básicos do pedido
       const order = await this.db!.get('orders', orderId);
       
-      if (order) {
-        console.log('✅ Order found:', order);
-        return order;
-      } else {
+      if (!order) {
         console.log('❌ Order not found');
         return null;
       }
+
+      console.log('✅ Order found:', order);
+
+      // Buscar produtos para referência de nomes
+      const products = await this.db!.getAll('products');
+      const productsMap = new Map();
+      products.forEach(product => {
+        productsMap.set(product.code?.toString(), product.name);
+        productsMap.set(product.id, product.name);
+      });
+
+      // Se o pedido tem itens no campo JSON, enriquecer com nomes dos produtos
+      if (order.items && typeof order.items === 'string') {
+        try {
+          const jsonItems = JSON.parse(order.items);
+          if (Array.isArray(jsonItems)) {
+            order.items = jsonItems.map(item => ({
+              ...item,
+              product_name: item.product_name || 
+                          item.productName || 
+                          productsMap.get(item.product_code?.toString()) || 
+                          productsMap.get(item.productId) ||
+                          'Produto não encontrado'
+            }));
+            console.log(`🌐 Enriched ${order.items.length} items with product names`);
+          }
+        } catch (e) {
+          console.log('🌐 Could not parse JSON items from order');
+        }
+      } else if (Array.isArray(order.items)) {
+        // Se já é array, apenas enriquecer com nomes
+        order.items = order.items.map(item => ({
+          ...item,
+          product_name: item.product_name || 
+                      item.productName || 
+                      productsMap.get(item.product_code?.toString()) || 
+                      productsMap.get(item.productId) ||
+                      'Produto não encontrado'
+        }));
+        console.log(`🌐 Enriched ${order.items.length} items with product names`);
+      } else {
+        // Se não há itens, inicializar array vazio
+        order.items = [];
+        console.log('🌐 No items found for order');
+      }
+
+      return order;
     } catch (error) {
       console.error('❌ Error getting order by ID:', error);
       return null;

@@ -1,3 +1,4 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
@@ -785,15 +786,51 @@ class SQLiteDatabaseService {
 
     try {
       console.log(`📱 Getting order by ID: ${orderId}`);
-      const result = await this.db!.query('SELECT * FROM orders WHERE id = ?', [orderId]);
       
-      if (result.values && result.values.length > 0) {
-        console.log('✅ Order found:', result.values[0]);
-        return result.values[0];
-      } else {
+      // Buscar dados básicos do pedido
+      const orderResult = await this.db!.query('SELECT * FROM orders WHERE id = ?', [orderId]);
+      
+      if (!orderResult.values || orderResult.values.length === 0) {
         console.log('❌ Order not found');
         return null;
       }
+
+      const order = orderResult.values[0];
+      console.log('✅ Order found:', order);
+
+      // Buscar itens do pedido com nomes dos produtos
+      const itemsQuery = `
+        SELECT 
+          oi.*,
+          p.name as product_name
+        FROM order_items oi
+        LEFT JOIN products p ON CAST(oi.product_code AS TEXT) = CAST(p.code AS TEXT)
+        WHERE oi.order_id = ?
+        ORDER BY oi.created_at
+      `;
+      
+      const itemsResult = await this.db!.query(itemsQuery, [orderId]);
+      const orderItems = itemsResult.values || [];
+
+      console.log(`📱 Found ${orderItems.length} items for order ${orderId}`);
+
+      // Se não há itens na tabela order_items, verificar se há itens no campo JSON
+      if (orderItems.length === 0 && order.items) {
+        try {
+          const jsonItems = JSON.parse(order.items);
+          if (Array.isArray(jsonItems) && jsonItems.length > 0) {
+            console.log(`📱 Using JSON items from order field: ${jsonItems.length} items`);
+            order.items = jsonItems;
+          }
+        } catch (e) {
+          console.log('📱 Could not parse JSON items from order');
+        }
+      } else {
+        // Usar itens da tabela order_items
+        order.items = orderItems;
+      }
+
+      return order;
     } catch (error) {
       console.error('❌ Error getting order by ID:', error);
       return null;
