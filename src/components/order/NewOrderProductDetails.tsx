@@ -123,7 +123,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     selectedUnitType,
     unitOptions: unitOptions.length
   });
-  return <div className="space-y-4">
+  return <div className="space-y-4 mt-6">
       {/* Informações do Produto */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 py-[12px]">
         <div className="flex items-center gap-2 mb-2">
