@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { useAppNavigation } from '@/hooks/useAppNavigation';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { useNavigate } from 'react-router-dom';
 
 interface MenuCardProps {
   icon: React.ReactNode;
@@ -10,14 +11,16 @@ interface MenuCardProps {
 }
 
 const MenuCard = ({ icon, title, to, state }: MenuCardProps) => {
-  const { navigateTo } = useAppNavigation();
+  const { navigateTo: contextNavigateTo } = useNavigation();
+  const navigate = useNavigate();
 
   const handleClick = () => {
     if (state) {
-      // Se há estado, usar navigate do React Router diretamente para passar o state
-      navigateTo(to, state);
+      // Se há estado, usar navigate do React Router para passar o state
+      navigate(to, { state });
     } else {
-      navigateTo(to);
+      // Caso contrário, usar nosso contexto de navegação
+      contextNavigateTo(to);
     }
   };
 
