@@ -108,37 +108,41 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
           </div>
         )}
 
-        {/* Informações de contato e endereço - layout otimizado com endereço primeiro */}
-        <div className="space-y-2 mb-4">
-          {(client.address || client.city || client.state) && (
-            <div className="flex items-start gap-2 p-2 bg-white rounded border">
-              <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
-              <div>
-                <p className="text-xs text-gray-500">Endereço</p>
-                <div className="text-sm font-medium">
-                  {client.address && <p className="text-xs">{client.address}</p>}
-                  {(client.city || client.state) && (
-                    <p className="text-xs">
-                      {client.city}
-                      {client.city && client.state && ', '}
-                      {client.state}
-                    </p>
-                  )}
+        {/* Informações de contato e endereço - unificadas em uma única div */}
+        {((client.address || client.city || client.state) || client.phone) && (
+          <div className="p-2 bg-white rounded border mb-4 space-y-3">
+            {/* Endereço */}
+            {(client.address || client.city || client.state) && (
+              <div className="flex items-start gap-2">
+                <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
+                <div>
+                  <p className="text-xs text-gray-500">Endereço</p>
+                  <div className="text-sm font-medium">
+                    {client.address && <p className="text-xs">{client.address}</p>}
+                    {(client.city || client.state) && (
+                      <p className="text-xs">
+                        {client.city}
+                        {client.city && client.state && ', '}
+                        {client.state}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {client.phone && (
-            <div className="flex items-center gap-2 p-2 bg-white rounded border">
-              <Phone className="h-4 w-4 text-gray-600" />
-              <div>
-                <p className="text-xs text-gray-500">Telefone</p>
-                <p className="font-medium text-xs">{client.phone}</p>
+            )}
+            
+            {/* Telefone */}
+            {client.phone && (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs text-gray-500">Telefone</p>
+                  <p className="font-medium text-xs">{client.phone}</p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Botão de ação - mais compacto */}
         <AppButton 
