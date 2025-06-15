@@ -225,7 +225,7 @@
     @apply text-red-600 border-red-300 hover:bg-red-50;
   }
 
-  /* Client status card styling - estas são as classes que estavam faltando */
+  /* Client status card styling - fundos mais neutros */
   .tab-success-bg {
     @apply bg-green-600;
   }
@@ -239,7 +239,7 @@
   }
   
   .tab-success-light {
-    @apply bg-green-50 border-green-200;
+    @apply bg-white border-green-200;
   }
   
   .tab-error-bg {
@@ -255,7 +255,7 @@
   }
   
   .tab-error-light {
-    @apply bg-red-50 border-red-200;
+    @apply bg-white border-red-200;
   }
   
   .tab-pending-bg {
@@ -271,6 +271,6 @@
   }
   
   .tab-pending-light {
-    @apply bg-orange-50 border-orange-200;
+    @apply bg-white border-orange-200;
   }
 }
