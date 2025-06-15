@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { toast } from '@/hooks/use-toast';
@@ -46,7 +45,8 @@ export const useClientValidation = () => {
     clientName: string, 
     day?: string,
     onNegatedClient?: () => void,
-    onExistingOrder?: (order: any) => void
+    onExistingOrder?: (order: any) => void,
+    options?: { backPath?: string }
   ) => {
     const validation = await validateClientForOrder(clientId);
     
@@ -74,7 +74,8 @@ export const useClientValidation = () => {
       state: {
         clientName,
         clientId,
-        day
+        day,
+        backPath: options?.backPath
       }
     });
   };
