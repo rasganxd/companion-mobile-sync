@@ -5,10 +5,9 @@ import Header from '@/components/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import AppButton from '@/components/AppButton';
-import { ArrowLeft, Send, Check } from 'lucide-react';
+import { ArrowLeft, Send } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { toast } from '@/components/ui/use-toast';
 
@@ -17,7 +16,6 @@ const MessagePage = () => {
   const location = useLocation();
   const { clientId, clientName } = location.state || { clientId: null, clientName: 'Cliente' };
   
-  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -36,15 +34,6 @@ const MessagePage = () => {
   };
 
   const handleSend = async () => {
-    if (!subject.trim()) {
-      toast({
-        title: "Erro",
-        description: "Por favor, informe o assunto da mensagem",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     if (!message.trim()) {
       toast({
         title: "Erro",
@@ -65,7 +54,6 @@ const MessagePage = () => {
         'pending', 
         JSON.stringify({
           clientId,
-          subject,
           message,
           date: new Date().toISOString()
         })
@@ -109,23 +97,13 @@ const MessagePage = () => {
           <CardContent className="p-4">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="subject">Assunto:</Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Informe o assunto"
-                />
-              </div>
-              
-              <div className="space-y-2">
                 <Label htmlFor="message">Mensagem:</Label>
                 <Textarea
                   id="message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Digite sua mensagem aqui..."
-                  rows={8}
+                  rows={10}
                 />
               </div>
             </div>
@@ -147,7 +125,7 @@ const MessagePage = () => {
         <AppButton 
           variant="blue" 
           onClick={handleSend}
-          disabled={isLoading || !subject.trim() || !message.trim()}
+          disabled={isLoading || !message.trim()}
           className="flex items-center justify-center"
         >
           <Send size={16} className="mr-2" />
