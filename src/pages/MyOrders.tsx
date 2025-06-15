@@ -29,7 +29,7 @@ interface GroupedOrders {
 }
 
 const MyOrders = () => {
-  const { navigateTo } = useAppNavigation();
+  const { navigateTo, navigateToViewOrderDetails } = useAppNavigation();
   const { isOpen, options, confirm, handleConfirm, handleCancel } = useConfirm();
   
   const [orders, setOrders] = useState<LocalOrder[]>([]);
@@ -383,7 +383,7 @@ const MyOrders = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => navigateTo(`/order-details/${order.id}`)}
+                            onClick={() => navigateToViewOrderDetails(order.id)}
                             className="text-xs px-2 py-1 h-auto"
                           >
                             <Eye size={12} className="mr-1" />
