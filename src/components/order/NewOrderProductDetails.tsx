@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,9 +87,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
   if (!currentProduct) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
-        <div className="text-gray-400 mb-1 text-xl">📦</div>
-        <p className="text-gray-500 text-sm">Nenhum produto selecionado</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+        <div className="text-gray-400 mb-2 text-2xl">📦</div>
+        <p className="text-gray-500">Nenhum produto selecionado</p>
       </div>
     );
   }
@@ -155,10 +154,10 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   });
 
   return (
-    <div className="space-y-3 mt-4">
+    <div className="space-y-4 mt-6">
       {/* Informações do Produto */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
-        <div className="flex items-center gap-2 mb-1">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 py-[12px]">
+        <div className="flex items-center gap-2 mb-2">
           {isEditingCode ? (
             <Input
               ref={inputRef}
@@ -167,7 +166,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               onChange={(e) => setTempCode(e.target.value)}
               onKeyDown={handleCodeKeyDown}
               onBlur={handleCodeCancel}
-              className="w-16 h-6 text-xs font-bold bg-white border-blue-300"
+              className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
               placeholder="Código"
             />
           ) : (
@@ -175,7 +174,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               variant="outline"
               size="sm"
               onClick={handleCodeClick}
-              className="h-6 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900"
+              className="h-7 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900"
             >
               {currentProduct.code}
             </Button>
@@ -191,10 +190,10 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
 
       {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
       {hasDiscountRestriction() && (
-        <div className={`border rounded-lg p-2 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle size={14} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
-            <span className="text-xs font-medium">
+        <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
+            <span className="text-sm font-medium">
               {isDiscountExceeded ? 'DESCONTO EXCEDIDO!' : 'Controle de Desconto'}
             </span>
           </div>
@@ -214,7 +213,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
             </div>
             {isDiscountExceeded && (
-              <div className="mt-1 p-1 bg-red-100 border border-red-300 rounded text-red-700 text-center">
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-center">
                 <strong>Preço abaixo do permitido!</strong>
               </div>
             )}
@@ -223,7 +222,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       )}
 
       {/* Formulário de Quantidade e Preço */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
           <Input
@@ -232,7 +231,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             onChange={(e) => onQuantityChange(Number(e.target.value))}
             min="1"
             step="1"
-            className="text-center h-9 text-sm"
+            className="text-center h-10"
           />
         </div>
 
@@ -243,7 +242,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
             disabled={!hasMultipleUnits}
           >
-            <SelectTrigger className="h-9">
+            <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -266,16 +265,16 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
             onChange={handlePriceChange}
             onFocus={priceMask.handleFocus}
             onBlur={priceMask.handleBlur}
-            className={`text-center h-9 text-sm ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
+            className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
             placeholder="R$ 0,00"
           />
         </div>
       </div>
 
       {/* Total do Item */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-2">
+      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
         <div className="flex justify-between items-center">
-          <span className="text-xs font-medium text-green-700">Total do Item:</span>
+          <span className="text-sm font-medium text-green-700">Total do Item:</span>
           <span className="text-green-600 text-sm font-medium">
             {formatPrice(quantity * unitPrice)}
           </span>
@@ -286,9 +285,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       <Button
         onClick={onAddProduct}
         disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
-        className={`w-full h-10 text-sm ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}
+        className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}
       >
-        <Plus size={16} className="mr-2" />
+        <Plus size={18} className="mr-2" />
         {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
       </Button>
     </div>

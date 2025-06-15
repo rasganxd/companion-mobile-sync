@@ -99,7 +99,7 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
 
   if (loading) {
     return (
-      <div className="text-center text-gray-500 py-12">
+      <div className="text-center text-gray-500 py-8">
         <div className="text-lg">Carregando clientes...</div>
         <div className="text-sm mt-2">Buscando clientes para {day}</div>
       </div>
@@ -108,9 +108,9 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
 
   if (clients.length > 0 && salesRep) {
     return (
-      <div className="space-y-5">
-        {/* Search bar com visual melhorado */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
+      <div className="space-y-4">
+        {/* Search bar */}
+        <div className="bg-white rounded-lg shadow p-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -118,7 +118,7 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
               placeholder="Buscar por nome, empresa, telefone, endereço..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue focus:border-transparent transition-all duration-200"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-app-blue focus:border-transparent"
             />
           </div>
         </div>
@@ -134,31 +134,30 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
                 onToggleView={toggleViewMode}
               />
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-4">
                 {/* Botão para alternar para modo paginado */}
                 <div className="flex justify-end">
-                  <AppButton variant="gray" onClick={toggleViewMode} className="flex items-center gap-2 shadow-md">
+                  <AppButton variant="gray" onClick={toggleViewMode} className="flex items-center gap-2">
                     <User size={16} />
                     <span className="text-sm">Ver Páginas</span>
                   </AppButton>
                 </div>
                 
-                <div className="space-y-4">
-                  {filteredClients.map((client, index) => (
-                    <div key={client.id} className="animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                      <ClientCard
-                        client={client}
-                        onSelect={onClientSelect}
-                        onViewDetails={handleViewDetails}
-                      />
-                    </div>
+                <div className="space-y-3">
+                  {filteredClients.map(client => (
+                    <ClientCard
+                      key={client.id}
+                      client={client}
+                      onSelect={onClientSelect}
+                      onViewDetails={handleViewDetails}
+                    />
                   ))}
                 </div>
               </div>
             )}
           </>
         ) : (
-          <div className="text-center text-gray-500 py-12">
+          <div className="text-center text-gray-500 py-8">
             <div className="text-lg mb-2">Nenhum cliente encontrado</div>
             <div className="text-sm">
               Nenhum cliente corresponde à busca "{searchTerm}"
@@ -170,7 +169,7 @@ const ClientsListContent: React.FC<ClientsListContentProps> = ({
   }
 
   return (
-    <div className="text-center text-gray-500 py-12">
+    <div className="text-center text-gray-500 py-8">
       <div className="text-lg mb-2">Nenhum cliente registrado</div>
       <div className="text-sm">
         Não há clientes cadastrados para {day} - {salesRep?.name || 'vendedor'}

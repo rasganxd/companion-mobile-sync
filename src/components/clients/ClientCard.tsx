@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { User, Phone, MapPin, Eye, Store, ArrowRight, Clock } from 'lucide-react';
+import { User, Phone, MapPin, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
 
 interface Client {
@@ -36,22 +36,19 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
     switch (client.status) {
       case 'positivado':
         return {
-          color: 'bg-green-100 text-green-800 border-green-200',
-          text: `Positivado${localInfo}${transmittedInfo}`,
-          icon: null
+          color: 'bg-green-100 text-green-800',
+          text: `Positivado${localInfo}${transmittedInfo}`
         };
       case 'negativado':
         return {
-          color: 'bg-red-100 text-red-800 border-red-200',
-          text: `Negativado${localInfo}${transmittedInfo}`,
-          icon: null
+          color: 'bg-red-100 text-red-800',
+          text: `Negativado${localInfo}${transmittedInfo}`
         };
       case 'pendente':
       default:
         return {
-          color: (client.hasLocalOrders || client.hasTransmittedOrders) ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200',
-          text: `Pendente${localInfo}${transmittedInfo}`,
-          icon: <Clock className="h-3 w-3" />
+          color: (client.hasLocalOrders || client.hasTransmittedOrders) ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
+          text: `Pendente${localInfo}${transmittedInfo}`
         };
     }
   };
@@ -66,17 +63,17 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
   const statusInfo = getStatusInfo(client);
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-200 p-5 hover:shadow-lg transition-all duration-300 hover:border-gray-300">
-      <div className="flex items-start gap-4">
-        <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-3 rounded-full flex-shrink-0 shadow-sm">
-          <Store className="h-6 w-6 text-app-blue" />
+    <div className="bg-white rounded-lg shadow p-4">
+      <div className="flex items-start gap-3">
+        <div className="bg-blue-100 p-2 rounded-full flex-shrink-0">
+          <User className="h-5 w-5 text-app-blue" />
         </div>
         
         <div className="flex-1 min-w-0">
-          {/* Header com nome destacado e status */}
-          <div className="flex justify-between items-start mb-3">
+          {/* Header with name and status */}
+          <div className="flex justify-between items-start mb-2">
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-gray-900 truncate mb-1">
+              <h3 className="font-semibold text-gray-900 truncate">
                 {client.company_name || client.name}
               </h3>
               {client.company_name && client.name && (
@@ -85,36 +82,35 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
                 </p>
               )}
             </div>
-            <div className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border ml-3 flex-shrink-0 ${statusInfo.color}`}>
-              {statusInfo.icon}
-              <span>{statusInfo.text}</span>
-            </div>
+            <span className={`text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0 ${statusInfo.color}`}>
+              {statusInfo.text}
+            </span>
           </div>
 
-          {/* Code e informações financeiras */}
-          <div className="flex items-center gap-4 mb-4">
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+          {/* Code and financial info */}
+          <div className="flex items-center gap-4 mb-2">
+            <span className="text-xs text-gray-500">
               Código: {client.code || 'N/A'}
             </span>
             {(client.status === 'positivado' && client.orderTotal && client.orderTotal > 0) && (
-              <span className="text-sm text-green-600 font-semibold">
+              <span className="text-xs text-green-600 font-medium">
                 {formatCurrency(client.orderTotal)}
               </span>
             )}
           </div>
 
-          {/* Lista de contato e endereço com ícones alinhados */}
-          <div className="space-y-3 mb-4">
+          {/* Contact and address */}
+          <div className="space-y-1 mb-3">
             {client.phone && (
-              <div className="flex items-center gap-3 text-sm text-gray-700">
-                <Phone className="h-4 w-4 text-gray-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Phone className="h-3 w-3" />
                 <span className="truncate">{client.phone}</span>
               </div>
             )}
             
             {(client.address || client.city || client.state) && (
-              <div className="flex items-start gap-3 text-sm text-gray-700">
-                <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <div className="flex items-start gap-2 text-sm text-gray-600">
+                <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   {client.address && (
                     <p className="truncate">{client.address}</p>
@@ -131,20 +127,19 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
             )}
           </div>
 
-          {/* Botões de ação */}
-          <div className="flex gap-3">
+          {/* Action buttons */}
+          <div className="flex gap-2">
             <AppButton 
               variant="blue"
               onClick={() => onSelect(client)}
-              className="flex-1 text-sm py-3 bg-gradient-to-r from-app-blue to-app-blue-dark hover:from-app-blue-dark hover:to-app-blue shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
+              className="flex-1 text-sm py-2"
             >
-              <span>Iniciar Atividades</span>
-              <ArrowRight className="h-4 w-4" />
+              Iniciar Atividades
             </AppButton>
             <AppButton 
               variant="gray"
               onClick={() => onViewDetails(client)}
-              className="px-4 py-3 hover:bg-gray-200 transition-colors duration-200"
+              className="px-3 py-2"
             >
               <Eye className="h-4 w-4" />
             </AppButton>
