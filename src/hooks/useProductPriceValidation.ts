@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -26,7 +25,8 @@ interface PriceValidationResult {
   isDiscountExceeded: boolean;
 }
 
-export const useProductPriceValidation = (product: Product | null) => {
+// ✅ MODIFICADO: Hook agora recebe o tipo de unidade selecionado para ser determinístico
+export const useProductPriceValidation = (product: Product | null, selectedUnitType: 'main' | 'sub' = 'main') => {
   const [validationResult, setValidationResult] = useState<PriceValidationResult>({
     isValid: true,
     error: null,
@@ -52,34 +52,28 @@ export const useProductPriceValidation = (product: Product | null) => {
     }
   }, [product]);
 
+  // ✅ MODIFICADO: A lógica de desconto agora usa o `selectedUnitType` para converter o preço da sub-unidade para o preço da unidade principal ANTES de calcular o desconto. Isso remove a "adivinhação" anterior.
   const calculateDiscountInfo = (inputPrice: number) => {
     if (!product) {
       console.log('❌ calculateDiscountInfo: Produto não definido');
       return { currentDiscount: 0, isExceeded: false };
     }
     
-    const salePrice = product.sale_price || product.price || 0;
+    const salePrice = product.sale_price || product.price || 0; // Preço de venda da unidade PRINCIPAL
     const maxDiscount = product.max_discount_percent || 0;
     
-    // Para cálculo de desconto, sempre usar o preço equivalente da unidade principal
-    // Se o produto tem subunidade, precisamos calcular o equivalente na unidade principal
+    // Converte o preço de entrada para o equivalente da unidade principal para um cálculo de desconto consistente.
     let mainUnitEquivalentPrice = inputPrice;
     
-    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
-      // Se o preço atual é muito menor que o preço de venda, provavelmente estamos na subunidade
-      // Converter para equivalente da unidade principal para cálculo do desconto
-      const subUnitPrice = salePrice / product.subunit_ratio;
-      
-      // Se o preço está próximo do preço da subunidade, estamos na subunidade
-      if (Math.abs(inputPrice - subUnitPrice) < Math.abs(inputPrice - salePrice)) {
-        mainUnitEquivalentPrice = inputPrice * product.subunit_ratio;
-        console.log('🔄 Convertendo preço da subunidade para unidade principal:', {
-          inputPrice,
-          subUnitPrice,
-          ratio: product.subunit_ratio,
-          mainUnitEquivalentPrice
-        });
-      }
+    if (selectedUnitType === 'sub' && product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+      mainUnitEquivalentPrice = inputPrice * product.subunit_ratio;
+      console.log('🔄 Convertendo preço da subunidade para unidade principal para cálculo do desconto:', {
+        productName: product.name,
+        inputPrice,
+        subUnitPrice: inputPrice,
+        ratio: product.subunit_ratio,
+        mainUnitEquivalentPrice
+      });
     }
     
     console.log('🔍 calculateDiscountInfo - Dados de entrada:', {
@@ -232,23 +226,30 @@ export const useProductPriceValidation = (product: Product | null) => {
     return calculateDiscountInfo(inputPrice).currentDiscount;
   };
 
-  const getMinPriceForCurrentUnit = (inputPrice: number): number => {
+  // ✅ MODIFICADO: Esta função agora usa o `selectedUnitType` para determinar o preço mínimo para a unidade CORRETA (principal ou subunidade), sem adivinhações baseadas no preço.
+  const getMinPriceForCurrentUnit = (): number => {
     if (!product || !hasDiscountRestriction()) return 0;
     
     const salePrice = product.sale_price || product.price || 0;
     const maxDiscount = product.max_discount_percent || 0;
     const minMainUnitPrice = salePrice * (1 - maxDiscount / 100);
     
-    // Se o produto tem subunidade e o preço atual sugere que estamos na subunidade
-    if (product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
-      const subUnitPrice = salePrice / product.subunit_ratio;
-      
-      // Se o preço está próximo do preço da subunidade, retornar o mínimo da subunidade
-      if (Math.abs(inputPrice - subUnitPrice) < Math.abs(inputPrice - salePrice)) {
-        return minMainUnitPrice / product.subunit_ratio;
-      }
+    // Se a unidade selecionada for a sub-unidade, calcula o preço mínimo para ela.
+    if (selectedUnitType === 'sub' && product.has_subunit && product.subunit_ratio && product.subunit_ratio > 1) {
+      const minSubUnitPrice = minMainUnitPrice / product.subunit_ratio;
+      console.log('💰 getMinPriceForCurrentUnit (Sub-unidade):', {
+        productName: product.name,
+        minMainUnitPrice,
+        ratio: product.subunit_ratio,
+        minSubUnitPrice
+      });
+      return minSubUnitPrice;
     }
     
+    console.log('💰 getMinPriceForCurrentUnit (Unidade Principal):', {
+        productName: product.name,
+        minMainUnitPrice
+    });
     return minMainUnitPrice;
   };
 

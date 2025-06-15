@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,13 +62,14 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const [tempCode, setTempCode] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   
+  // ✅ MODIFICADO: Passa `selectedUnitType` para o hook de validação para garantir que os cálculos de desconto e preço mínimo sejam feitos com base na unidade correta.
   const {
     hasDiscountRestriction,
     getMaxDiscountPercent,
     getCurrentDiscountPercent,
     getMinPriceForCurrentUnit,
     validationResult
-  } = useProductPriceValidation(currentProduct);
+  } = useProductPriceValidation(currentProduct, selectedUnitType);
 
   // Hook para máscara de preço
   const priceMask = usePriceMask(unitPrice);
@@ -97,7 +99,9 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const salePrice = currentProduct.sale_price || currentProduct.price || 0;
   const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
   const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
-  const minPriceForCurrentUnit = getMinPriceForCurrentUnit(unitPrice);
+
+  // ✅ MODIFICADO: A função `getMinPriceForCurrentUnit` não precisa mais do preço como argumento, pois já sabe a unidade através do `selectedUnitType`.
+  const minPriceForCurrentUnit = getMinPriceForCurrentUnit();
 
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;

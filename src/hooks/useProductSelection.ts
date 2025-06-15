@@ -59,7 +59,9 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     hasMultipleUnits 
   } = useUnitSelection(selectedProduct);
 
-  const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct);
+  // ✅ MODIFICADO: Passa o `selectedUnitType` para o hook de validação de preço.
+  // Isso garante que a validação sempre saiba se o preço é para a unidade principal ou sub-unidade.
+  const { checkPriceAndNotify, hasDiscountRestriction } = useProductPriceValidation(selectedProduct, selectedUnitType);
 
   useEffect(() => {
     loadProducts();
@@ -273,6 +275,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     });
 
     // Esta é a validação que deve impedir a adição se o desconto for excedido
+    // ✅ CORREÇÃO: `checkPriceAndNotify` agora tem a lógica correta para unidades compostas.
     const priceIsValid = checkPriceAndNotify(unitPrice);
     
     if (!priceIsValid) {
