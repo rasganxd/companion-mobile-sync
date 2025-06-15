@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, Building, Phone, MapPin, Hash, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -107,18 +108,8 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
           </div>
         )}
 
-        {/* Informações de contato e endereço - layout otimizado */}
+        {/* Informações de contato e endereço - layout otimizado com endereço primeiro */}
         <div className="space-y-2 mb-4">
-          {client.phone && (
-            <div className="flex items-center gap-2 p-2 bg-white rounded border">
-              <Phone className="h-4 w-4 text-gray-600" />
-              <div>
-                <p className="text-xs text-gray-500">Telefone</p>
-                <p className="font-medium text-xs">{client.phone}</p>
-              </div>
-            </div>
-          )}
-          
           {(client.address || client.city || client.state) && (
             <div className="flex items-start gap-2 p-2 bg-white rounded border">
               <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
@@ -134,6 +125,16 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
                     </p>
                   )}
                 </div>
+              </div>
+            </div>
+          )}
+          
+          {client.phone && (
+            <div className="flex items-center gap-2 p-2 bg-white rounded border">
+              <Phone className="h-4 w-4 text-gray-600" />
+              <div>
+                <p className="text-xs text-gray-500">Telefone</p>
+                <p className="font-medium text-xs">{client.phone}</p>
               </div>
             </div>
           )}
