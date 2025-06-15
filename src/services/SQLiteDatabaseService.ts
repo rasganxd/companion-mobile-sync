@@ -446,6 +446,19 @@ class SQLiteDatabaseService {
     }
   }
 
+  async deleteAllOrders(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Deleting all orders...`);
+      await this.db!.run('DELETE FROM orders');
+      console.log(`✅ All orders deleted from SQLite`);
+    } catch (error) {
+      console.error(`❌ Error deleting all orders:`, error);
+      throw error;
+    }
+  }
+
   async getTransmittedOrders(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
 
@@ -722,7 +735,6 @@ class SQLiteDatabaseService {
     }
   }
 
-  // ✅ IMPLEMENTAÇÃO: Método savePaymentTables que estava faltando
   async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
     if (!this.db) await this.initDatabase();
   
