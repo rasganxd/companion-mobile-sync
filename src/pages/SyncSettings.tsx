@@ -11,12 +11,17 @@ import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-
 const SyncSettings = () => {
   const navigate = useNavigate();
-  const { syncStatus } = useLocalSyncStatus();
-  const { salesRep } = useAuth();
-  const { connected } = useNetworkStatus();
+  const {
+    syncStatus
+  } = useLocalSyncStatus();
+  const {
+    salesRep
+  } = useAuth();
+  const {
+    connected
+  } = useNetworkStatus();
   const {
     isSyncing,
     syncProgress,
@@ -27,45 +32,41 @@ const SyncSettings = () => {
     clearLocalData,
     canSync
   } = useDataSync();
-
   const [isClearingData, setIsClearingData] = useState(false);
-
   React.useEffect(() => {
     loadLastSyncDate();
   }, [loadLastSyncDate]);
-
   const formatLastSync = () => {
     const dateToFormat = lastSyncDate || syncStatus.lastSync;
-    
     if (!dateToFormat) {
       return 'Nunca sincronizado';
     }
-    
     try {
-      return format(dateToFormat, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      return format(dateToFormat, "dd/MM/yyyy 'às' HH:mm", {
+        locale: ptBR
+      });
     } catch (error) {
       return 'Data inválida';
     }
   };
-
   const handleQuickSync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
       return;
     }
-
     if (!canSync) {
       toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
       return;
     }
-
     console.log('🔄 Iniciando sincronização rápida...');
-    
     try {
       const result = await performFullSync(salesRep.id, salesRep.sessionToken);
-      
       if (result.success) {
-        const { clients = 0, products = 0, paymentTables = 0 } = result.syncedData || {};
+        const {
+          clients = 0,
+          products = 0,
+          paymentTables = 0
+        } = result.syncedData || {};
         toast.success(`Sincronização concluída! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
         console.log('✅ Sincronização rápida bem-sucedida');
       } else {
@@ -77,29 +78,27 @@ const SyncSettings = () => {
       toast.error('Erro durante a sincronização. Tente novamente.');
     }
   };
-
   const handleFullResync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
       return;
     }
-
     if (!canSync) {
       toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
       return;
     }
-
     if (!confirm('Isso irá limpar todos os dados locais e recarregar tudo do servidor. Continuar?')) {
       return;
     }
-
     console.log('🔄 Iniciando ressincronização completa...');
-    
     try {
       const result = await forceResync(salesRep.id, salesRep.sessionToken);
-      
       if (result.success) {
-        const { clients = 0, products = 0, paymentTables = 0 } = result.syncedData || {};
+        const {
+          clients = 0,
+          products = 0,
+          paymentTables = 0
+        } = result.syncedData || {};
         toast.success(`Ressincronização completa! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
         console.log('✅ Ressincronização completa bem-sucedida');
       } else {
@@ -111,19 +110,16 @@ const SyncSettings = () => {
       toast.error('Erro durante a ressincronização. Tente novamente.');
     }
   };
-
   const handleClearLocalData = async () => {
     if (!confirm('Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Continuar?')) {
       return;
     }
-
     setIsClearingData(true);
-    
     try {
       await clearLocalData();
       toast.success('Dados locais limpos com sucesso');
       console.log('✅ Dados locais limpos');
-      
+
       // Redirecionar para login após limpar dados
       setTimeout(() => {
         navigate('/login');
@@ -135,23 +131,16 @@ const SyncSettings = () => {
       setIsClearingData(false);
     }
   };
-
   const getProgressPercentage = () => {
     if (!syncProgress) return 0;
     return syncProgress.percentage || 0;
   };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        title="Configurações de Sync" 
-        showBackButton={true} 
-        backgroundColor="blue" 
-      />
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Configurações de Sync" showBackButton={true} backgroundColor="blue" />
       
       <div className="p-4 flex-1">
         {/* Sync Method Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[9px]">
           <h2 className="text-lg font-semibold mb-4">Método de Sincronização</h2>
           
           <div className="space-y-4">
@@ -168,11 +157,7 @@ const SyncSettings = () => {
             </div>
             
             <div className="pl-4 border-l-2 border-green-200">
-              <div className="text-sm text-gray-600 mb-2">
-                ✅ Dados salvos localmente no dispositivo<br/>
-                ✅ Funciona completamente offline<br/>
-                ✅ Pedidos aguardam transmissão para o desktop
-              </div>
+              
             </div>
           </div>
         </div>
@@ -182,11 +167,7 @@ const SyncSettings = () => {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Sincronizar Dados</h2>
             <div className="flex items-center">
-              {connected ? (
-                <Wifi size={20} className="text-green-500 mr-2" />
-              ) : (
-                <WifiOff size={20} className="text-red-500 mr-2" />
-              )}
+              {connected ? <Wifi size={20} className="text-green-500 mr-2" /> : <WifiOff size={20} className="text-red-500 mr-2" />}
               <span className={connected ? "text-green-500" : "text-red-500"}>
                 {connected ? 'Online' : 'Offline'}
               </span>
@@ -194,8 +175,7 @@ const SyncSettings = () => {
           </div>
 
           {/* Progress Bar */}
-          {isSyncing && syncProgress && (
-            <div className="mb-4">
+          {isSyncing && syncProgress && <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">{syncProgress.stage}</span>
                 <span className="text-sm text-gray-500">
@@ -203,53 +183,29 @@ const SyncSettings = () => {
                 </span>
               </div>
               <Progress value={getProgressPercentage()} className="h-2" />
-            </div>
-          )}
+            </div>}
 
           <div className="space-y-3">
-            <Button
-              onClick={handleQuickSync}
-              disabled={isSyncing || !canSync || !salesRep}
-              className="w-full"
-              variant="default"
-            >
-              {isSyncing ? (
-                <>
+            <Button onClick={handleQuickSync} disabled={isSyncing || !canSync || !salesRep} className="w-full" variant="default">
+              {isSyncing ? <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Sincronizando...
-                </>
-              ) : (
-                <>
+                </> : <>
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Sincronização Rápida
-                </>
-              )}
+                </>}
             </Button>
 
-            <Button
-              onClick={handleFullResync}
-              disabled={isSyncing || !canSync || !salesRep}
-              className="w-full"
-              variant="outline"
-            >
+            <Button onClick={handleFullResync} disabled={isSyncing || !canSync || !salesRep} className="w-full" variant="outline">
               <RefreshCw className="w-4 h-4 mr-2" />
               Ressincronização Completa
             </Button>
 
-            <Button
-              onClick={handleClearLocalData}
-              disabled={isSyncing || isClearingData}
-              className="w-full"
-              variant="destructive"
-            >
-              {isClearingData ? (
-                <>
+            <Button onClick={handleClearLocalData} disabled={isSyncing || isClearingData} className="w-full" variant="destructive">
+              {isClearingData ? <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Limpando...
-                </>
-              ) : (
-                'Limpar Dados Locais'
-              )}
+                </> : 'Limpar Dados Locais'}
             </Button>
           </div>
 
@@ -261,7 +217,7 @@ const SyncSettings = () => {
         </div>
 
         {/* Status Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[12px]">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Status do Sistema</h2>
             <div className="flex items-center">
@@ -289,41 +245,12 @@ const SyncSettings = () => {
             </div>
           </div>
           
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-            <div className="flex items-center">
-              <Clock size={20} className="text-blue-500 mr-2" />
-              <span className="text-blue-700 text-sm">
-                Sistema funcionando em modo local - dados salvos no dispositivo
-              </span>
-            </div>
-          </div>
+          
         </div>
         
         {/* Info Card */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="text-lg font-semibold mb-4">Informações do Sistema</h2>
-          
-          <div className="space-y-3">
-            <div className="text-sm text-gray-600">
-              <strong>Configuração Atual:</strong> Sistema Local (Offline-First)
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              <strong>Armazenamento:</strong> SQLite Local
-            </div>
-            
-            <div className="text-sm text-gray-600">
-              <strong>Transmissão:</strong> Via sincronização com desktop
-            </div>
-
-            <div className="text-sm text-gray-600">
-              <strong>Conectividade:</strong> {connected ? 'Conectado' : 'Desconectado'}
-            </div>
-          </div>
-        </div>
+        
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default SyncSettings;
