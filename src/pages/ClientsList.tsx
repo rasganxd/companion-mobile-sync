@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -18,6 +19,7 @@ interface Client {
   active: boolean;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   visit_days?: string[];
