@@ -324,6 +324,22 @@ class WebDatabaseService {
       console.log(`✅ Order with ID ${orderId} deleted`);
     } catch (error) {
       console.error(`❌ Error deleting order with ID ${orderId}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteAllOrders(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`🌐 Deleting all orders...`);
+      const tx = this.db!.transaction('orders', 'readwrite');
+      await tx.objectStore('orders').clear();
+      await tx.done;
+      console.log(`✅ All orders deleted`);
+    } catch (error) {
+      console.error(`❌ Error deleting all orders:`, error);
+      throw error;
     }
   }
 

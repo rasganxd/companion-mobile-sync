@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, RefreshCw, Send, Users } from 'lucide-react';
 import Header from '@/components/Header';
@@ -150,6 +151,32 @@ const MyOrders = () => {
     }
   };
 
+  const deleteAllOrders = async () => {
+    const confirmed = await confirm({
+      title: 'Excluir Todos os Pedidos',
+      description: 'Tem certeza que deseja excluir TODOS os pedidos? Esta ação não pode ser desfeita e removerá todos os pedidos, incluindo os já transmitidos.',
+      confirmText: 'Excluir Todos',
+      cancelText: 'Cancelar'
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const db = getDatabaseAdapter();
+      await db.deleteAllOrders();
+      toast.success('Todos os pedidos foram excluídos com sucesso.');
+      await loadAllOrders(); // Recarregar a lista
+    } catch (error) {
+      console.error('Error deleting all orders:', error);
+      toast.error('Ocorreu um erro ao excluir os pedidos.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const editOrder = (order: LocalOrder) => {
     if (order.sync_status === 'transmitted') {
       toast.warning('Pedidos transmitidos não podem ser editados. Crie um novo pedido para este cliente.');
@@ -294,6 +321,16 @@ const MyOrders = () => {
           <Button onClick={loadAllOrders} variant="outline" size="sm" className="text-xs px-3 py-2">
             <RefreshCw size={14} className="mr-1" />
             Atualizar
+          </Button>
+          <Button
+            onClick={deleteAllOrders}
+            variant="destructive"
+            size="sm"
+            disabled={orders.length === 0 || isLoading}
+            className="text-xs px-3 py-2"
+          >
+            <Trash2 size={14} className="mr-1" />
+            Excluir Todos
           </Button>
         </div>
 

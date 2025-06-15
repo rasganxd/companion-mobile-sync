@@ -23,6 +23,7 @@ interface DatabaseAdapter {
   // New methods for improved order management
   getClientOrders(clientId: string): Promise<any[]>;
   deleteOrder(orderId: string): Promise<void>;
+  deleteAllOrders(): Promise<void>;
   getTransmittedOrders(): Promise<any[]>;
   getAllOrders(): Promise<any[]>;
   // New method for mobile orders
