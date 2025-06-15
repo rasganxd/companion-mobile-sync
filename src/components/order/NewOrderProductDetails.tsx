@@ -83,6 +83,22 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
+  const formatPriceForDisplay = (value: number): string => {
+    return value.toFixed(2).replace('.', ',');
+  };
+
+  const parsePriceFromInput = (value: string): number => {
+    const cleanValue = value.replace(',', '.');
+    const parsed = parseFloat(cleanValue);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const numericValue = parsePriceFromInput(inputValue);
+    onUnitPriceChange(numericValue);
+  };
+
   const handleCodeClick = () => {
     setTempCode(currentProduct.code.toString());
     setIsEditingCode(true);
@@ -193,7 +209,13 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           <Label className="text-xs font-medium text-gray-700 mb-1 block">
             Preço
           </Label>
-          <Input type="number" value={unitPrice || ''} onChange={e => onUnitPriceChange(Number(e.target.value))} min="0" step="0.01" className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`} />
+          <Input 
+            type="text" 
+            value={formatPriceForDisplay(unitPrice)} 
+            onChange={handlePriceChange}
+            className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
+            placeholder="0,00"
+          />
         </div>
       </div>
 

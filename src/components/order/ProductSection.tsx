@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -46,6 +45,22 @@ const ProductSection: React.FC<ProductSectionProps> = ({
     onUnitPriceChange(product.price);
     setShowProductSearch(false);
     setProductSearchTerm('');
+  };
+
+  const formatPriceForDisplay = (value: number): string => {
+    return value.toFixed(2).replace('.', ',');
+  };
+
+  const parsePriceFromInput = (value: string): number => {
+    const cleanValue = value.replace(',', '.');
+    const parsed = parseFloat(cleanValue);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const numericValue = parsePriceFromInput(inputValue);
+    onUnitPriceChange(numericValue);
   };
 
   const filteredProducts = products.filter(product =>
@@ -111,12 +126,11 @@ const ProductSection: React.FC<ProductSectionProps> = ({
               <div>
                 <Label className="text-xs text-gray-600 mb-1 block">Preço Unit.</Label>
                 <Input
-                  type="number"
-                  value={unitPrice}
-                  onChange={(e) => onUnitPriceChange(Number(e.target.value))}
-                  min="0"
-                  step="0.01"
+                  type="text"
+                  value={formatPriceForDisplay(unitPrice)}
+                  onChange={handlePriceChange}
                   className="text-center"
+                  placeholder="0,00"
                 />
               </div>
             </div>
