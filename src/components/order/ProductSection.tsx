@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Package, Plus } from 'lucide-react';
+import { usePriceMask } from '@/hooks/usePriceMask';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 
 interface Product {
@@ -40,6 +42,14 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
 
+  // Hook para máscara de preço
+  const priceMask = usePriceMask(unitPrice);
+
+  // Sincronizar o valor da máscara quando unitPrice mudar externamente
+  useEffect(() => {
+    priceMask.setValue(unitPrice);
+  }, [unitPrice, priceMask]);
+
   const handleSelectProduct = (product: Product) => {
     onSelectProduct(product);
     onUnitPriceChange(product.price);
@@ -47,20 +57,9 @@ const ProductSection: React.FC<ProductSectionProps> = ({
     setProductSearchTerm('');
   };
 
-  const formatPriceForDisplay = (value: number): string => {
-    return value.toFixed(2).replace('.', ',');
-  };
-
-  const parsePriceFromInput = (value: string): number => {
-    const cleanValue = value.replace(',', '.');
-    const parsed = parseFloat(cleanValue);
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const numericValue = parsePriceFromInput(inputValue);
-    onUnitPriceChange(numericValue);
+    const newValue = priceMask.handleChange(e.target.value);
+    onUnitPriceChange(newValue);
   };
 
   const filteredProducts = products.filter(product =>
@@ -127,10 +126,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                 <Label className="text-xs text-gray-600 mb-1 block">Preço Unit.</Label>
                 <Input
                   type="text"
-                  value={formatPriceForDisplay(unitPrice)}
+                  value={priceMask.maskedValue}
                   onChange={handlePriceChange}
+                  onFocus={priceMask.handleFocus}
+                  onBlur={priceMask.handleBlur}
                   className="text-center"
-                  placeholder="0,00"
+                  placeholder="R$ 0,00"
                 />
               </div>
             </div>

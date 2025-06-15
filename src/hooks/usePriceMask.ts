@@ -15,47 +15,39 @@ export const usePriceMask = (initialValue: number = 0) => {
   const [inputValue, setInputValue] = useState(() => formatPrice(initialValue));
   const [isTyping, setIsTyping] = useState(false);
 
+  const formatWhileTyping = (value: string): string => {
+    // Remove tudo exceto números
+    let numbers = value.replace(/\D/g, '');
+    
+    // Se não tem números, retorna formato vazio
+    if (!numbers) return 'R$ 0,00';
+    
+    // Converte para número considerando os últimos 2 dígitos como centavos
+    let numValue = parseInt(numbers) / 100;
+    
+    // Formata com 2 casas decimais e vírgula
+    return `R$ ${numValue.toFixed(2).replace('.', ',')}`;
+  };
+
   const handleChange = useCallback((value: string) => {
     setIsTyping(true);
     
-    // Se o usuário está apagando tudo, permite valor vazio
-    if (value === '' || value === 'R$ ') {
-      setInputValue('R$ ');
-      return 0;
-    }
-
-    // Remove caracteres não numéricos exceto vírgula e ponto
-    let cleanValue = value.replace(/[^0-9,\.]/g, '');
+    // Aplica formatação automática durante a digitação
+    const formattedValue = formatWhileTyping(value);
+    setInputValue(formattedValue);
     
-    // Se não tem números, retorna 0
-    if (!/\d/.test(cleanValue)) {
-      setInputValue('R$ ');
-      return 0;
-    }
-
-    // Substitui vírgula por ponto para cálculos
-    const normalizedValue = cleanValue.replace(',', '.');
-    const numericValue = parseFloat(normalizedValue);
-    
-    if (!isNaN(numericValue) && numericValue >= 0) {
-      // Durante a digitação, mantém o formato mais simples
-      if (cleanValue.includes(',') || cleanValue.includes('.')) {
-        setInputValue(`R$ ${cleanValue}`);
-      } else {
-        setInputValue(`R$ ${cleanValue}`);
-      }
-      return numericValue;
-    }
-    
-    // Se inválido, mantém o valor anterior
-    return parsePrice(inputValue);
-  }, [inputValue]);
+    // Retorna o valor numérico para o componente pai
+    return parsePrice(formattedValue);
+  }, []);
 
   const handleBlur = useCallback(() => {
     setIsTyping(false);
-    const numericValue = parsePrice(inputValue);
-    setInputValue(formatPrice(numericValue));
-  }, [inputValue]);
+    // Já está formatado, não precisa reformatar
+  }, []);
+
+  const handleFocus = useCallback(() => {
+    setIsTyping(true);
+  }, []);
 
   const setValue = useCallback((value: number) => {
     setIsTyping(false);
@@ -70,6 +62,7 @@ export const usePriceMask = (initialValue: number = 0) => {
     maskedValue: inputValue,
     handleChange,
     handleBlur,
+    handleFocus,
     setValue,
     getValue,
     formatPrice,

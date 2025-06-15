@@ -5,7 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
+import { usePriceMask } from '@/hooks/usePriceMask';
 import { toast } from 'sonner';
+
 interface Product {
   id: string;
   name: string;
@@ -19,6 +21,7 @@ interface Product {
   subunit_ratio?: number;
   max_discount_percent?: number;
 }
+
 interface UnitOption {
   value: 'main' | 'sub';
   label: string;
@@ -26,6 +29,7 @@ interface UnitOption {
   price: number;
   displayText: string;
 }
+
 interface NewOrderProductDetailsProps {
   currentProduct: Product | null;
   quantity: number;
@@ -39,6 +43,7 @@ interface NewOrderProductDetailsProps {
   onAddProduct: () => void;
   onProductCodeSearch?: (code: string) => void;
 }
+
 const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   currentProduct,
   quantity,
@@ -55,6 +60,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
   const [isEditingCode, setIsEditingCode] = useState(false);
   const [tempCode, setTempCode] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  
   const {
     hasDiscountRestriction,
     getMaxDiscountPercent,
@@ -63,6 +69,14 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     validationResult
   } = useProductPriceValidation(currentProduct);
 
+  // Hook para máscara de preço
+  const priceMask = usePriceMask(unitPrice);
+
+  // Sincronizar o valor da máscara quando unitPrice mudar externamente
+  useEffect(() => {
+    priceMask.setValue(unitPrice);
+  }, [unitPrice, priceMask]);
+
   // Focus input when entering edit mode
   useEffect(() => {
     if (isEditingCode && inputRef.current) {
@@ -70,39 +84,35 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       inputRef.current.select();
     }
   }, [isEditingCode]);
+
   if (!currentProduct) {
-    return <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
         <div className="text-gray-400 mb-2 text-2xl">📦</div>
         <p className="text-gray-500">Nenhum produto selecionado</p>
-      </div>;
+      </div>
+    );
   }
+
   const salePrice = currentProduct.sale_price || currentProduct.price || 0;
   const currentDiscountPercent = getCurrentDiscountPercent(unitPrice);
   const isDiscountExceeded = hasDiscountRestriction() && currentDiscountPercent > getMaxDiscountPercent();
   const minPriceForCurrentUnit = getMinPriceForCurrentUnit(unitPrice);
+
   const formatPrice = (value: number): string => {
     return `R$ ${value.toFixed(2).replace('.', ',')}`;
   };
-  const formatPriceForDisplay = (value: number): string => {
-    return value.toFixed(2).replace('.', ',');
-  };
-
-  const parsePriceFromInput = (value: string): number => {
-    const cleanValue = value.replace(',', '.');
-    const parsed = parseFloat(cleanValue);
-    return isNaN(parsed) ? 0 : parsed;
-  };
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const inputValue = e.target.value;
-    const numericValue = parsePriceFromInput(inputValue);
-    onUnitPriceChange(numericValue);
+    const newValue = priceMask.handleChange(e.target.value);
+    onUnitPriceChange(newValue);
   };
 
   const handleCodeClick = () => {
     setTempCode(currentProduct.code.toString());
     setIsEditingCode(true);
   };
+
   const handleCodeSubmit = () => {
     const newCode = tempCode.trim();
     if (newCode && newCode !== currentProduct.code.toString()) {
@@ -115,10 +125,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     setIsEditingCode(false);
     setTempCode('');
   };
+
   const handleCodeCancel = () => {
     setIsEditingCode(false);
     setTempCode('');
   };
+
   const handleCodeKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       e.preventDefault();
@@ -128,6 +140,7 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       handleCodeCancel();
     }
   };
+
   console.log('🔍 NewOrderProductDetails - Renderizando:', {
     productName: currentProduct.name,
     hasDiscountRestriction: hasDiscountRestriction(),
@@ -139,13 +152,33 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     selectedUnitType,
     unitOptions: unitOptions.length
   });
-  return <div className="space-y-4 mt-6">
+
+  return (
+    <div className="space-y-4 mt-6">
       {/* Informações do Produto */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 py-[12px]">
         <div className="flex items-center gap-2 mb-2">
-          {isEditingCode ? <Input ref={inputRef} type="text" value={tempCode} onChange={e => setTempCode(e.target.value)} onKeyDown={handleCodeKeyDown} onBlur={handleCodeCancel} className="w-20 h-7 text-xs font-bold bg-white border-blue-300" placeholder="Código" /> : <Button variant="outline" size="sm" onClick={handleCodeClick} className="h-7 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900">
+          {isEditingCode ? (
+            <Input
+              ref={inputRef}
+              type="text"
+              value={tempCode}
+              onChange={(e) => setTempCode(e.target.value)}
+              onKeyDown={handleCodeKeyDown}
+              onBlur={handleCodeCancel}
+              className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
+              placeholder="Código"
+            />
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCodeClick}
+              className="h-7 px-2 text-xs font-bold bg-blue-100 border-blue-300 hover:bg-blue-200 text-blue-900"
+            >
               {currentProduct.code}
-            </Button>}
+            </Button>
+          )}
           <div className="flex-1">
             <h3 className="font-semibold text-blue-900 text-sm">{currentProduct.name}</h3>
             <p className="text-xs text-blue-700">
@@ -156,7 +189,8 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       </div>
 
       {/* Alerta de Desconto Máximo - SEMPRE VISÍVEL quando há restrição */}
-      {hasDiscountRestriction() && <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
+      {hasDiscountRestriction() && (
+        <div className={`border rounded-lg p-3 ${isDiscountExceeded ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'}`}>
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={16} className={isDiscountExceeded ? 'text-red-600' : 'text-yellow-600'} />
             <span className="text-sm font-medium">
@@ -178,29 +212,45 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
               <span>Preço mínimo para esta unidade:</span>
               <span className="font-bold text-red-600">{formatPrice(minPriceForCurrentUnit)}</span>
             </div>
-            {isDiscountExceeded && <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-center">
+            {isDiscountExceeded && (
+              <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded text-red-700 text-center">
                 <strong>Preço abaixo do permitido!</strong>
-              </div>}
+              </div>
+            )}
           </div>
-        </div>}
+        </div>
+      )}
 
       {/* Formulário de Quantidade e Preço */}
       <div className="grid grid-cols-3 gap-3">
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Quantidade</Label>
-          <Input type="number" value={quantity || ''} onChange={e => onQuantityChange(Number(e.target.value))} min="1" step="1" className="text-center h-10" />
+          <Input
+            type="number"
+            value={quantity || ''}
+            onChange={(e) => onQuantityChange(Number(e.target.value))}
+            min="1"
+            step="1"
+            className="text-center h-10"
+          />
         </div>
 
         <div>
           <Label className="text-xs font-medium text-gray-700 mb-1 block">Unidade</Label>
-          <Select value={selectedUnitType} onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)} disabled={!hasMultipleUnits}>
+          <Select
+            value={selectedUnitType}
+            onValueChange={(value: 'main' | 'sub') => onUnitTypeChange(value)}
+            disabled={!hasMultipleUnits}
+          >
             <SelectTrigger className="h-10">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {unitOptions.map(option => <SelectItem key={option.value} value={option.value}>
+              {unitOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
                   {option.displayText}
-                </SelectItem>)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -211,10 +261,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
           </Label>
           <Input 
             type="text" 
-            value={formatPriceForDisplay(unitPrice)} 
+            value={priceMask.maskedValue}
             onChange={handlePriceChange}
+            onFocus={priceMask.handleFocus}
+            onBlur={priceMask.handleBlur}
             className={`text-center h-10 ${isDiscountExceeded ? 'border-red-500 bg-red-50' : ''}`}
-            placeholder="0,00"
+            placeholder="R$ 0,00"
           />
         </div>
       </div>
@@ -230,10 +282,16 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       </div>
 
       {/* Botão Adicionar */}
-      <Button onClick={onAddProduct} disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded} className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}>
+      <Button
+        onClick={onAddProduct}
+        disabled={!currentProduct || quantity <= 0 || unitPrice <= 0 || isDiscountExceeded}
+        className={`w-full h-12 ${isDiscountExceeded ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white font-medium`}
+      >
         <Plus size={18} className="mr-2" />
         {isDiscountExceeded ? 'Preço Abaixo do Mínimo' : 'Adicionar ao Pedido'}
       </Button>
-    </div>;
+    </div>
+  );
 };
+
 export default NewOrderProductDetails;
