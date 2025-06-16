@@ -261,14 +261,12 @@ const Reports = () => {
               <CardDescription>Distribuição dos pedidos por status.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer>
+              <ChartContainer config={chartConfig}>
                 <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={reportData.ordersByStatus}>
                     <XAxis dataKey="status" />
                     <YAxis />
-                    <ChartTooltip>
-                      <ChartTooltipContent label="Status" value="count" config={chartConfig} />
-                    </ChartTooltip>
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="count" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
@@ -283,7 +281,7 @@ const Reports = () => {
               <CardDescription>Visualização em pizza dos status dos pedidos.</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer>
+              <ChartContainer config={chartConfig}>
                 <ResponsiveContainer width="100%" height={250}>
                   <PieChart>
                     <Pie
@@ -301,9 +299,7 @@ const Reports = () => {
                         ))
                       }
                     </Pie>
-                    <ChartTooltip>
-                      <ChartTooltipContent label="Status" value="count" config={chartConfig} />
-                    </ChartTooltip>
+                    <ChartTooltip content={<ChartTooltipContent />} />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
