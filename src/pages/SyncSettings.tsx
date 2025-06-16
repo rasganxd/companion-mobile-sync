@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff, Bug } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
@@ -34,9 +34,11 @@ const SyncSettings = () => {
     canSync
   } = useDataSync();
   const [isClearingData, setIsClearingData] = useState(false);
+  
   React.useEffect(() => {
     loadLastSyncDate();
   }, [loadLastSyncDate]);
+  
   const formatLastSync = () => {
     const dateToFormat = lastSyncDate || syncStatus.lastSync;
     if (!dateToFormat) {
@@ -50,6 +52,7 @@ const SyncSettings = () => {
       return 'Data inválida';
     }
   };
+  
   const handleQuickSync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
@@ -79,6 +82,7 @@ const SyncSettings = () => {
       toast.error('Erro durante a sincronização. Tente novamente.');
     }
   };
+  
   const handleFullResync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
@@ -111,6 +115,7 @@ const SyncSettings = () => {
       toast.error('Erro durante a ressincronização. Tente novamente.');
     }
   };
+  
   const handleClearLocalData = async () => {
     if (!confirm('Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Continuar?')) {
       return;
@@ -132,10 +137,17 @@ const SyncSettings = () => {
       setIsClearingData(false);
     }
   };
+
+  const handleOpenMobileDebug = () => {
+    console.log('🐛 Navegando para Mobile Debug...');
+    navigate('/mobile-debug');
+  };
+  
   const getProgressPercentage = () => {
     if (!syncProgress) return 0;
     return syncProgress.percentage || 0;
   };
+  
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Configurações de Sync" showBackButton={true} backgroundColor="blue" />
       
@@ -245,8 +257,26 @@ const SyncSettings = () => {
               <span className="font-medium">{salesRep?.name || 'Não identificado'}</span>
             </div>
           </div>
+        </div>
+
+        {/* Diagnostic Tools Card */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <h2 className="text-lg font-semibold mb-4">Ferramentas de Diagnóstico</h2>
           
-          
+          <div className="space-y-3">
+            <Button 
+              onClick={handleOpenMobileDebug} 
+              className="w-full" 
+              variant="outline"
+            >
+              <Bug className="w-4 h-4 mr-2" />
+              Mobile Debug
+            </Button>
+          </div>
+
+          <div className="text-sm text-gray-600 mt-3">
+            <p><strong>Mobile Debug:</strong> Informações detalhadas sobre o ambiente móvel e dados locais</p>
+          </div>
         </div>
         
         {/* Info Card */}
