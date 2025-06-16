@@ -1,4 +1,3 @@
-
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -18,6 +17,7 @@ import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
 import ViewOrderDetails from '@/pages/ViewOrderDetails';
+import MobileDebugPage from '@/pages/MobileDebugPage';
 
 // Context Providers
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -131,6 +131,12 @@ function App() {
                 <Route path="/view-order-details/:orderId" element={
                   <ProtectedRoute>
                     <ViewOrderDetails />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/mobile-debug" element={
+                  <ProtectedRoute>
+                    <MobileDebugPage />
                   </ProtectedRoute>
                 } />
                 

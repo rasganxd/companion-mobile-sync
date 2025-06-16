@@ -1,5 +1,4 @@
 
-import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
@@ -31,7 +30,7 @@ interface DatabaseAdapter {
   // ✅ NOVO: Métodos para salvar dados em batch
   saveClients(clientsArray: any[]): Promise<void>;
   saveProducts(productsArray: any[]): Promise<void>;
-  savePaymentTables(paymentTablesArray: any[]): Promise<void>; // ✅ NOVO: Para tabelas de pagamento
+  savePaymentTables(paymentTablesArray: any[]): Promise<void>;
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
   // ✅ NOVOS métodos para validações e controle de status
@@ -44,7 +43,7 @@ interface DatabaseAdapter {
   getActivePendingOrder(clientId: string): Promise<any | null>;
   // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
-  getPaymentTables(): Promise<any[]>; // ✅ NOVO: Para buscar tabelas de pagamento
+  getPaymentTables(): Promise<any[]>;
   // ✅ NOVO: Método para obter pedido por ID
   getOrderById(orderId: string): Promise<any | null>;
   // ✅ NOVO: Método para limpar dados mock
@@ -52,35 +51,29 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
+  // ✅ NOVOS: Métodos para diagnóstico mobile
+  getDatabaseDiagnostics(): Promise<any>;
+  validateDatabaseIntegrity(): Promise<boolean>;
 }
 
-// Esta função determinará qual implementação de banco de dados usar
+// Esta função sempre retorna SQLite para ambiente mobile
 export function getDatabaseAdapter(): DatabaseAdapter {
-  console.log('🔍 Determining database adapter...');
+  console.log('📱 Mobile-only app: Using SQLite database service');
   
-  // Para apps nativos, sempre tentar usar SQLite primeiro
-  const isNative = Capacitor.isNativePlatform();
-  
-  console.log('🔍 Platform detection:', {
-    isNative,
-    platform: Capacitor.getPlatform(),
-    isAndroid: Capacitor.getPlatform() === 'android',
-    isIOS: Capacitor.getPlatform() === 'ios'
+  const platform = Capacitor.getPlatform();
+  console.log('📱 Platform details:', {
+    platform,
+    isNative: Capacitor.isNativePlatform(),
+    timestamp: new Date().toISOString()
   });
   
-  if (isNative) {
-    console.log('📱 Native platform detected, using SQLite database service');
-    try {
-      const sqliteService = SQLiteDatabaseService.getInstance();
-      return sqliteService;
-    } catch (e) {
-      console.error('❌ Failed to initialize SQLite on native platform:', e);
-      console.log('🌐 Falling back to Web database service');
-      return WebDatabaseService.getInstance();
-    }
-  } else {
-    console.log('🌐 Web platform detected, using Web database service');
-    return WebDatabaseService.getInstance();
+  try {
+    const sqliteService = SQLiteDatabaseService.getInstance();
+    console.log('✅ SQLite database service initialized successfully');
+    return sqliteService;
+  } catch (error) {
+    console.error('❌ Critical error initializing SQLite database:', error);
+    throw new Error(`Failed to initialize mobile database: ${error}`);
   }
 }
 
