@@ -1,9 +1,9 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
-import { DatabaseInitializer } from '@/services/database/DatabaseInitializer';
 
 interface SyncProgress {
   stage: string;
@@ -36,18 +36,19 @@ export const useDataSync = () => {
   const handleDatabaseVersionError = useCallback(async () => {
     try {
       console.log('🔄 Handling database version conflict...');
-      await DatabaseInitializer.clearDatabase();
-      console.log('✅ Database cleared, will reinitialize on next sync attempt');
+      const db = getDatabaseAdapter();
+      await db.closeDatabase();
+      await db.initDatabase();
+      console.log('✅ Database reinitialized after version conflict');
     } catch (error) {
-      console.error('❌ Error clearing database:', error);
-      throw new Error('Falha ao limpar banco de dados corrompido');
+      console.error('❌ Error handling database version conflict:', error);
+      throw new Error('Falha ao corrigir conflito de versão do banco de dados');
     }
   }, []);
 
   const clearLocalData = useCallback(async () => {
     try {
       console.log('🗑️ Limpando dados locais para forçar sincronização completa');
-      const db = getDatabaseAdapter();
       
       // Limpar metadata de sincronização
       localStorage.removeItem('last_sync_date');
