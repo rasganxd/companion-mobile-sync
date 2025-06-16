@@ -145,19 +145,20 @@
     padding-right: env(safe-area-inset-right, 0px);
   }
   
-  /* Header specific safe area com fallbacks robustos */
+  /* Header specific safe area - CORRIGIDO com declaração única e robusta */
   .header-safe-top {
-    padding-top: env(safe-area-inset-top, 24px);
-    /* Fallback adicional para iOS */
-    padding-top: max(env(safe-area-inset-top, 24px), 24px);
-    /* Suporte para notch em dispositivos iOS */
-    padding-top: max(env(safe-area-inset-top), constant(safe-area-inset-top), 24px);
+    padding-top: max(env(safe-area-inset-top, 44px), 44px);
   }
 
-  /* ✅ NOVA: Classe específica para containers principais */
+  /* Classe extra-safe para casos extremos */
+  .header-extra-safe {
+    padding-top: max(env(safe-area-inset-top, 60px), 60px);
+  }
+
+  /* Classe específica para containers principais */
   .main-container-safe {
     min-height: 100vh;
-    min-height: 100dvh; /* Suporte para viewports dinâmicos */
+    min-height: 100dvh;
     margin-top: env(safe-area-inset-top, 0px);
   }
 

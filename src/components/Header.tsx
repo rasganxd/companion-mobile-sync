@@ -35,8 +35,8 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <div className={`${getBackgroundClasses()} shadow-md header-safe-top pb-3 px-4`}>
-      <div className="flex items-center justify-between">
+    <div className={`${getBackgroundClasses()} shadow-md header-safe-top pb-4 px-4`}>
+      <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {showBackButton && canGoBack && (
             <button
