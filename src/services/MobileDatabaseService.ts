@@ -788,56 +788,6 @@ class MobileDatabaseService {
     }
   }
 
-  async saveClients(clientsArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
-  
-    try {
-      console.log(`📱 Saving ${clientsArray.length} clients to mobile database...`);
-  
-      for (const client of clientsArray) {
-        await this.db!.run(
-          `INSERT OR REPLACE INTO clients (
-            id, name, company_name, code, active, phone, address, city, state,
-            visit_days, visit_sequence, sales_rep_id, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            client.id, client.name, client.company_name, client.code, client.active ? 1 : 0,
-            client.phone, client.address, client.city, client.state, client.visit_days,
-            client.visit_sequence, client.sales_rep_id, client.status || 'pendente'
-          ]
-        );
-      }
-  
-      console.log('✅ Clients saved to mobile database');
-    } catch (error) {
-      console.error('❌ Error saving clients:', error);
-    }
-  }
-
-  async saveProducts(productsArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
-  
-    try {
-      console.log(`📱 Saving ${productsArray.length} products to mobile database...`);
-  
-      for (const product of productsArray) {
-        await this.db!.run(
-          `INSERT OR REPLACE INTO products (
-            id, name, code, sale_price, cost_price, stock, active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [
-            product.id, product.name, product.code, product.sale_price || 0,
-            product.cost_price || 0, product.stock || 0, product.active ? 1 : 0
-          ]
-        );
-      }
-  
-      console.log('✅ Products saved to mobile database');
-    } catch (error) {
-      console.error('❌ Error saving products:', error);
-    }
-  }
-
   async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
     if (!this.db) await this.initDatabase();
   
@@ -1044,6 +994,24 @@ class MobileDatabaseService {
     } catch (error) {
       console.error('❌ Error getting payment tables:', error);
       return [];
+    }
+  }
+
+  async getOrderById(orderId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Getting order by ID: ${orderId}`);
+      const result = await this.db!.query('SELECT * FROM orders WHERE id = ?', [orderId]);
+      
+      if (result.values && result.values.length > 0) {
+        return result.values[0];
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error getting order by ID:', error);
+      return null;
     }
   }
 }

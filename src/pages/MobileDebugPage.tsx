@@ -12,8 +12,7 @@ const MobileDebugPage = () => {
       <Header 
         title="Mobile Debug" 
         showBackButton 
-        backgroundColor="blue" 
-        onBackClick={goBack}
+        backgroundColor="blue"
       />
       
       <div className="flex-1 p-4 flex items-center justify-center">

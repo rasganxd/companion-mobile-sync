@@ -1,5 +1,5 @@
 
-import SQLiteDatabaseService from './SQLiteDatabaseService';
+import MobileDatabaseService from './MobileDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
@@ -56,9 +56,9 @@ interface DatabaseAdapter {
   validateDatabaseIntegrity(): Promise<boolean>;
 }
 
-// Esta função sempre retorna SQLite para ambiente mobile
+// Esta função sempre retorna o MobileDatabaseService para ambiente mobile
 export function getDatabaseAdapter(): DatabaseAdapter {
-  console.log('📱 Mobile-only app: Using SQLite database service');
+  console.log('📱 Mobile-only app: Using Mobile SQLite database service');
   
   const platform = Capacitor.getPlatform();
   console.log('📱 Platform details:', {
@@ -68,11 +68,11 @@ export function getDatabaseAdapter(): DatabaseAdapter {
   });
   
   try {
-    const sqliteService = SQLiteDatabaseService.getInstance();
-    console.log('✅ SQLite database service initialized successfully');
-    return sqliteService;
+    const mobileService = MobileDatabaseService.getInstance();
+    console.log('✅ Mobile SQLite database service initialized successfully');
+    return mobileService;
   } catch (error) {
-    console.error('❌ Critical error initializing SQLite database:', error);
+    console.error('❌ Critical error initializing Mobile SQLite database:', error);
     throw new Error(`Failed to initialize mobile database: ${error}`);
   }
 }
