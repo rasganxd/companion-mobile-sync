@@ -56,7 +56,12 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
     backgroundColor: '#3B82F6',
-    appendUserAgent: 'SalesTrackMobile'
+    appendUserAgent: 'SalesTrackMobile',
+    // ✅ NOVA configuração para safe areas no iOS
+    preferredContentMode: 'mobile',
+    allowsLinkPreview: false,
+    scrollEnabled: true,
+    overrideUserInterfaceStyle: 'light'
   }
 };
 
