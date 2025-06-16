@@ -316,11 +316,13 @@ class MobileDatabaseService {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               client.id, client.name, client.company_name, client.code, client.active ? 1 : 0,
-              client.phone, client.address, client.city, client.state, client.visit_days,
+              client.phone, client.address, client.city, client.state, 
+              client.visit_days ? JSON.stringify(client.visit_days) : null,
               client.visit_sequence, client.sales_rep_id, client.status || 'pendente'
             ]
           );
           savedCount++;
+          console.log(`📱 Saved client: ${client.name} (${client.id})`);
         } catch (error) {
           console.error('❌ Error saving individual client:', client.id, error);
         }
@@ -363,6 +365,7 @@ class MobileDatabaseService {
             ]
           );
           savedCount++;
+          console.log(`📱 Saved product: ${product.name} (${product.id})`);
         } catch (error) {
           console.error('❌ Error saving individual product:', product.id, error);
         }
@@ -377,6 +380,54 @@ class MobileDatabaseService {
       
     } catch (error) {
       console.error('❌ Error saving products to mobile database:', error);
+      throw error;
+    }
+  }
+
+  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
+    if (!this.db) await this.initDatabase();
+  
+    try {
+      console.log(`📱 Saving ${paymentTablesArray.length} payment tables to mobile database...`);
+      
+      // Clear existing payment tables first
+      await this.db!.run('DELETE FROM payment_tables');
+      console.log('📱 Cleared existing payment tables');
+  
+      let savedCount = 0;
+      for (const paymentTable of paymentTablesArray) {
+        try {
+          await this.db!.run(
+            `INSERT INTO payment_tables (
+              id, name, description, type, payable_to, payment_location, active, installments
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              paymentTable.id, 
+              paymentTable.name, 
+              paymentTable.description || null,
+              paymentTable.type || null,
+              paymentTable.payable_to || null,
+              paymentTable.payment_location || null,
+              paymentTable.active !== false ? 1 : 0,
+              paymentTable.installments ? JSON.stringify(paymentTable.installments) : null
+            ]
+          );
+          savedCount++;
+          console.log(`📱 Saved payment table: ${paymentTable.name} (${paymentTable.id})`);
+        } catch (error) {
+          console.error('❌ Error saving individual payment table:', paymentTable.id, error);
+        }
+      }
+  
+      console.log(`✅ Successfully saved ${savedCount}/${paymentTablesArray.length} payment tables to mobile database`);
+      
+      // Verify save
+      const verifyResult = await this.db!.query('SELECT COUNT(*) as count FROM payment_tables');
+      const actualCount = verifyResult.values?.[0]?.count || 0;
+      console.log(`📊 Verification: ${actualCount} payment tables in database after save`);
+      
+    } catch (error) {
+      console.error('❌ Error saving payment tables:', error);
       throw error;
     }
   }
@@ -788,37 +839,6 @@ class MobileDatabaseService {
     }
   }
 
-  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
-  
-    try {
-      console.log(`📱 Saving ${paymentTablesArray.length} payment tables to mobile database...`);
-  
-      for (const paymentTable of paymentTablesArray) {
-        await this.db!.run(
-          `INSERT OR REPLACE INTO payment_tables (
-            id, name, description, type, payable_to, payment_location, active, installments
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            paymentTable.id, 
-            paymentTable.name, 
-            paymentTable.description || null,
-            paymentTable.type || null,
-            paymentTable.payable_to || null,
-            paymentTable.payment_location || null,
-            paymentTable.active !== false ? 1 : 0,
-            paymentTable.installments ? JSON.stringify(paymentTable.installments) : null
-          ]
-        );
-      }
-  
-      console.log('✅ Payment tables saved to mobile database');
-    } catch (error) {
-      console.error('❌ Error saving payment tables:', error);
-      throw error;
-    }
-  }
-
   async saveClient(client: any): Promise<void> {
     if (!this.db) await this.initDatabase();
   
@@ -831,7 +851,8 @@ class MobileDatabaseService {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           client.id, client.name, client.company_name, client.code, client.active ? 1 : 0,
-          client.phone, client.address, client.city, client.state, client.visit_days,
+          client.phone, client.address, client.city, client.state, 
+          client.visit_days ? JSON.stringify(client.visit_days) : null,
           client.visit_sequence, client.sales_rep_id, client.status || 'pendente'
         ]
       );
