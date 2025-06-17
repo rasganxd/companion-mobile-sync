@@ -1,5 +1,6 @@
 
-import MobileDatabaseService from './MobileDatabaseService';
+import WebDatabaseService from './WebDatabaseService';
+import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
@@ -30,7 +31,7 @@ interface DatabaseAdapter {
   // ✅ NOVO: Métodos para salvar dados em batch
   saveClients(clientsArray: any[]): Promise<void>;
   saveProducts(productsArray: any[]): Promise<void>;
-  savePaymentTables(paymentTablesArray: any[]): Promise<void>;
+  savePaymentTables(paymentTablesArray: any[]): Promise<void>; // ✅ NOVO: Para tabelas de pagamento
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
   // ✅ NOVOS métodos para validações e controle de status
@@ -43,7 +44,7 @@ interface DatabaseAdapter {
   getActivePendingOrder(clientId: string): Promise<any | null>;
   // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
-  getPaymentTables(): Promise<any[]>;
+  getPaymentTables(): Promise<any[]>; // ✅ NOVO: Para buscar tabelas de pagamento
   // ✅ NOVO: Método para obter pedido por ID
   getOrderById(orderId: string): Promise<any | null>;
   // ✅ NOVO: Método para limpar dados mock
@@ -51,36 +52,35 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
-  // ✅ NOVOS: Métodos para diagnóstico mobile
-  getDatabaseDiagnostics(): Promise<any>;
-  validateDatabaseIntegrity(): Promise<boolean>;
 }
 
-// Esta função sempre retorna o MobileDatabaseService com detecção inteligente de ambiente
+// Esta função determinará qual implementação de banco de dados usar
 export function getDatabaseAdapter(): DatabaseAdapter {
-  console.log('📱 Initializing database adapter...');
+  console.log('🔍 Determining database adapter...');
   
-  const platform = Capacitor.getPlatform();
+  // Para apps nativos, sempre tentar usar SQLite primeiro
   const isNative = Capacitor.isNativePlatform();
   
-  console.log('📱 Environment details:', {
-    platform,
+  console.log('🔍 Platform detection:', {
     isNative,
-    userAgent: navigator.userAgent.substring(0, 100),
-    timestamp: new Date().toISOString()
+    platform: Capacitor.getPlatform(),
+    isAndroid: Capacitor.getPlatform() === 'android',
+    isIOS: Capacitor.getPlatform() === 'ios'
   });
   
-  try {
-    const mobileService = MobileDatabaseService.getInstance();
-    console.log('✅ Mobile database service initialized successfully');
-    console.log('🔧 Service will auto-detect and use appropriate storage (SQLite/LocalStorage)');
-    return mobileService;
-  } catch (error) {
-    console.error('❌ Critical error initializing database service:', error);
-    
-    // Even if there's an error, return the service - it will handle fallbacks internally
-    console.log('⚠️ Returning service anyway - fallback mechanisms will handle errors');
-    return MobileDatabaseService.getInstance();
+  if (isNative) {
+    console.log('📱 Native platform detected, using SQLite database service');
+    try {
+      const sqliteService = SQLiteDatabaseService.getInstance();
+      return sqliteService;
+    } catch (e) {
+      console.error('❌ Failed to initialize SQLite on native platform:', e);
+      console.log('🌐 Falling back to Web database service');
+      return WebDatabaseService.getInstance();
+    }
+  } else {
+    console.log('🌐 Web platform detected, using Web database service');
+    return WebDatabaseService.getInstance();
   }
 }
 

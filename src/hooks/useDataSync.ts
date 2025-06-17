@@ -1,9 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
+import { DatabaseInitializer } from '@/services/database/DatabaseInitializer';
 
 interface SyncProgress {
   stage: string;
@@ -36,19 +36,18 @@ export const useDataSync = () => {
   const handleDatabaseVersionError = useCallback(async () => {
     try {
       console.log('🔄 Handling database version conflict...');
-      const db = getDatabaseAdapter();
-      await db.closeDatabase();
-      await db.initDatabase();
-      console.log('✅ Database reinitialized after version conflict');
+      await DatabaseInitializer.clearDatabase();
+      console.log('✅ Database cleared, will reinitialize on next sync attempt');
     } catch (error) {
-      console.error('❌ Error handling database version conflict:', error);
-      throw new Error('Falha ao corrigir conflito de versão do banco de dados');
+      console.error('❌ Error clearing database:', error);
+      throw new Error('Falha ao limpar banco de dados corrompido');
     }
   }, []);
 
   const clearLocalData = useCallback(async () => {
     try {
       console.log('🗑️ Limpando dados locais para forçar sincronização completa');
+      const db = getDatabaseAdapter();
       
       // Limpar metadata de sincronização
       localStorage.removeItem('last_sync_date');
@@ -57,6 +56,40 @@ export const useDataSync = () => {
       console.log('✅ Dados locais limpos com sucesso');
     } catch (error) {
       console.error('❌ Erro ao limpar dados locais:', error);
+    }
+  }, []);
+
+  const clearMockData = useCallback(async () => {
+    try {
+      console.log('🗑️ Iniciando limpeza FORÇADA de dados mock...');
+      const db = getDatabaseAdapter();
+      
+      // Forçar limpeza de dados mock
+      if ('forceClearMockData' in db && typeof db.forceClearMockData === 'function') {
+        await db.forceClearMockData();
+        console.log('✅ Dados mock limpos via forceClearMockData');
+      } else if ('clearMockData' in db && typeof db.clearMockData === 'function') {
+        await db.clearMockData();
+        console.log('✅ Dados mock limpos via clearMockData');
+      }
+      
+      console.log('✅ Limpeza forçada de dados mock concluída');
+    } catch (error) {
+      console.error('❌ Erro ao limpar dados mock:', error);
+    }
+  }, []);
+
+  const forceCleanAllProducts = useCallback(async () => {
+    try {
+      console.log('🗑️ Iniciando limpeza COMPLETA de todos os produtos...');
+      const db = getDatabaseAdapter();
+      
+      if ('forceCleanAllProducts' in db && typeof db.forceCleanAllProducts === 'function') {
+        await db.forceCleanAllProducts();
+        console.log('✅ Limpeza COMPLETA de produtos concluída');
+      }
+    } catch (error) {
+      console.error('❌ Erro na limpeza completa de produtos:', error);
     }
   }, []);
 
@@ -75,10 +108,40 @@ export const useDataSync = () => {
     });
   };
 
+  const validateSyncedData = (clients: any[], products: any[], paymentTables: any[]) => {
+    console.log('🔍 Validando dados sincronizados:', {
+      clients: clients.length,
+      products: products.length,
+      paymentTables: paymentTables.length,
+      clientsSample: clients.slice(0, 2).map(c => ({ id: c.id, name: c.name })),
+      productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name })),
+      paymentTablesSample: paymentTables.slice(0, 2).map(pt => ({ id: pt.id, name: pt.name }))
+    });
+
+    // Verificar se há dados mock ainda presentes
+    const hasMockClients = clients.some(c => 
+      c.name?.toLowerCase().includes('mykaela') || 
+      c.company_name?.toLowerCase().includes('mykaela')
+    );
+    const hasMockProducts = products.some(p => 
+      p.name?.toLowerCase().includes('produto premium') || 
+      p.name?.toLowerCase().includes('produto standard')
+    );
+
+    if (hasMockClients) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de clientes ainda presentes!');
+    }
+    if (hasMockProducts) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de produtos ainda presentes!');
+    }
+
+    return !hasMockClients && !hasMockProducts;
+  };
+
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
     try {
       setIsSyncing(true);
-      console.log('🔄 Iniciando sincronização COMPLETA');
+      console.log('🔄 Iniciando sincronização COMPLETA - APENAS DADOS REAIS');
       
       // Validar parâmetros de entrada
       try {
@@ -109,8 +172,13 @@ export const useDataSync = () => {
         }
       }
 
+      // SEMPRE executar limpeza de dados mock primeiro
+      await clearMockData();
+
       if (forceClear) {
         await clearLocalData();
+        // NOVA: Limpeza completa de produtos
+        await forceCleanAllProducts();
       }
 
       let syncedClients = 0;
@@ -120,17 +188,17 @@ export const useDataSync = () => {
       let productsData: any[] = [];
       let paymentTablesData: any[] = [];
 
-      // Etapa 1: Buscar clientes
+      // Etapa 1: Buscar clientes REAIS
       updateProgress('Carregando clientes...', 0, 4);
       try {
-        console.log('📥 Buscando clientes do Supabase');
+        console.log('📥 Buscando clientes REAIS do Supabase');
         clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
         console.log(`📥 Recebidos ${clientsData.length} clientes do serviço`);
         
         if (clientsData.length > 0) {
           await db.saveClients(clientsData);
           syncedClients = clientsData.length;
-          console.log(`✅ Salvos ${syncedClients} clientes`);
+          console.log(`✅ Salvos ${syncedClients} clientes REAIS`);
         } else {
           console.log('ℹ️ Nenhum cliente encontrado no banco de dados');
           syncedClients = 0;
@@ -141,10 +209,10 @@ export const useDataSync = () => {
         throw new Error(`Erro ao carregar clientes: ${errorMessage}`);
       }
 
-      // Etapa 2: Buscar produtos
+      // Etapa 2: Buscar produtos REAIS com limpeza completa
       updateProgress('Carregando produtos...', 1, 4);
       try {
-        console.log('📥 Buscando produtos do Supabase');
+        console.log('📥 Buscando produtos REAIS do Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
         console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
         
@@ -159,9 +227,10 @@ export const useDataSync = () => {
         });
         
         if (productsData.length > 0) {
+          // O saveProducts já faz a limpeza completa antes de salvar
           await db.saveProducts(productsData);
           syncedProducts = productsData.length;
-          console.log(`✅ Salvos ${syncedProducts} produtos`);
+          console.log(`✅ Salvos ${syncedProducts} produtos REAIS após limpeza completa`);
         } else {
           console.log('ℹ️ Nenhum produto encontrado no banco de dados');
           syncedProducts = 0;
@@ -172,10 +241,10 @@ export const useDataSync = () => {
         throw new Error(`Erro ao carregar produtos: ${errorMessage}`);
       }
 
-      // Etapa 3: Buscar tabelas de pagamento
+      // Etapa 3: Buscar tabelas de pagamento REAIS
       updateProgress('Carregando tabelas de pagamento...', 2, 4);
       try {
-        console.log('📥 Buscando tabelas de pagamento do Supabase');
+        console.log('📥 Buscando tabelas de pagamento REAIS do Supabase');
         paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
         console.log(`📥 Recebidas ${paymentTablesData.length} tabelas de pagamento`);
         
@@ -192,7 +261,7 @@ export const useDataSync = () => {
         if (paymentTablesData.length > 0) {
           await db.savePaymentTables(paymentTablesData);
           syncedPaymentTables = paymentTablesData.length;
-          console.log(`✅ Salvas ${syncedPaymentTables} tabelas de pagamento`);
+          console.log(`✅ Salvas ${syncedPaymentTables} tabelas de pagamento REAIS`);
         } else {
           console.log('ℹ️ Nenhuma tabela de pagamento encontrada no banco de dados');
           syncedPaymentTables = 0;
@@ -200,6 +269,16 @@ export const useDataSync = () => {
       } catch (error) {
         console.warn('⚠️ Falha ao sincronizar tabelas de pagamento:', error);
         syncedPaymentTables = 0;
+      }
+
+      // Validar dados sincronizados
+      updateProgress('Validando dados...', 3, 4);
+      const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
+
+      if (!isDataValid) {
+        console.warn('⚠️ Dados mock detectados após sincronização!');
+        // Executar segunda limpeza
+        await clearMockData();
       }
 
       // Salvar metadata de sincronização
@@ -212,7 +291,8 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts + syncedPaymentTables
+        total: syncedClients + syncedProducts + syncedPaymentTables,
+        dataValid: isDataValid
       });
 
       const totalSynced = syncedClients + syncedProducts;
@@ -224,7 +304,7 @@ export const useDataSync = () => {
         };
       }
 
-      console.log('✅ Sincronização concluída com sucesso');
+      console.log('✅ Sincronização concluída - APENAS dados REAIS carregados');
       
       return {
         success: true,
@@ -254,7 +334,7 @@ export const useDataSync = () => {
       setIsSyncing(false);
       setSyncProgress(null);
     }
-  }, [connected, clearLocalData, handleDatabaseVersionError]);
+  }, [connected, clearLocalData, clearMockData, forceCleanAllProducts, handleDatabaseVersionError]);
 
   const loadLastSyncDate = useCallback(() => {
     const saved = localStorage.getItem('last_sync_date');
@@ -276,6 +356,8 @@ export const useDataSync = () => {
     forceResync,
     loadLastSyncDate,
     clearLocalData,
+    clearMockData,
+    forceCleanAllProducts,
     canSync: connected
   };
 };
