@@ -1,3 +1,4 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
@@ -343,7 +344,13 @@ class MobileDatabaseService {
 
   private async executeRun(sql: string, params: any[] = []): Promise<{ changes?: { changes: number } }> {
     if (this.db) {
-      return await this.db.run(sql, params);
+      const result = await this.db.run(sql, params);
+      // Fix the SQLite result format to match our expected interface
+      return { 
+        changes: { 
+          changes: result.changes?.changes || 0 
+        } 
+      };
     } else if (this.fallback) {
       return await this.fallback.run(sql, params);
     }

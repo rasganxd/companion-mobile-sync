@@ -13,7 +13,7 @@ export const NativeAppInitializer: React.FC<NativeAppInitializerProps> = ({ chil
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const initializeNativeFeatures = async () => {
+    const initializeApp = async () => {
       console.log('🔧 Initializing app features...');
       console.log('📱 Platform info:', {
         platform: Capacitor.getPlatform(),
@@ -116,7 +116,7 @@ export const NativeAppInitializer: React.FC<NativeAppInitializerProps> = ({ chil
       }
     };
 
-    initializeNativeFeatures();
+    initializeApp();
   }, []);
 
   // Mostrar loading apenas para apps nativos ou durante inicialização
