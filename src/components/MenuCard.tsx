@@ -6,56 +6,34 @@ import { useNavigate } from 'react-router-dom';
 interface MenuCardProps {
   icon: React.ReactNode;
   title: string;
-  description: string;
-  color: string;
-  to?: string;
-  route?: string;
+  to: string;
   state?: any;
-  onClick?: () => void;
 }
 
-const MenuCard = ({ icon, title, description, color, to, route, state, onClick }: MenuCardProps) => {
+const MenuCard = ({ icon, title, to, state }: MenuCardProps) => {
   const { navigateTo: contextNavigateTo } = useNavigation();
   const navigate = useNavigate();
 
   const handleClick = () => {
-    if (onClick) {
-      onClick();
-    } else if (state) {
+    if (state) {
       // Se há estado, usar navigate do React Router para passar o state
-      navigate(to || route || '#', { state });
+      navigate(to, { state });
     } else {
       // Caso contrário, usar nosso contexto de navegação
-      contextNavigateTo(to || route || '#');
+      contextNavigateTo(to);
     }
   };
-
-  // Color classes mapping
-  const colorClasses = {
-    blue: 'text-blue-600',
-    green: 'text-green-600',
-    orange: 'text-orange-600',
-    purple: 'text-purple-600',
-    red: 'text-red-600',
-    gray: 'text-gray-600',
-    indigo: 'text-indigo-600'
-  };
-
-  const iconColorClass = colorClasses[color as keyof typeof colorClasses] || 'text-blue-600';
 
   return (
     <div 
       className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col items-center justify-center cursor-pointer hover:shadow-md transition-shadow duration-200 aspect-square min-h-[120px]"
       onClick={handleClick}
     >
-      <div className={`mb-3 ${iconColorClass}`}>
+      <div className="text-blue-600 mb-3">
         {icon}
       </div>
-      <span className="text-sm font-medium text-gray-800 text-center leading-tight mb-1">
+      <span className="text-sm font-medium text-gray-800 text-center leading-tight">
         {title}
-      </span>
-      <span className="text-xs text-gray-500 text-center leading-tight">
-        {description}
       </span>
     </div>
   );

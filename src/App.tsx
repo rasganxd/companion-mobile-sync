@@ -18,9 +18,9 @@ import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
 import ViewOrderDetails from '@/pages/ViewOrderDetails';
+import MobileDebugPage from '@/pages/MobileDebugPage';
 
 // Context Providers
-import { AuthProvider } from '@/contexts/AuthContext';
 import { NavigationProvider } from '@/contexts/NavigationContext';
 
 // Protected Route Component
@@ -37,115 +37,119 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <NavigationProvider>
-            <div className="App">
-              {/* Adicionar o gerenciador do botão voltar para mobile */}
-              <MobileBackButtonManager />
+      <Router>
+        <NavigationProvider>
+          <div className="App">
+            {/* Adicionar o gerenciador do botão voltar para mobile */}
+            <MobileBackButtonManager />
+            
+            <Routes>
+              {/* Login Route - não protegida */}
+              <Route path="/login" element={<Login />} />
               
-              <Routes>
-                {/* Login Route - não protegida */}
-                <Route path="/login" element={<Login />} />
-                
-                {/* Initial Sync Route - protegida mas não precisa verificar sync */}
-                <Route path="/initial-sync" element={
-                  <ProtectedRoute>
-                    <InitialSyncScreen />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Protected Routes */}
-                <Route path="/home" element={
-                  <ProtectedRoute>
-                    <Home />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/rotas" element={
-                  <ProtectedRoute>
-                    <VisitRoutes />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/clients-list" element={
-                  <ProtectedRoute>
-                    <ClientsList />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/client-activities" element={
-                  <ProtectedRoute>
-                    <ClientActivities />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/my-orders" element={
-                  <ProtectedRoute>
-                    <MyOrders />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/new-order" element={
-                  <ProtectedRoute>
-                    <NewOrder />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/negativar-venda" element={
-                  <ProtectedRoute>
-                    <NegativeSale />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/mensagem" element={
-                  <ProtectedRoute>
-                    <MessagePage />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/ultimas-compras" element={
-                  <ProtectedRoute>
-                    <LastPurchases />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/reports" element={
-                  <ProtectedRoute>
-                    <Reports />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/sync-settings" element={
-                  <ProtectedRoute>
-                    <SyncSettings />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/transmit-orders" element={
-                  <ProtectedRoute>
-                    <TransmitOrders />
-                  </ProtectedRoute>
-                } />
-                
-                <Route path="/view-order-details/:orderId" element={
-                  <ProtectedRoute>
-                    <ViewOrderDetails />
-                  </ProtectedRoute>
-                } />
-                
-                {/* Default redirect - vai para HOME, não para login */}
-                <Route path="/" element={<Navigate to="/home" replace />} />
-                
-                {/* Catch all route - vai para HOME, não para login */}
-                <Route path="*" element={<Navigate to="/home" replace />} />
-              </Routes>
+              {/* Initial Sync Route - protegida mas não precisa verificar sync */}
+              <Route path="/initial-sync" element={
+                <ProtectedRoute>
+                  <InitialSyncScreen />
+                </ProtectedRoute>
+              } />
               
-              <Toaster richColors position="top-center" />
-            </div>
-          </NavigationProvider>
-        </Router>
-      </AuthProvider>
+              {/* Protected Routes */}
+              <Route path="/home" element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/rotas" element={
+                <ProtectedRoute>
+                  <VisitRoutes />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/clients-list" element={
+                <ProtectedRoute>
+                  <ClientsList />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/client-activities" element={
+                <ProtectedRoute>
+                  <ClientActivities />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/my-orders" element={
+                <ProtectedRoute>
+                  <MyOrders />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/new-order" element={
+                <ProtectedRoute>
+                  <NewOrder />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/negativar-venda" element={
+                <ProtectedRoute>
+                  <NegativeSale />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/mensagem" element={
+                <ProtectedRoute>
+                  <MessagePage />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/ultimas-compras" element={
+                <ProtectedRoute>
+                  <LastPurchases />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/reports" element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/sync-settings" element={
+                <ProtectedRoute>
+                  <SyncSettings />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/transmit-orders" element={
+                <ProtectedRoute>
+                  <TransmitOrders />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/view-order-details/:orderId" element={
+                <ProtectedRoute>
+                  <ViewOrderDetails />
+                </ProtectedRoute>
+              } />
+              
+              <Route path="/mobile-debug" element={
+                <ProtectedRoute>
+                  <MobileDebugPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* Default redirect - vai para HOME, não para login */}
+              <Route path="/" element={<Navigate to="/home" replace />} />
+              
+              {/* Catch all route - vai para HOME, não para login */}
+              <Route path="*" element={<Navigate to="/home" replace />} />
+            </Routes>
+            
+            <Toaster richColors position="top-center" />
+          </div>
+        </NavigationProvider>
+      </Router>
     </QueryClientProvider>
   );
 }

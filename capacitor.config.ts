@@ -5,30 +5,30 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.b59a35aa537b448a9b7f6ed0f1ddcd77',
   appName: 'SalesTrack Mobile',
   webDir: 'dist',
-  bundledWebRuntime: true, // Bundle runtime for standalone app
+  bundledWebRuntime: false, // Disable for production mobile
   plugins: {
     App: {
       'android:exported': true
     },
     SplashScreen: {
-      launchShowDuration: 3000,
+      launchShowDuration: 2000,
       launchAutoHide: true,
       backgroundColor: '#3B82F6',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
+      showSpinner: true,
       androidSpinnerStyle: 'large',
       iosSpinnerStyle: 'small',
-      spinnerColor: '#999999',
+      spinnerColor: '#FFFFFF',
       splashFullScreen: true,
       splashImmersive: true,
       layoutName: 'launch_screen',
-      useDialog: true,
+      useDialog: false,
     },
     StatusBar: {
       style: 'LIGHT',
       backgroundColor: '#3B82F6',
-      overlaysWebView: true,
+      overlaysWebView: false,
       androidStatusBarBackgroundColor: '#3B82F6'
     },
     Keyboard: {
@@ -41,16 +41,27 @@ const config: CapacitorConfig = {
     },
     Camera: {
       enabled: true
+    },
+    SQLite: {
+      iosDatabaseLocation: 'default',
+      androidDatabaseLocation: 'default'
     }
   },
   android: {
-    allowMixedContent: true,
+    allowMixedContent: false,
     backgroundColor: '#3B82F6',
-    webContentsDebuggingEnabled: false
+    webContentsDebuggingEnabled: true, // Enable for debugging APK issues
+    appendUserAgent: 'SalesTrackMobile'
   },
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#3B82F6'
+    backgroundColor: '#3B82F6',
+    appendUserAgent: 'SalesTrackMobile',
+    // ✅ NOVA configuração para safe areas no iOS
+    preferredContentMode: 'mobile',
+    allowsLinkPreview: false,
+    scrollEnabled: true,
+    overrideUserInterfaceStyle: 'light'
   }
 };
 

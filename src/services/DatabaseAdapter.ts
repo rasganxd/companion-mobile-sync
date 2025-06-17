@@ -1,6 +1,5 @@
 
-import WebDatabaseService from './WebDatabaseService';
-import SQLiteDatabaseService from './SQLiteDatabaseService';
+import MobileDatabaseService from './MobileDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
@@ -31,7 +30,7 @@ interface DatabaseAdapter {
   // ✅ NOVO: Métodos para salvar dados em batch
   saveClients(clientsArray: any[]): Promise<void>;
   saveProducts(productsArray: any[]): Promise<void>;
-  savePaymentTables(paymentTablesArray: any[]): Promise<void>; 
+  savePaymentTables(paymentTablesArray: any[]): Promise<void>;
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
   // ✅ NOVOS métodos para validações e controle de status
@@ -52,69 +51,29 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
-  // ✅ NOVOS: Métodos para limpeza e debug
-  clearAllData(): Promise<void>;
-  getStorageStats(): Promise<{ clients: number; products: number; orders: number; paymentTables: number }>;
-  forceClearCache(): Promise<void>;
+  // ✅ NOVOS: Métodos para diagnóstico mobile
+  getDatabaseDiagnostics(): Promise<any>;
+  validateDatabaseIntegrity(): Promise<boolean>;
 }
 
-// Função para criar um proxy que adiciona métodos faltantes para SQLite
-function createSQLiteProxy(sqliteService: any): DatabaseAdapter {
-  return new Proxy(sqliteService, {
-    get(target, prop) {
-      // Se o método existe no SQLite, usar ele
-      if (prop in target) {
-        return target[prop];
-      }
-      
-      // Métodos que precisam ser implementados para SQLite mas não existem ainda
-      const webService = WebDatabaseService.getInstance();
-      
-      switch (prop) {
-        case 'clearAllData':
-          return webService.clearAllData.bind(webService);
-        case 'getStorageStats':
-          return webService.getStorageStats.bind(webService);
-        case 'forceClearCache':
-          return webService.forceClearCache.bind(webService);
-        default:
-          // Se não existe nem no SQLite nem implementado aqui, usar Web como fallback
-          if (prop in webService) {
-            return webService[prop as keyof typeof webService];
-          }
-          return undefined;
-      }
-    }
-  }) as DatabaseAdapter;
-}
-
-// Esta função determinará qual implementação de banco de dados usar
+// Esta função sempre retorna o MobileDatabaseService para ambiente mobile
 export function getDatabaseAdapter(): DatabaseAdapter {
-  console.log('🔍 Determining database adapter...');
+  console.log('📱 Mobile-only app: Using Mobile SQLite database service');
   
-  // Para apps nativos, sempre tentar usar SQLite primeiro
-  const isNative = Capacitor.isNativePlatform();
-  
-  console.log('🔍 Platform detection:', {
-    isNative,
-    platform: Capacitor.getPlatform(),
-    isAndroid: Capacitor.getPlatform() === 'android',
-    isIOS: Capacitor.getPlatform() === 'ios'
+  const platform = Capacitor.getPlatform();
+  console.log('📱 Platform details:', {
+    platform,
+    isNative: Capacitor.isNativePlatform(),
+    timestamp: new Date().toISOString()
   });
   
-  if (isNative) {
-    console.log('📱 Native platform detected, using SQLite database service');
-    try {
-      const sqliteService = SQLiteDatabaseService.getInstance();
-      return createSQLiteProxy(sqliteService);
-    } catch (e) {
-      console.error('❌ Failed to initialize SQLite on native platform:', e);
-      console.log('🌐 Falling back to Web database service');
-      return WebDatabaseService.getInstance();
-    }
-  } else {
-    console.log('🌐 Web platform detected, using Web database service');
-    return WebDatabaseService.getInstance();
+  try {
+    const mobileService = MobileDatabaseService.getInstance();
+    console.log('✅ Mobile SQLite database service initialized successfully');
+    return mobileService;
+  } catch (error) {
+    console.error('❌ Critical error initializing Mobile SQLite database:', error);
+    throw new Error(`Failed to initialize mobile database: ${error}`);
   }
 }
 
