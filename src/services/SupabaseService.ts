@@ -307,6 +307,199 @@ class SupabaseService {
       throw error;
     }
   }
+
+  async authenticateSalesRep(code: string, password: string): Promise<{ success: boolean; salesRep?: any; sessionToken?: string; error?: string }> {
+    try {
+      console.log('🔐 SupabaseService.authenticateSalesRep - START for code:', code);
+      
+      // Buscar vendedor por código
+      const url = `${this.supabaseUrl}/rest/v1/sales_reps?code=eq.${code}&active=eq.true&select=*`;
+      console.log(`🌐 Making Supabase API call: ${url}`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'apikey': this.supabaseKey,
+          'Authorization': `Bearer ${this.supabaseKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Supabase API error: ${response.status} - ${errorText}`);
+        return { success: false, error: `Erro na API: ${response.status}` };
+      }
+      
+      const salesReps = await response.json();
+      console.log(`📊 Found ${salesReps.length} sales reps`);
+      
+      if (salesReps.length === 0) {
+        console.log('❌ Sales rep not found');
+        return { success: false, error: 'Vendedor não encontrado' };
+      }
+      
+      const salesRep = salesReps[0];
+      
+      // Verificar senha (implementação simples - em produção usar hash)
+      if (salesRep.password !== password) {
+        console.log('❌ Invalid password');
+        return { success: false, error: 'Senha incorreta' };
+      }
+      
+      // Gerar token de sessão
+      const sessionToken = `supabase_session_${salesRep.id}_${Date.now()}`;
+      
+      console.log('✅ Authentication successful');
+      return {
+        success: true,
+        salesRep: {
+          id: salesRep.id,
+          name: salesRep.name,
+          code: salesRep.code,
+          email: salesRep.email
+        },
+        sessionToken
+      };
+      
+    } catch (error) {
+      console.error('❌ Error in authenticateSalesRep:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido na autenticação' 
+      };
+    }
+  }
+
+  async transmitOrders(orders: any[], sessionToken: string): Promise<{ success: boolean; successCount: number; errorCount: number; errors?: string[]; errorMessage?: string }> {
+    try {
+      console.log('📤 SupabaseService.transmitOrders - START');
+      console.log(`📋 Transmitting ${orders.length} orders`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+      
+      for (const order of orders) {
+        try {
+          // Transmitir para mobile_orders
+          const url = `${this.supabaseUrl}/rest/v1/mobile_orders`;
+          
+          const orderData = {
+            mobile_order_id: order.id,
+            customer_id: order.customer_id,
+            customer_name: order.customer_name,
+            customer_code: order.customer_code,
+            sales_rep_id: order.sales_rep_id || order.salesRepId,
+            sales_rep_name: order.sales_rep_name || order.salesRepName,
+            status: order.status,
+            total: order.total,
+            date: order.order_date || order.date || order.created_at,
+            payment_table_id: order.payment_table_id,
+            payment_table: order.payment_table,
+            notes: order.notes,
+            reason: order.reason,
+            sync_status: 'transmitted'
+          };
+          
+          console.log(`📤 Transmitting order ${order.id}:`, orderData);
+          
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'apikey': this.supabaseKey,
+              'Authorization': `Bearer ${this.supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(orderData)
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ Failed to transmit order ${order.id}: ${response.status} - ${errorText}`);
+            errors.push(`Order ${order.id}: ${response.status} - ${errorText}`);
+            errorCount++;
+            continue;
+          }
+          
+          const result = await response.json();
+          console.log(`✅ Order ${order.id} transmitted successfully:`, result);
+          
+          // Transmitir itens do pedido
+          if (order.items && order.items.length > 0) {
+            const mobileOrderId = result[0]?.id;
+            if (mobileOrderId) {
+              await this.transmitOrderItems(order.items, mobileOrderId, sessionToken);
+            }
+          }
+          
+          successCount++;
+          
+        } catch (itemError) {
+          console.error(`❌ Error transmitting order ${order.id}:`, itemError);
+          errors.push(`Order ${order.id}: ${itemError}`);
+          errorCount++;
+        }
+      }
+      
+      console.log(`📊 Transmission summary: ${successCount} success, ${errorCount} errors`);
+      
+      return {
+        success: successCount > 0,
+        successCount,
+        errorCount,
+        errors: errors.length > 0 ? errors : undefined,
+        errorMessage: errorCount > 0 ? `${errorCount} pedidos falharam na transmissão` : undefined
+      };
+      
+    } catch (error) {
+      console.error('❌ Error in transmitOrders:', error);
+      return {
+        success: false,
+        successCount: 0,
+        errorCount: orders.length,
+        errorMessage: error instanceof Error ? error.message : 'Erro desconhecido na transmissão'
+      };
+    }
+  }
+
+  private async transmitOrderItems(items: any[], mobileOrderId: string, sessionToken: string): Promise<void> {
+    try {
+      const url = `${this.supabaseUrl}/rest/v1/mobile_order_items`;
+      
+      for (const item of items) {
+        const itemData = {
+          mobile_order_id: mobileOrderId,
+          product_id: item.productId || item.product_id,
+          product_name: item.productName || item.product_name,
+          product_code: item.code || item.product_code,
+          quantity: item.quantity,
+          unit_price: item.price || item.unit_price,
+          price: item.price || item.unit_price,
+          unit: item.unit,
+          total: (item.price || item.unit_price || 0) * item.quantity
+        };
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'apikey': this.supabaseKey,
+            'Authorization': `Bearer ${this.supabaseKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(itemData)
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Failed to transmit item for order ${mobileOrderId}: ${response.status} - ${errorText}`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error transmitting order items:', error);
+    }
+  }
 }
 
 export const supabaseService = new SupabaseService();
