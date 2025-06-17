@@ -58,6 +58,36 @@ interface DatabaseAdapter {
   forceClearCache(): Promise<void>;
 }
 
+// Função para criar um proxy que adiciona métodos faltantes para SQLite
+function createSQLiteProxy(sqliteService: any): DatabaseAdapter {
+  return new Proxy(sqliteService, {
+    get(target, prop) {
+      // Se o método existe no SQLite, usar ele
+      if (prop in target) {
+        return target[prop];
+      }
+      
+      // Métodos que precisam ser implementados para SQLite mas não existem ainda
+      const webService = WebDatabaseService.getInstance();
+      
+      switch (prop) {
+        case 'clearAllData':
+          return webService.clearAllData.bind(webService);
+        case 'getStorageStats':
+          return webService.getStorageStats.bind(webService);
+        case 'forceClearCache':
+          return webService.forceClearCache.bind(webService);
+        default:
+          // Se não existe nem no SQLite nem implementado aqui, usar Web como fallback
+          if (prop in webService) {
+            return webService[prop as keyof typeof webService];
+          }
+          return undefined;
+      }
+    }
+  }) as DatabaseAdapter;
+}
+
 // Esta função determinará qual implementação de banco de dados usar
 export function getDatabaseAdapter(): DatabaseAdapter {
   console.log('🔍 Determining database adapter...');
@@ -76,7 +106,7 @@ export function getDatabaseAdapter(): DatabaseAdapter {
     console.log('📱 Native platform detected, using SQLite database service');
     try {
       const sqliteService = SQLiteDatabaseService.getInstance();
-      return sqliteService;
+      return createSQLiteProxy(sqliteService);
     } catch (e) {
       console.error('❌ Failed to initialize SQLite on native platform:', e);
       console.log('🌐 Falling back to Web database service');

@@ -75,7 +75,9 @@ class WebDatabaseService {
           if (oldVersion < 2) {
             console.log('🔄 Adding index customer_id to orders object store');
             const ordersStore = transaction.objectStore('orders');
-            ordersStore.createIndex('customer_id', 'customer_id');
+            if (!ordersStore.indexNames.contains('customer_id')) {
+              ordersStore.createIndex('customer_id', 'customer_id');
+            }
           }
 
           if (oldVersion < 3) {
@@ -131,7 +133,8 @@ class WebDatabaseService {
 
   async getPendingSyncItems(table: string): Promise<any[]> {
     if (!this.db) throw new Error('Database not initialized');
-    return this.db.getAllFromIndex('sync_log', 'table', table);
+    const allItems = await this.db.getAll('sync_log');
+    return allItems.filter(item => item.type === table && item.status === 'pending_sync');
   }
 
   async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {

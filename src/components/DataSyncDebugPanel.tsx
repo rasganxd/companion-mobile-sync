@@ -20,7 +20,7 @@ const DataSyncDebugPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const { getStorageStats, forceResync, isSyncing } = useDataSync();
-  const { salesRep, sessionToken } = useAuth();
+  const { salesRep } = useAuth();
 
   const loadStats = async () => {
     try {
@@ -40,7 +40,7 @@ const DataSyncDebugPanel: React.FC = () => {
   }, []);
 
   const handleClearAndResync = async () => {
-    if (!salesRep?.id || !sessionToken) {
+    if (!salesRep?.id || !salesRep?.sessionToken) {
       toast.error('Vendedor não autenticado');
       return;
     }
@@ -49,7 +49,7 @@ const DataSyncDebugPanel: React.FC = () => {
       console.log('🔄 Iniciando limpeza e ressincronização...');
       toast.info('Limpando cache e ressincronizando...');
       
-      const result = await forceResync(salesRep.id, sessionToken);
+      const result = await forceResync(salesRep.id, salesRep.sessionToken);
       
       if (result.success) {
         toast.success(`Ressincronização concluída! ${result.syncedData?.clients || 0} clientes carregados`);
