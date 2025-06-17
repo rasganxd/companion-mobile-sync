@@ -1,12 +1,39 @@
+import { openDB, IDBPDatabase, DBSchema } from 'idb';
+import { v4 as uuidv4 } from 'uuid';
 
-import { DatabaseInitializer } from './database/DatabaseInitializer';
-import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
+export interface SalesAppDBSchema extends DBSchema {
+  clients: {
+    key: string;
+    value: any;
+  };
+  visit_routes: {
+    key: string;
+    value: any;
+  };
+  orders: {
+    key: string;
+    value: any;
+    indexes: { customer_id: string };
+  };
+  products: {
+    key: string;
+    value: any;
+  };
+  payment_tables: {
+    key: string;
+    value: any;
+  };
+  sync_log: {
+    key: string;
+    value: any;
+  };
+}
 
 class WebDatabaseService {
-  private static instance: WebDatabaseService | null = null;
-  private db: DatabaseInstance | null = null;
-  private isInitialized = false;
-  private initializationPromise: Promise<void> | null = null;
+  private static instance: WebDatabaseService;
+  private db: IDBPDatabase<SalesAppDBSchema> | null = null;
+  private readonly DB_NAME = 'SalesAppDB';
+  private readonly DB_VERSION = 3;
 
   private constructor() {}
 
@@ -18,764 +45,452 @@ class WebDatabaseService {
   }
 
   async initDatabase(): Promise<void> {
-    // Prevent multiple simultaneous initialization attempts
-    if (this.initializationPromise) {
-      console.log('🌐 Database initialization already in progress, waiting...');
-      return this.initializationPromise;
-    }
-
-    if (this.isInitialized && this.db) {
+    if (this.db) {
       console.log('🌐 Web database already initialized');
       return;
     }
 
-    this.initializationPromise = this._initDatabaseInternal();
-    
     try {
-      await this.initializationPromise;
-    } finally {
-      this.initializationPromise = null;
-    }
-  }
+      console.log('🌐 Initializing Web database...');
+      this.db = await openDB<SalesAppDBSchema>(this.DB_NAME, this.DB_VERSION, {
+        upgrade(db, oldVersion, newVersion, transaction) {
+          console.log(`🔄 Upgrading database from version ${oldVersion} to ${newVersion}`);
+          
+          if (oldVersion < 1) {
+            console.log('Creating object store: clients');
+            db.createObjectStore('clients');
+            console.log('Creating object store: visit_routes');
+            db.createObjectStore('visit_routes');
+            console.log('Creating object store: orders');
+            const ordersStore = db.createObjectStore('orders', { keyPath: 'id' });
+            ordersStore.createIndex('customer_id', 'customer_id');
+            console.log('Creating object store: products');
+            db.createObjectStore('products');
+            console.log('Creating object store: payment_tables');
+            db.createObjectStore('payment_tables');
+            console.log('Creating object store: sync_log');
+            db.createObjectStore('sync_log');
+          }
 
-  private async _initDatabaseInternal(): Promise<void> {
-    try {
-      console.log('🌐 Initializing Web IndexedDB database using DatabaseInitializer...');
-      this.db = await DatabaseInitializer.initialize();
-      this.isInitialized = true;
+          if (oldVersion < 2) {
+            console.log('🔄 Adding index customer_id to orders object store');
+            const ordersStore = transaction.objectStore('orders');
+            ordersStore.createIndex('customer_id', 'customer_id');
+          }
+
+          if (oldVersion < 3) {
+            console.log('🔄 Adding UUID to existing orders');
+            const ordersStore = transaction.objectStore('orders');
+            ordersStore.getAll().then(orders => {
+              orders.forEach(order => {
+                if (!order.id) {
+                  order.id = uuidv4();
+                  ordersStore.put(order, order.id);
+                }
+              });
+            });
+          }
+        },
+      });
       console.log('✅ Web database initialized successfully');
     } catch (error) {
       console.error('❌ Failed to initialize Web database:', error);
-      
-      // Reset state on failure
-      this.db = null;
-      this.isInitialized = false;
-      
-      // If it's an upgrade/version error, try force cleanup and retry once
-      if (error instanceof Error && (
-        error.message.includes('version') || 
-        error.message.includes('aborted') ||
-        error.message.includes('upgradeneeded')
-      )) {
-        console.log('🔄 Attempting recovery from database error...');
-        try {
-          await DatabaseInitializer.forceCleanDatabase();
-          this.db = await DatabaseInitializer.initialize();
-          this.isInitialized = true;
-          console.log('✅ Database recovered successfully');
-        } catch (recoveryError) {
-          console.error('❌ Failed to recover database:', recoveryError);
-          throw recoveryError;
-        }
-      } else {
-        throw error;
-      }
+      throw error;
     }
   }
 
   async getClients(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting clients from Web database...');
-      return await this.db!.getAll('clients');
-    } catch (error) {
-      console.error('❌ Error getting clients:', error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAll('clients');
   }
 
   async getVisitRoutes(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting visit routes from Web database...');
-      return await this.db!.getAll('visit_routes');
-    } catch (error) {
-      console.error('❌ Error getting visit routes:', error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAll('visit_routes');
   }
 
   async getOrders(clientId?: string): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Getting orders from Web database for client ID: ${clientId}`);
-      if (clientId) {
-        const index = this.db!.transaction('orders').store.index('customer_id');
-        return await index.getAll(clientId);
-      } else {
-        return await this.db!.getAll('orders');
-      }
-    } catch (error) {
-      console.error('❌ Error getting orders:', error);
-      return [];
+    if (!this.db) throw new Error('Database not initialized');
+    if (clientId) {
+      const tx = this.db.transaction('orders', 'readonly');
+      const index = tx.store.index('customer_id');
+      return index.getAll(clientId);
     }
+    return this.db.getAll('orders');
   }
 
   async getProducts(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAll('products');
+  }
 
-    try {
-      console.log('🌐 Getting products from Web database...');
-      return await this.db!.getAll('products');
-    } catch (error) {
-      console.error('❌ Error getting products:', error);
-      return [];
-    }
+  async getPaymentTables(): Promise<any[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAll('payment_tables');
   }
 
   async getPendingSyncItems(table: string): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    if (!isValidTableName(table)) {
-      console.error(`❌ Invalid table name: ${table}`);
-      return [];
-    }
-
-    try {
-      console.log(`🌐 Getting pending sync items from ${table}...`);
-      const items = await this.db!.getAll(table);
-      return items.filter(item => item.sync_status === 'pending_sync');
-    } catch (error) {
-      console.error(`❌ Error getting pending sync items from ${table}:`, error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAllFromIndex('sync_log', 'table', table);
   }
 
   async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
+    
+    const tx = this.db.transaction('sync_log', 'readwrite');
+    const store = tx.objectStore('sync_log');
 
-    if (!isValidTableName(table)) {
-      console.error(`❌ Invalid table name: ${table}`);
-      return;
+    const item = await store.get(id);
+    if (item) {
+      item.status = status;
+      await store.put(item, id);
     }
 
-    try {
-      console.log(`🌐 Updating sync status for ${table} with ID ${id} to ${status}...`);
-      const item = await this.db!.get(table, id);
-      if (item) {
-        item.sync_status = status;
-        await this.db!.put(table, item);
-        console.log(`✅ Sync status updated for ${table} with ID ${id} to ${status}`);
-      } else {
-        console.warn(`⚠️ Item with ID ${id} not found in ${table}`);
-      }
-    } catch (error) {
-      console.error(`❌ Error updating sync status for ${table} with ID ${id}:`, error);
-    }
+    await tx.done;
   }
 
   async logSync(type: string, status: string, details?: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
 
-    try {
-      const logEntry = {
-        id: new Date().toISOString(),
-        type,
-        status,
-        details,
-        timestamp: new Date().toISOString()
-      };
-      console.log('Logging sync event:', logEntry);
-      await this.db!.put('sync_log', logEntry);
-      console.log('✅ Sync event logged');
-    } catch (error) {
-      console.error('❌ Error logging sync event:', error);
-    }
+    await this.db.put('sync_log', {
+      id: uuidv4(),
+      type,
+      status,
+      details,
+      timestamp: new Date().toISOString(),
+    });
   }
 
   async saveOrder(order: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
 
-    try {
-      console.log('🌐 Saving order to Web database:', order);
-      await this.db!.put('orders', order);
-      console.log('✅ Order saved to Web database');
-    } catch (error) {
-      console.error('❌ Error saving order:', error);
-    }
+    await this.db.put('orders', order);
+  }
+
+  async saveMobileOrder(order: any): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    const orderToSave = {
+      ...order,
+      id: uuidv4(),
+      sync_status: 'pending_sync',
+      created_at: new Date().toISOString(),
+    };
+
+    await this.db.put('orders', orderToSave);
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
+     if (!this.db) throw new Error('Database not initialized');
 
-    try {
-      console.log(`🌐 [DEBUG] Atualizando status do cliente ${clientId} para ${status}...`);
-      
-      // Primeiro verificar se o cliente existe
-      const clientBefore = await this.getClientById(clientId);
-      console.log(`🌐 [DEBUG] Cliente antes da atualização:`, clientBefore);
-      
-      if (clientBefore) {
-        clientBefore.status = status;
-        clientBefore.updated_at = new Date().toISOString();
-        await this.db!.put('clients', clientBefore);
-        
-        // Verificar se a atualização foi persistida
-        const clientAfter = await this.getClientById(clientId);
-        console.log(`🌐 [DEBUG] Cliente após a atualização:`, clientAfter);
-        
-        if (clientAfter?.status !== status) {
-          console.error(`❌ [DEBUG] Status não foi persistido! Esperado: ${status}, Atual: ${clientAfter?.status}`);
-        } else {
-          console.log(`✅ [DEBUG] Cliente status atualizado para ${clientId} -> ${status}`);
-        }
-      } else {
-        console.warn(`⚠️ [DEBUG] Cliente com ID ${clientId} não encontrado`);
-      }
-    } catch (error) {
-      console.error(`❌ [DEBUG] Erro ao atualizar status do cliente ${clientId}:`, error);
-    }
-  }
-
-  async updateClientStatusAfterOrderDeletion(clientId: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🔄 Verificando status do cliente ${clientId} após exclusão de pedido...`);
-      
-      const client = await this.getClientById(clientId);
-      if (!client) {
-        console.warn(`⚠️ Cliente ${clientId} não encontrado`);
-        return;
-      }
-
-      // Buscar pedidos restantes do cliente
-      const clientOrders = await this.getClientOrders(clientId);
-      console.log(`📋 Cliente ${clientId} tem ${clientOrders.length} pedidos restantes`);
-
-      if (clientOrders.length === 0) {
-        // Se não tem pedidos e estava negativado, voltar para pendente
-        if (client.status === 'negativado') {
-          console.log(`🔄 Cliente ${clientId} não tem mais pedidos, mudando de 'negativado' para 'pendente'`);
-          await this.updateClientStatus(clientId, 'pendente');
-        }
-      } else {
-        // Verificar o tipo de pedidos restantes
-        const hasPositiveOrders = clientOrders.some(order => 
-          order.status === 'pending' || 
-          order.status === 'processed' || 
-          order.status === 'delivered'
-        );
-        const hasNegativeOrders = clientOrders.some(order => 
-          order.status === 'negativado' || 
-          order.status === 'cancelled'
-        );
-
-        if (hasPositiveOrders) {
-          console.log(`✅ Cliente ${clientId} tem pedidos positivos, status deve ser 'positivado'`);
-          await this.updateClientStatus(clientId, 'positivado');
-        } else if (hasNegativeOrders) {
-          console.log(`❌ Cliente ${clientId} tem apenas pedidos negativos, mantendo 'negativado'`);
-          await this.updateClientStatus(clientId, 'negativado');
-        } else {
-          console.log(`🔄 Cliente ${clientId} sem pedidos válidos, mudando para 'pendente'`);
-          await this.updateClientStatus(clientId, 'pendente');
-        }
-      }
-    } catch (error) {
-      console.error(`❌ Erro ao verificar status do cliente ${clientId}:`, error);
-    }
-  }
-
-  async resetAllNegatedClientsStatus(): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🔄 Resetando status de todos os clientes negativados...');
-      
-      const allClients = await this.getClients();
-      const negatedClients = allClients.filter(client => client.status === 'negativado');
-      
-      console.log(`📋 Encontrados ${negatedClients.length} clientes negativados`);
-      
-      for (const client of negatedClients) {
-        console.log(`🔄 Resetando status do cliente ${client.name} (${client.id}) para 'pendente'`);
-        await this.updateClientStatus(client.id, 'pendente');
-      }
-      
-      console.log('✅ Status de todos os clientes negativados resetado para pendente');
-    } catch (error) {
-      console.error('❌ Erro ao resetar status dos clientes negativados:', error);
+    const client = await this.db.get('clients', clientId);
+    if (client) {
+      client.status = status;
+      await this.db.put('clients', client, clientId);
     }
   }
 
   async getClientById(clientId: string): Promise<any | null> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Getting client by ID: ${clientId}`);
-      const client = await this.db!.get('clients', clientId);
-      if (client) {
-        console.log('✅ Client found:', client);
-        return client;
-      } else {
-        console.log('❌ Client not found');
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Error getting client by ID:', error);
-      return null;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.get('clients', clientId);
   }
 
   async closeDatabase(): Promise<void> {
     if (this.db) {
       this.db.close();
       this.db = null;
-      this.isInitialized = false;
-      console.log('🌐 Web database closed');
     }
   }
 
   async getPendingOrders(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting pending orders from Web database...');
-      const orders = await this.db!.getAll('orders');
-      return orders.filter(order => order.sync_status === 'pending_sync');
-    } catch (error) {
-      console.error('❌ Error getting pending orders:', error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const allOrders = await this.db.getAll('orders');
+    return allOrders.filter(order => order.sync_status === 'pending_sync');
   }
 
   async markOrderAsTransmitted(orderId: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Marking order ${orderId} as transmitted...`);
-      const order = await this.db!.get('orders', orderId);
-      if (order) {
-        order.sync_status = 'transmitted';
-        await this.db!.put('orders', order);
-        console.log(`✅ Order ${orderId} marked as transmitted`);
-      } else {
-        console.warn(`⚠️ Order with ID ${orderId} not found`);
-      }
-    } catch (error) {
-      console.error(`❌ Error marking order ${orderId} as transmitted:`, error);
+    if (!this.db) throw new Error('Database not initialized');
+    const order = await this.db.get('orders', orderId);
+    if (order) {
+      order.sync_status = 'transmitted';
+      await this.db.put('orders', order, orderId);
     }
   }
 
   async getOfflineOrdersCount(): Promise<number> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting offline orders count from Web database...');
-      const orders = await this.db!.getAll('orders');
-      const offlineOrders = orders.filter(order => order.sync_status === 'pending_sync' || order.sync_status === 'error');
-      return offlineOrders.length;
-    } catch (error) {
-      console.error('❌ Error getting offline orders count:', error);
-      return 0;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const orders = await this.db.getAll('orders');
+    return orders.filter(order => order.sync_status === 'pending_sync').length;
   }
 
   async getClientOrders(clientId: string): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Getting orders for client ID: ${clientId}`);
-      const index = this.db!.transaction('orders').store.index('customer_id');
-      return await index.getAll(clientId);
-    } catch (error) {
-      console.error('❌ Error getting client orders:', error);
-      return [];
-    }
+     if (!this.db) throw new Error('Database not initialized');
+    const allOrders = await this.db.getAll('orders');
+    return allOrders.filter(order => order.customer_id === clientId);
   }
 
   async deleteOrder(orderId: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Deleting order with ID: ${orderId}`);
-      
-      // Primeiro, obter informações do pedido antes de deletar
-      const order = await this.db!.get('orders', orderId);
-      const clientId = order?.customer_id;
-      
-      await this.db!.delete('orders', orderId);
-      console.log(`✅ Order with ID ${orderId} deleted`);
-      
-      // Verificar e atualizar status do cliente após exclusão
-      if (clientId) {
-        await this.updateClientStatusAfterOrderDeletion(clientId);
-      }
-    } catch (error) {
-      console.error(`❌ Error deleting order with ID ${orderId}:`, error);
-      throw error;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.delete('orders', orderId);
   }
 
   async deleteAllOrders(): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Deleting all orders...`);
-      const tx = this.db!.transaction('orders', 'readwrite');
-      await tx.objectStore('orders').clear();
-      await tx.done;
-      console.log(`✅ All orders deleted`);
-      
-      // Resetar status de todos os clientes negativados após exclusão de todos os pedidos
-      await this.resetAllNegatedClientsStatus();
-    } catch (error) {
-      console.error(`❌ Error deleting all orders:`, error);
-      throw error;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const tx = this.db.transaction('orders', 'readwrite');
+    await tx.store.clear();
+    await tx.done;
   }
 
   async getTransmittedOrders(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting transmitted orders from Web database...');
-      const orders = await this.db!.getAll('orders');
-      return orders.filter(order => order.sync_status === 'transmitted');
-    } catch (error) {
-      console.error('❌ Error getting transmitted orders:', error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const allOrders = await this.db.getAll('orders');
+    return allOrders.filter(order => order.sync_status === 'transmitted' || order.sync_status === 'synced');
   }
 
   async getAllOrders(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting all orders from Web database...');
-      return await this.db!.getAll('orders');
-    } catch (error) {
-      console.error('❌ Error getting all orders:', error);
-      return [];
-    }
-  }
-
-  async saveMobileOrder(order: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Saving mobile order to Web database:', order);
-      await this.db!.put('orders', order);
-      console.log('✅ Mobile order saved to Web database');
-    } catch (error) {
-      console.error('❌ Error saving mobile order:', error);
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.getAll('orders');
   }
 
   async saveClients(clientsArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
     
-    const tx = this.db!.transaction('clients', 'readwrite');
+    console.log(`💾 Salvando ${clientsArray.length} clientes no Web database...`);
+    
+    const tx = this.db.transaction('clients', 'readwrite');
     const store = tx.objectStore('clients');
     
+    // Limpar clientes existentes primeiro
+    await store.clear();
+    console.log('🗑️ Clientes existentes removidos');
+    
+    // Salvar novos clientes
     for (const client of clientsArray) {
-      await store.put(client);
+      const clientToSave = {
+        ...client,
+        // Garantir que visit_days seja string JSON se for array
+        visit_days: Array.isArray(client.visit_days) 
+          ? JSON.stringify(client.visit_days) 
+          : client.visit_days || '[]'
+      };
+      
+      await store.put(clientToSave, client.id);
     }
     
     await tx.done;
-    console.log(`✅ Saved ${clientsArray.length} clients to Web database`);
+    console.log(`✅ ${clientsArray.length} clientes salvos no Web database`);
   }
 
   async saveProducts(productsArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
-    
-    const tx = this.db!.transaction('products', 'readwrite');
+    if (!this.db) throw new Error('Database not initialized');
+
+    console.log(`💾 Salvando ${productsArray.length} produtos no Web database...`);
+
+    const tx = this.db.transaction('products', 'readwrite');
     const store = tx.objectStore('products');
-    
+
+    // Limpar produtos existentes primeiro
+    await store.clear();
+    console.log('🗑️ Produtos existentes removidos');
+
+    // Salvar novos produtos
     for (const product of productsArray) {
-      await store.put(product);
+      await store.put(product, product.id);
     }
-    
+
     await tx.done;
-    console.log(`✅ Saved ${productsArray.length} products to Web database`);
+    console.log(`✅ ${productsArray.length} produtos salvos no Web database`);
+  }
+
+  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    console.log(`💾 Salvando ${paymentTablesArray.length} tabelas de pagamento no Web database...`);
+
+    const tx = this.db.transaction('payment_tables', 'readwrite');
+    const store = tx.objectStore('payment_tables');
+
+    // Limpar tabelas de pagamento existentes primeiro
+    await store.clear();
+    console.log('🗑️ Tabelas de pagamento existentes removidas');
+
+    // Salvar novas tabelas de pagamento
+    for (const paymentTable of paymentTablesArray) {
+      await store.put(paymentTable, paymentTable.id);
+    }
+
+    await tx.done;
+    console.log(`✅ ${paymentTablesArray.length} tabelas de pagamento salvas no Web database`);
   }
 
   async saveClient(client: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
-    
-    const tx = this.db!.transaction('clients', 'readwrite');
-    await tx.objectStore('clients').put(client);
-    await tx.done;
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.put('clients', client, client.id);
   }
 
   async saveProduct(product: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
-    
-    const tx = this.db!.transaction('products', 'readwrite');
-    await tx.objectStore('products').put(product);
-    await tx.done;
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.put('products', product, product.id);
   }
 
   async isClientNegated(clientId: string): Promise<boolean> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      const client = await this.getClientById(clientId);
-      if (client && client.status === 'negativado') {
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error checking if client is negated:', error);
-      return false;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const client = await this.db.get('clients', clientId);
+    return client?.negated === true;
   }
 
   async unnegateClient(clientId: string, reason: string): Promise<void> {
-     if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Unnegating client with ID: ${clientId}, reason: ${reason}`);
-      const client = await this.getClientById(clientId);
-      if (client) {
-        client.status = 'ativo';
-        await this.db!.put('clients', client);
-        console.log(`✅ Client with ID ${clientId} unnegated`);
-      } else {
-        console.warn(`⚠️ Client with ID ${clientId} not found`);
-      }
-    } catch (error) {
-      console.error(`❌ Error unnegating client with ID ${clientId}:`, error);
+    if (!this.db) throw new Error('Database not initialized');
+    const client = await this.db.get('clients', clientId);
+    if (client) {
+      client.negated = false;
+      client.negationReason = reason;
+      await this.db.put('clients', client, clientId);
     }
   }
 
   async getClientStatusHistory(clientId: string): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Getting client status history for client ID: ${clientId}`);
-      // Since IndexedDB doesn't support complex queries, we'll just return a mock history for now
-      return [
-        { status: 'ativo', date: new Date().toISOString(), reason: 'Initial status' }
-      ];
-    } catch (error) {
-      console.error('❌ Error getting client status history:', error);
-      return [];
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    // This is a mock implementation. Replace with actual logic to fetch client status history.
+    return Promise.resolve([]);
   }
 
   async hasClientPendingOrders(clientId: string): Promise<boolean> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Checking if client ${clientId} has pending orders...`);
-      const orders = await this.getClientOrders(clientId);
-      const pendingOrders = orders.filter(order => order.status === 'pending');
-      return pendingOrders.length > 0;
-    } catch (error) {
-      console.error('❌ Error checking for pending orders:', error);
-      return false;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const orders = await this.getClientOrders(clientId);
+    return orders.some(order => order.sync_status === 'pending_sync');
   }
 
   async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
 
-    try {
-      console.log(`🌐 Checking if can create order for client ${clientId}...`);
-
-      const client = await this.getClientById(clientId);
-      if (!client) {
-        return { canCreate: false, reason: 'Cliente não encontrado' };
-      }
-
-      if (client.status === 'negativado') {
-        return { canCreate: false, reason: 'Cliente negativado' };
-      }
-
-      const activePendingOrder = await this.getActivePendingOrder(clientId);
-      if (activePendingOrder) {
-        return { canCreate: false, reason: 'Já existe um pedido pendente para este cliente', existingOrder: activePendingOrder };
-      }
-
-      return { canCreate: true };
-    } catch (error) {
-      console.error('❌ Error checking if can create order:', error);
-      return { canCreate: false, reason: 'Erro ao verificar elegibilidade' };
+    const client = await this.getClientById(clientId);
+    if (!client) {
+      return { canCreate: false, reason: 'Cliente não encontrado' };
     }
+
+    if (client.negated) {
+      return { canCreate: false, reason: `Cliente negativado. Motivo: ${client.negationReason}` };
+    }
+
+    const activeOrder = await this.getActivePendingOrder(clientId);
+    if (activeOrder) {
+      return { canCreate: false, reason: 'Já existe um pedido pendente para este cliente', existingOrder: activeOrder };
+    }
+
+    return { canCreate: true };
   }
 
   async getActivePendingOrder(clientId: string): Promise<any | null> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log(`🌐 Getting active pending order for client ${clientId}...`);
-      const orders = await this.getClientOrders(clientId);
-      const pendingOrder = orders.find(order => order.status === 'pending');
-      return pendingOrder || null;
-    } catch (error) {
-      console.error('❌ Error getting active pending order:', error);
-      return null;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    const orders = await this.getClientOrders(clientId);
+    return orders.find(order => order.sync_status === 'pending_sync');
   }
 
   async getCustomers(): Promise<any[]> {
-    return this.getClients();
-  }
-
-  async getPaymentTables(): Promise<any[]> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('🌐 Getting payment tables from Web database...');
-      const paymentTables = await this.db!.getAll('payment_tables');
-      console.log(`💳 Encontradas ${paymentTables.length} tabelas de pagamento no banco local`);
-      
-      // Log das tabelas encontradas
-      paymentTables.forEach((table, index) => {
-        console.log(`💳 Tabela ${index + 1}:`, {
-          id: table.id,
-          name: table.name,
-          type: table.type,
-          active: table.active
-        });
-      });
-      
-      return paymentTables;
-    } catch (error) {
-      console.error('❌ Error getting payment tables:', error);
-      return [];
-    }
-  }
-
-  async savePaymentTables(paymentTablesArray: any[]): Promise<void> {
-    if (!this.db) await this.initDatabase();
+    if (!this.db) throw new Error('Database not initialized');
     
-    try {
-      console.log(`💳 Salvando ${paymentTablesArray.length} tabelas de pagamento no Web database...`);
+    console.log('🌐 Getting customers from Web database...');
+    
+    const tx = this.db.transaction('clients', 'readonly');
+    const store = tx.objectStore('clients');
+    const allClients = await store.getAll();
+    
+    // Processar visit_days para garantir que seja array
+    const processedClients = allClients.map(client => {
+      let visitDays = client.visit_days;
       
-      // Limpar tabelas existentes antes de salvar novas
-      const tx = this.db!.transaction('payment_tables', 'readwrite');
-      const store = tx.objectStore('payment_tables');
-      await store.clear();
-      
-      // Salvar novas tabelas
-      for (const paymentTable of paymentTablesArray) {
-        await store.put(paymentTable);
-        console.log(`💳 Tabela salva: ${paymentTable.name} (${paymentTable.id})`);
+      // Se for string, fazer parse para array
+      if (typeof visitDays === 'string') {
+        try {
+          visitDays = JSON.parse(visitDays);
+        } catch (error) {
+          console.warn('⚠️ Erro ao fazer parse de visit_days:', error);
+          visitDays = [];
+        }
       }
       
-      await tx.done;
-      console.log(`✅ Saved ${paymentTablesArray.length} payment tables to Web database`);
-    } catch (error) {
-      console.error('❌ Error saving payment tables:', error);
-      throw error;
-    }
+      return {
+        ...client,
+        visit_days: Array.isArray(visitDays) ? visitDays : []
+      };
+    });
+    
+    console.log(`🌐 Retrieved ${processedClients.length} customers from Web database`);
+    return processedClients;
   }
 
   async getOrderById(orderId: string): Promise<any | null> {
-    if (!this.db) await this.initDatabase();
-    
-    try {
-      console.log(`🌐 Getting order by ID: ${orderId}`);
-      
-      // Buscar dados básicos do pedido
-      const order = await this.db!.get('orders', orderId);
-      
-      if (!order) {
-        console.log('❌ Order not found');
-        return null;
-      }
-
-      console.log('✅ Order found:', order);
-
-      // Buscar produtos para referência de nomes
-      const products = await this.db!.getAll('products');
-      const productsMap = new Map();
-      products.forEach(product => {
-        productsMap.set(product.code?.toString(), product.name);
-        productsMap.set(product.id, product.name);
-      });
-
-      // Se o pedido tem itens no campo JSON, enriquecer com nomes dos produtos
-      if (order.items && typeof order.items === 'string') {
-        try {
-          const jsonItems = JSON.parse(order.items);
-          if (Array.isArray(jsonItems)) {
-            order.items = jsonItems.map(item => ({
-              ...item,
-              product_name: item.product_name || 
-                          item.productName || 
-                          productsMap.get(item.product_code?.toString()) || 
-                          productsMap.get(item.productId) ||
-                          'Produto não encontrado'
-            }));
-            console.log(`🌐 Enriched ${order.items.length} items with product names`);
-          }
-        } catch (e) {
-          console.log('🌐 Could not parse JSON items from order');
-        }
-      } else if (Array.isArray(order.items)) {
-        // Se já é array, apenas enriquecer com nomes
-        order.items = order.items.map(item => ({
-          ...item,
-          product_name: item.product_name || 
-                      item.productName || 
-                      productsMap.get(item.product_code?.toString()) || 
-                      productsMap.get(item.productId) ||
-                      'Produto não encontrado'
-        }));
-        console.log(`🌐 Enriched ${order.items.length} items with product names`);
-      } else {
-        // Se não há itens, inicializar array vazio
-        order.items = [];
-        console.log('🌐 No items found for order');
-      }
-
-      return order;
-    } catch (error) {
-      console.error('❌ Error getting order by ID:', error);
-      return null;
-    }
+    if (!this.db) throw new Error('Database not initialized');
+    return this.db.get('orders', orderId);
   }
 
   async clearMockData(): Promise<void> {
-    if (!this.db) await this.initDatabase();
-    
-    console.log('🧹 Clearing mock data from Web database...');
-    
+    console.warn('⚠️ clearMockData não implementado para WebDatabaseService');
+  }
+
+  async updateClientStatusAfterOrderDeletion(clientId: string): Promise<void> {
+    console.warn('⚠️ updateClientStatusAfterOrderDeletion não implementado para WebDatabaseService');
+  }
+
+  async resetAllNegatedClientsStatus(): Promise<void> {
+    console.warn('⚠️ resetAllNegatedClientsStatus não implementado para WebDatabaseService');
+  }
+
+  async getStorageStats(): Promise<{ clients: number; products: number; orders: number; paymentTables: number }> {
+    if (!this.db) {
+      return { clients: 0, products: 0, orders: 0, paymentTables: 0 };
+    }
+
     try {
-      const tx = this.db!.transaction(['clients', 'visit_routes', 'orders', 'products', 'payment_tables'], 'readwrite');
-      
-      await Promise.all([
-        tx.objectStore('clients').clear(),
-        tx.objectStore('visit_routes').clear(),
-        tx.objectStore('orders').clear(),
-        tx.objectStore('products').clear(),
-        tx.objectStore('payment_tables').clear()
+      const [clients, products, orders, paymentTables] = await Promise.all([
+        this.db.count('clients'),
+        this.db.count('products'),
+        this.db.count('orders'),
+        this.db.count('payment_tables')
       ]);
-      
-      await tx.done;
-      console.log('✅ Mock data cleared from Web database');
+
+      return { clients, products, orders, paymentTables };
     } catch (error) {
-      console.error('❌ Error clearing mock data:', error);
-      throw error;
+      console.error('❌ Error getting storage stats:', error);
+      return { clients: 0, products: 0, orders: 0, paymentTables: 0 };
     }
   }
 
-  async forceClearMockData(): Promise<void> {
-    console.log('🗑️ Force clearing mock data...');
-    await this.clearMockData();
+  async forceClearCache(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    
+    console.log('🗑️ Forçando limpeza completa do cache Web database...');
+    
+    const tx = this.db.transaction(['clients', 'products', 'payment_tables'], 'readwrite');
+    
+    await Promise.all([
+      tx.objectStore('clients').clear(),
+      tx.objectStore('products').clear(),
+      tx.objectStore('payment_tables').clear()
+    ]);
+    
+    await tx.done;
+    console.log('✅ Cache Web database limpo completamente');
   }
 
-  async forceCleanAllProducts(): Promise<void> {
-    if (!this.db) await this.initDatabase();
+  async clearAllData(): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
     
-    console.log('🗑️ Force cleaning ALL products from Web database...');
+    console.log('🗑️ Limpando TODOS os dados do Web database...');
     
-    try {
-      const tx = this.db!.transaction(['products'], 'readwrite');
-      await tx.objectStore('products').clear();
-      await tx.done;
-      console.log('✅ ALL products force cleaned from Web database');
-    } catch (error) {
-      console.error('❌ Error force cleaning products:', error);
-      throw error;
-    }
+    const tx = this.db.transaction(['clients', 'products', 'orders', 'payment_tables', 'sync_log'], 'readwrite');
+    
+    await Promise.all([
+      tx.objectStore('clients').clear(),
+      tx.objectStore('products').clear(),
+      tx.objectStore('orders').clear(),
+      tx.objectStore('payment_tables').clear(),
+      tx.objectStore('sync_log').clear()
+    ]);
+    
+    await tx.done;
+    console.log('✅ Todos os dados limpos do Web database');
   }
 }
 

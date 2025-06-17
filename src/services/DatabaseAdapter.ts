@@ -31,7 +31,7 @@ interface DatabaseAdapter {
   // ✅ NOVO: Métodos para salvar dados em batch
   saveClients(clientsArray: any[]): Promise<void>;
   saveProducts(productsArray: any[]): Promise<void>;
-  savePaymentTables(paymentTablesArray: any[]): Promise<void>; // ✅ NOVO: Para tabelas de pagamento
+  savePaymentTables(paymentTablesArray: any[]): Promise<void>; 
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
   // ✅ NOVOS métodos para validações e controle de status
@@ -44,7 +44,7 @@ interface DatabaseAdapter {
   getActivePendingOrder(clientId: string): Promise<any | null>;
   // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
-  getPaymentTables(): Promise<any[]>; // ✅ NOVO: Para buscar tabelas de pagamento
+  getPaymentTables(): Promise<any[]>;
   // ✅ NOVO: Método para obter pedido por ID
   getOrderById(orderId: string): Promise<any | null>;
   // ✅ NOVO: Método para limpar dados mock
@@ -52,6 +52,10 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
+  // ✅ NOVOS: Métodos para limpeza e debug
+  clearAllData(): Promise<void>;
+  getStorageStats(): Promise<{ clients: number; products: number; orders: number; paymentTables: number }>;
+  forceClearCache(): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar
