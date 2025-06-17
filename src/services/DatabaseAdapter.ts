@@ -56,24 +56,31 @@ interface DatabaseAdapter {
   validateDatabaseIntegrity(): Promise<boolean>;
 }
 
-// Esta função sempre retorna o MobileDatabaseService para ambiente mobile
+// Esta função sempre retorna o MobileDatabaseService com detecção inteligente de ambiente
 export function getDatabaseAdapter(): DatabaseAdapter {
-  console.log('📱 Mobile-only app: Using Mobile SQLite database service');
+  console.log('📱 Initializing database adapter...');
   
   const platform = Capacitor.getPlatform();
-  console.log('📱 Platform details:', {
+  const isNative = Capacitor.isNativePlatform();
+  
+  console.log('📱 Environment details:', {
     platform,
-    isNative: Capacitor.isNativePlatform(),
+    isNative,
+    userAgent: navigator.userAgent.substring(0, 100),
     timestamp: new Date().toISOString()
   });
   
   try {
     const mobileService = MobileDatabaseService.getInstance();
-    console.log('✅ Mobile SQLite database service initialized successfully');
+    console.log('✅ Mobile database service initialized successfully');
+    console.log('🔧 Service will auto-detect and use appropriate storage (SQLite/LocalStorage)');
     return mobileService;
   } catch (error) {
-    console.error('❌ Critical error initializing Mobile SQLite database:', error);
-    throw new Error(`Failed to initialize mobile database: ${error}`);
+    console.error('❌ Critical error initializing database service:', error);
+    
+    // Even if there's an error, return the service - it will handle fallbacks internally
+    console.log('⚠️ Returning service anyway - fallback mechanisms will handle errors');
+    return MobileDatabaseService.getInstance();
   }
 }
 
