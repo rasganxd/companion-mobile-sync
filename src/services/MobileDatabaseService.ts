@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
@@ -13,6 +12,56 @@ interface DatabaseDiagnostics {
   timestamp: string;
   environment: 'web' | 'native' | 'fallback';
 }
+
+// Mock data for Lovable environment
+const MOCK_CLIENTS_DATA = [
+  { id: '1', name: 'Cliente A', visit_days: ['monday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '2', name: 'Cliente B', visit_days: ['monday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '3', name: 'Cliente C', visit_days: ['tuesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '4', name: 'Cliente D', visit_days: ['tuesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '5', name: 'Cliente E', visit_days: ['wednesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '6', name: 'Cliente F', visit_days: ['wednesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '7', name: 'Cliente G', visit_days: ['thursday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '8', name: 'Cliente H', visit_days: ['thursday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '9', name: 'Cliente I', visit_days: ['friday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '10', name: 'Cliente J', visit_days: ['friday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '11', name: 'Cliente K', visit_days: ['monday', 'friday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '12', name: 'Cliente L', visit_days: ['tuesday', 'thursday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '13', name: 'Cliente M', visit_days: ['wednesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '14', name: 'Cliente N', visit_days: ['monday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  { id: '15', name: 'Cliente O', visit_days: ['tuesday'], sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', active: 1, status: 'pendente' },
+  // Add more mock clients to reach 85 total
+  ...Array.from({ length: 70 }, (_, i) => ({
+    id: `${16 + i}`,
+    name: `Cliente ${String.fromCharCode(80 + i)}`,
+    visit_days: [['monday', 'tuesday', 'wednesday', 'thursday', 'friday'][i % 5]],
+    sales_rep_id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
+    active: 1,
+    status: 'pendente',
+    visit_sequence: i + 1
+  }))
+];
+
+const MOCK_PRODUCTS_DATA = [
+  { id: '1', name: 'Produto A', sale_price: 10.50, active: 1 },
+  { id: '2', name: 'Produto B', sale_price: 25.00, active: 1 },
+  { id: '3', name: 'Produto C', sale_price: 15.75, active: 1 },
+  { id: '4', name: 'Produto D', sale_price: 8.90, active: 1 },
+  { id: '5', name: 'Produto E', sale_price: 35.00, active: 1 },
+  ...Array.from({ length: 20 }, (_, i) => ({
+    id: `${6 + i}`,
+    name: `Produto ${String.fromCharCode(70 + i)}`,
+    sale_price: Math.random() * 50 + 5,
+    active: 1
+  }))
+];
+
+const MOCK_PAYMENT_TABLES_DATA = [
+  { id: '1', name: 'À Vista', description: 'Pagamento à vista', active: 1 },
+  { id: '2', name: '30 dias', description: 'Pagamento em 30 dias', active: 1 },
+  { id: '3', name: '2x sem juros', description: 'Parcelado em 2x', active: 1 },
+  { id: '4', name: '3x sem juros', description: 'Parcelado em 3x', active: 1 }
+];
 
 // Fallback storage using localStorage
 class LocalStorageFallback {
@@ -124,6 +173,41 @@ class MobileDatabaseService {
     return MobileDatabaseService.instance;
   }
 
+  private isLovableEnvironment(): boolean {
+    return window.location.hostname.includes('lovableproject.com') || 
+           window.location.hostname.includes('localhost');
+  }
+
+  private async populateMockDataForLovable(): Promise<void> {
+    if (!this.isLovableEnvironment()) return;
+    
+    console.log('🎭 Populating mock data for Lovable environment...');
+    
+    try {
+      // Check if data already exists
+      const existingClients = localStorage.getItem('salesapp_clients');
+      if (existingClients && JSON.parse(existingClients).length > 0) {
+        console.log('🎭 Mock data already exists, skipping population');
+        return;
+      }
+
+      // Populate clients with proper visit_days format
+      const clientsData = MOCK_CLIENTS_DATA.map(client => ({
+        ...client,
+        visit_days: JSON.stringify(client.visit_days) // Store as JSON string
+      }));
+      
+      localStorage.setItem('salesapp_clients', JSON.stringify(clientsData));
+      localStorage.setItem('salesapp_products', JSON.stringify(MOCK_PRODUCTS_DATA));
+      localStorage.setItem('salesapp_payment_tables', JSON.stringify(MOCK_PAYMENT_TABLES_DATA));
+      localStorage.setItem('salesapp_orders', JSON.stringify([]));
+      
+      console.log(`✅ Mock data populated: ${clientsData.length} clients, ${MOCK_PRODUCTS_DATA.length} products, ${MOCK_PAYMENT_TABLES_DATA.length} payment tables`);
+    } catch (error) {
+      console.error('❌ Error populating mock data:', error);
+    }
+  }
+
   async initDatabase(): Promise<void> {
     // Prevent multiple simultaneous initialization attempts
     if (this.initializationPromise) {
@@ -151,8 +235,17 @@ class MobileDatabaseService {
       console.log('📱 Platform check:', {
         isNative: Capacitor.isNativePlatform(),
         platform: Capacitor.getPlatform(),
-        userAgent: navigator.userAgent.substring(0, 100)
+        userAgent: navigator.userAgent.substring(0, 100),
+        isLovable: this.isLovableEnvironment()
       });
+      
+      // For Lovable environment, use fallback and populate mock data
+      if (this.isLovableEnvironment()) {
+        console.log('🎭 Lovable environment detected, using fallback with mock data');
+        await this.initializeFallback();
+        await this.populateMockDataForLovable();
+        return;
+      }
       
       // Try SQLite first (works for both native and web with jeep-sqlite)
       await this.initializeSQLite();
@@ -499,8 +592,23 @@ class MobileDatabaseService {
     try {
       console.log(`📱 Getting clients from ${this.environment} database...`);
       const result = await this.executeQuery('SELECT * FROM clients ORDER BY name');
-      const clients = result.values || [];
+      let clients = result.values || [];
+      
+      // Parse visit_days from JSON string to array for each client
+      clients = clients.map(client => {
+        if (client.visit_days && typeof client.visit_days === 'string') {
+          try {
+            client.visit_days = JSON.parse(client.visit_days);
+          } catch (error) {
+            console.warn('⚠️ Error parsing visit_days for client:', client.id, error);
+            client.visit_days = [];
+          }
+        }
+        return client;
+      });
+      
       console.log(`📱 Retrieved ${clients.length} clients from ${this.environment} database`);
+      console.log('📱 Sample client data:', clients.slice(0, 3));
       return clients;
     } catch (error) {
       console.error('❌ Error getting clients from database:', error);
@@ -695,7 +803,19 @@ class MobileDatabaseService {
     if (!this.isInitialized) await this.initDatabase();
     try {
       const result = await this.executeQuery('SELECT * FROM clients WHERE id = ?', [clientId]);
-      return result.values && result.values.length > 0 ? result.values[0] : null;
+      let client = result.values && result.values.length > 0 ? result.values[0] : null;
+      
+      // Parse visit_days if it's a string
+      if (client && client.visit_days && typeof client.visit_days === 'string') {
+        try {
+          client.visit_days = JSON.parse(client.visit_days);
+        } catch (error) {
+          console.warn('⚠️ Error parsing visit_days for client:', client.id, error);
+          client.visit_days = [];
+        }
+      }
+      
+      return client;
     } catch (error) {
       console.error('❌ Error getting client by ID:', error);
       return null;
@@ -816,6 +936,19 @@ class MobileDatabaseService {
   async resetAllNegatedClientsStatus(): Promise<void> {
     // Simplified implementation
     console.log('📱 Reset all negated clients status called');
+  }
+
+  // New method to reset mock data for testing
+  async resetMockData(): Promise<void> {
+    if (this.isLovableEnvironment()) {
+      console.log('🧹 Resetting mock data...');
+      localStorage.removeItem('salesapp_clients');
+      localStorage.removeItem('salesapp_products');
+      localStorage.removeItem('salesapp_payment_tables');
+      localStorage.removeItem('salesapp_orders');
+      await this.populateMockDataForLovable();
+      console.log('✅ Mock data reset and repopulated');
+    }
   }
 }
 
