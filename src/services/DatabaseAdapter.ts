@@ -70,6 +70,90 @@ export function getDatabaseAdapter(): DatabaseAdapter {
   try {
     const mobileService = MobileDatabaseService.getInstance();
     console.log('✅ Mobile SQLite database service initialized successfully');
+    
+    // ✅ IMPLEMENTAR getCustomers() que corrige o parsing de visit_days
+    const originalGetCustomers = mobileService.getCustomers?.bind(mobileService);
+    if (!originalGetCustomers) {
+      // Se getCustomers não existe, criar baseado em getClients
+      mobileService.getCustomers = async function() {
+        console.log('🔄 getCustomers() calling getClients() and parsing visit_days...');
+        const clients = await this.getClients();
+        console.log(`📊 Raw clients from DB: ${clients.length}`, clients);
+        
+        const processedClients = clients.map(client => {
+          let visitDays = client.visit_days;
+          
+          // Parse visit_days se for string JSON
+          if (typeof visitDays === 'string') {
+            try {
+              visitDays = JSON.parse(visitDays);
+            } catch (error) {
+              console.warn(`⚠️ Failed to parse visit_days for client ${client.id}:`, error);
+              visitDays = [];
+            }
+          }
+          
+          // Garantir que visit_days seja array
+          if (!Array.isArray(visitDays)) {
+            visitDays = [];
+          }
+          
+          const processedClient = {
+            ...client,
+            visit_days: visitDays
+          };
+          
+          console.log(`👤 Processed client ${client.name}:`, {
+            id: client.id,
+            name: client.name,
+            active: client.active,
+            sales_rep_id: client.sales_rep_id,
+            visit_days: visitDays,
+            original_visit_days: client.visit_days
+          });
+          
+          return processedClient;
+        });
+        
+        console.log(`✅ getCustomers() returning ${processedClients.length} processed clients`);
+        return processedClients;
+      };
+    } else {
+      // Se getCustomers já existe, melhorar com parsing correto
+      mobileService.getCustomers = async function() {
+        console.log('🔄 Enhanced getCustomers() with visit_days parsing...');
+        const clients = await originalGetCustomers();
+        console.log(`📊 Raw customers from existing method: ${clients.length}`, clients);
+        
+        const processedClients = clients.map(client => {
+          let visitDays = client.visit_days;
+          
+          // Parse visit_days se for string JSON
+          if (typeof visitDays === 'string') {
+            try {
+              visitDays = JSON.parse(visitDays);
+            } catch (error) {
+              console.warn(`⚠️ Failed to parse visit_days for client ${client.id}:`, error);
+              visitDays = [];
+            }
+          }
+          
+          // Garantir que visit_days seja array
+          if (!Array.isArray(visitDays)) {
+            visitDays = [];
+          }
+          
+          return {
+            ...client,
+            visit_days: visitDays
+          };
+        });
+        
+        console.log(`✅ Enhanced getCustomers() returning ${processedClients.length} processed clients`);
+        return processedClients;
+      };
+    }
+    
     return mobileService;
   } catch (error) {
     console.error('❌ Critical error initializing Mobile SQLite database:', error);
