@@ -8,7 +8,7 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
 
 export const useOrderTransmission = () => {
-  const { salesRep, isOnline } = useAuth();
+  const { salesRep, sessionToken, isOnline } = useAuth();
   const { connected } = useNetworkStatus();
   const [pendingOrders, setPendingOrders] = useState<LocalOrder[]>([]);
   const [transmittedOrders, setTransmittedOrders] = useState<LocalOrder[]>([]);
@@ -170,15 +170,15 @@ export const useOrderTransmission = () => {
       throw new Error(errorMsg);
     }
     
-    if (!salesRep.sessionToken) {
+    if (!sessionToken) {
       const errorMsg = 'Token de sessão expirado. Faça login novamente.';
       setTransmissionError(errorMsg);
       throw new Error(errorMsg);
     }
     
     // Verificar se o token não é muito antigo (para tokens mobile)
-    if (salesRep.sessionToken.startsWith('mobile_')) {
-      const tokenParts = salesRep.sessionToken.split('_');
+    if (sessionToken.startsWith('mobile_')) {
+      const tokenParts = sessionToken.split('_');
       if (tokenParts.length >= 3) {
         const timestamp = parseInt(tokenParts[2]);
         const tokenAge = Date.now() - timestamp;
@@ -220,7 +220,7 @@ export const useOrderTransmission = () => {
       const db = getDatabaseAdapter();
 
       console.log('📤 Starting transmission to Supabase...');
-      console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
+      console.log('🔐 Using session token:', sessionToken?.substring(0, 20) + '...');
       
       // Validar e normalizar dados dos pedidos antes da transmissão
       const validatedOrders: LocalOrder[] = [];
@@ -254,7 +254,7 @@ export const useOrderTransmission = () => {
       // Transmit orders to Supabase (agora com dados validados e normalizados incluindo payment_table_id)
       const transmissionResult = await supabaseService.transmitOrders(
         validatedOrders, 
-        salesRep.sessionToken!
+        sessionToken!
       );
 
       console.log('📊 Transmission result:', transmissionResult);

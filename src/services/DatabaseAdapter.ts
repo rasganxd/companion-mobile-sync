@@ -1,4 +1,3 @@
-
 import MobileDatabaseService from './MobileDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
@@ -73,9 +72,9 @@ export function getDatabaseAdapter(): DatabaseAdapter {
     const mobileService = MobileDatabaseService.getInstance();
     console.log('✅ Mobile SQLite database service initialized successfully');
     
-    // ✅ IMPLEMENTAR authenticateSalesRep
+    // ✅ IMPLEMENTAR authenticateSalesRep se não existir
     if (!mobileService.authenticateSalesRep) {
-      mobileService.authenticateSalesRep = async function(code: string, password: string) {
+      (mobileService as any).authenticateSalesRep = async function(code: string, password: string) {
         console.log('🔐 DatabaseAdapter.authenticateSalesRep called for code:', code);
         
         // Por enquanto, vamos fazer uma autenticação simples baseada em código
@@ -180,7 +179,7 @@ export function getDatabaseAdapter(): DatabaseAdapter {
       };
     }
     
-    return mobileService;
+    return mobileService as DatabaseAdapter;
   } catch (error) {
     console.error('❌ Critical error initializing Mobile SQLite database:', error);
     throw new Error(`Failed to initialize mobile database: ${error}`);
