@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,10 +8,28 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { salesRep, isLoading, needsInitialSync } = useAuth();
   const location = useLocation();
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [hasStoredAuth, setHasStoredAuth] = useState(false);
+
+  // Add error boundary for useAuth hook
+  let authData;
+  try {
+    authData = useAuth();
+  } catch (error) {
+    console.error('🛡️ ProtectedRoute: Error accessing AuthContext:', error);
+    // Fallback when AuthProvider is not available
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center text-red-500">
+          <div className="text-lg">Erro de autenticação</div>
+          <div className="text-sm mt-2">Recarregue a página</div>
+        </div>
+      </div>
+    );
+  }
+
+  const { salesRep, isLoading, needsInitialSync } = authData;
 
   console.log('🛡️ ProtectedRoute check:', {
     pathname: location.pathname,
