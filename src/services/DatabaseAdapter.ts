@@ -54,6 +54,8 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para diagnóstico mobile
   getDatabaseDiagnostics(): Promise<any>;
   validateDatabaseIntegrity(): Promise<boolean>;
+  // ✅ NOVO: Método de autenticação
+  authenticateSalesRep(code: string, password: string): Promise<{ success: boolean; salesRep?: any; error?: string }>;
 }
 
 // Esta função sempre retorna o MobileDatabaseService para ambiente mobile
@@ -70,6 +72,30 @@ export function getDatabaseAdapter(): DatabaseAdapter {
   try {
     const mobileService = MobileDatabaseService.getInstance();
     console.log('✅ Mobile SQLite database service initialized successfully');
+    
+    // ✅ IMPLEMENTAR authenticateSalesRep
+    if (!mobileService.authenticateSalesRep) {
+      mobileService.authenticateSalesRep = async function(code: string, password: string) {
+        console.log('🔐 DatabaseAdapter.authenticateSalesRep called for code:', code);
+        
+        // Por enquanto, vamos fazer uma autenticação simples baseada em código
+        // Em produção, você deve implementar uma validação real
+        if (code && password) {
+          const salesRep = {
+            id: `sales_${code}`,
+            name: `Vendedor ${code}`,
+            code: code,
+            email: `${code}@empresa.com`
+          };
+          
+          console.log('✅ DatabaseAdapter: Local auth successful for:', salesRep);
+          return { success: true, salesRep };
+        }
+        
+        console.log('❌ DatabaseAdapter: Local auth failed - invalid credentials');
+        return { success: false, error: 'Credenciais inválidas' };
+      };
+    }
     
     // ✅ IMPLEMENTAR getCustomers() que corrige o parsing de visit_days
     const originalGetCustomers = mobileService.getCustomers?.bind(mobileService);
