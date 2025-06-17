@@ -131,13 +131,13 @@ const Reports = () => {
 
   // Componente dos filtros de período para o rightComponent
   const PeriodFilters = () => <div className="flex space-x-1">
-      <Button variant={selectedPeriod === '7' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('7')} className="text-xs text-white hover:bg-white/20 data-[state=active]:bg-white/30">
+      <Button variant={selectedPeriod === '7' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('7')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
         7d
       </Button>
-      <Button variant={selectedPeriod === '30' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('30')} className="text-xs text-white hover:bg-white/20 data-[state=active]:bg-white/30">
+      <Button variant={selectedPeriod === '30' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('30')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
         30d
       </Button>
-      <Button variant={selectedPeriod === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('all')} className="text-xs text-white hover:bg-white/20 data-[state=active]:bg-white/30">
+      <Button variant={selectedPeriod === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('all')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
         Todos
       </Button>
     </div>;
