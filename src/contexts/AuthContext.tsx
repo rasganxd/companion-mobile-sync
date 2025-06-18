@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { supabaseService } from '@/services/SupabaseService';
@@ -80,58 +79,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (code: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔐 AuthContext.login - START for code:', code);
+      console.log('🔐 AuthContext.login - REAL AUTH START for code:', code);
       
-      // Primeiro tentar autenticação local
+      // Usar APENAS autenticação real via DatabaseAdapter
       const db = getDatabaseAdapter();
       await db.initDatabase();
       
-      console.log('🔍 Attempting local authentication...');
+      console.log('🔍 Attempting REAL authentication via DatabaseAdapter...');
+      const authResult = await db.authenticateSalesRep(code, password);
       
-      // Simular autenticação local (você pode implementar uma validação real aqui)
-      if (code && password) {
-        console.log('✅ Local authentication successful');
+      console.log('📊 DatabaseAdapter auth result:', authResult);
+      
+      if (authResult.success && authResult.salesRep) {
+        console.log('✅ Real authentication successful');
         
-        const authSalesRep = {
-          id: `sales_${code}`,
-          name: `Vendedor ${code}`,
-          code: code,
-          email: `${code}@empresa.com`
-        };
-        
-        const localToken = `local_${authSalesRep.id}_${Date.now()}`;
+        const authSalesRep = authResult.salesRep;
+        const realToken = `real_${authSalesRep.id}_${Date.now()}`;
         
         setSalesRep(authSalesRep);
-        setSessionToken(localToken);
+        setSessionToken(realToken);
         
         // Armazenar no localStorage
         localStorage.setItem('salesRep', JSON.stringify(authSalesRep));
-        localStorage.setItem('sessionToken', localToken);
+        localStorage.setItem('sessionToken', realToken);
         
+        console.log('✅ Real authentication completed successfully');
         return { success: true };
       }
       
-      // Se falhou localmente, tentar no Supabase
-      console.log('🌐 Local auth failed, trying Supabase authentication...');
-      const supabaseResult = await supabaseService.authenticateSalesRep(code, password);
-      
-      if (supabaseResult.success && supabaseResult.salesRep && supabaseResult.sessionToken) {
-        console.log('✅ Supabase authentication successful');
-        
-        setSalesRep(supabaseResult.salesRep);
-        setSessionToken(supabaseResult.sessionToken);
-        
-        // Armazenar no localStorage
-        localStorage.setItem('salesRep', JSON.stringify(supabaseResult.salesRep));
-        localStorage.setItem('sessionToken', supabaseResult.sessionToken);
-        
-        return { success: true };
-      }
-      
-      console.log('❌ Authentication failed on both local and Supabase');
+      console.log('❌ Real authentication failed:', authResult.error);
       return { 
         success: false, 
-        error: supabaseResult.error || 'Credenciais inválidas' 
+        error: authResult.error || 'Credenciais inválidas' 
       };
       
     } catch (error) {

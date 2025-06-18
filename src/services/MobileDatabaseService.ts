@@ -1,5 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
+import { supabase } from '@/integrations/supabase/client';
+import bcrypt from 'bcryptjs';
 
 interface DatabaseDiagnostics {
   isInitialized: boolean;
@@ -1038,27 +1040,67 @@ class MobileDatabaseService {
 
   async authenticateSalesRep(code: string, password: string): Promise<{ success: boolean; salesRep?: any; error?: string }> {
     try {
-      console.log('🔐 MobileDatabaseService.authenticateSalesRep called for code:', code);
+      console.log('🔐 MobileDatabaseService.authenticateSalesRep - REAL AUTH START for code:', code);
       
-      // Por enquanto, vamos fazer uma autenticação simples baseada em código
-      // Em produção, você deve implementar uma validação real
-      if (code && password) {
-        const salesRep = {
-          id: `sales_${code}`,
-          name: `Vendedor ${code}`,
-          code: code,
-          email: `${code}@empresa.com`
-        };
-        
-        console.log('✅ MobileDatabaseService: Local auth successful for:', salesRep);
-        return { success: true, salesRep };
+      // Buscar o vendedor no Supabase pelo código
+      const { data: salesRep, error: fetchError } = await supabase
+        .from('sales_reps')
+        .select('*')
+        .eq('code', parseInt(code))
+        .eq('active', true)
+        .single();
+
+      if (fetchError) {
+        console.log('❌ Error fetching sales rep:', fetchError);
+        return { success: false, error: 'Vendedor não encontrado' };
       }
+
+      if (!salesRep) {
+        console.log('❌ Sales rep not found for code:', code);
+        return { success: false, error: 'Código do vendedor não encontrado' };
+      }
+
+      console.log('📊 Sales rep found:', {
+        id: salesRep.id,
+        name: salesRep.name,
+        code: salesRep.code,
+        hasPassword: !!salesRep.password
+      });
+
+      // Verificar a senha usando bcrypt
+      if (!salesRep.password) {
+        console.log('❌ Sales rep has no password set');
+        return { success: false, error: 'Senha não configurada para este vendedor' };
+      }
+
+      console.log('🔍 Comparing passwords...');
+      const passwordMatch = await bcrypt.compare(password, salesRep.password);
       
-      console.log('❌ MobileDatabaseService: Local auth failed - invalid credentials');
-      return { success: false, error: 'Credenciais inválidas' };
+      if (!passwordMatch) {
+        console.log('❌ Password does not match');
+        return { success: false, error: 'Senha incorreta' };
+      }
+
+      console.log('✅ Authentication successful');
+      
+      const authenticatedSalesRep = {
+        id: salesRep.id,
+        name: salesRep.name,
+        code: salesRep.code.toString(),
+        email: salesRep.email
+      };
+
+      return { 
+        success: true, 
+        salesRep: authenticatedSalesRep
+      };
+      
     } catch (error) {
       console.error('❌ MobileDatabaseService.authenticateSalesRep error:', error);
-      return { success: false, error: 'Erro na autenticação' };
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro na autenticação' 
+      };
     }
   }
 }
