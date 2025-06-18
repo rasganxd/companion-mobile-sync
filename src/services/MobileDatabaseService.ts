@@ -1035,6 +1035,32 @@ class MobileDatabaseService {
       return null;
     }
   }
+
+  async authenticateSalesRep(code: string, password: string): Promise<{ success: boolean; salesRep?: any; error?: string }> {
+    try {
+      console.log('🔐 MobileDatabaseService.authenticateSalesRep called for code:', code);
+      
+      // Por enquanto, vamos fazer uma autenticação simples baseada em código
+      // Em produção, você deve implementar uma validação real
+      if (code && password) {
+        const salesRep = {
+          id: `sales_${code}`,
+          name: `Vendedor ${code}`,
+          code: code,
+          email: `${code}@empresa.com`
+        };
+        
+        console.log('✅ MobileDatabaseService: Local auth successful for:', salesRep);
+        return { success: true, salesRep };
+      }
+      
+      console.log('❌ MobileDatabaseService: Local auth failed - invalid credentials');
+      return { success: false, error: 'Credenciais inválidas' };
+    } catch (error) {
+      console.error('❌ MobileDatabaseService.authenticateSalesRep error:', error);
+      return { success: false, error: 'Erro na autenticação' };
+    }
+  }
 }
 
 export default MobileDatabaseService;

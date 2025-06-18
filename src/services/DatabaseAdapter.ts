@@ -1,3 +1,4 @@
+
 import MobileDatabaseService from './MobileDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
@@ -71,30 +72,6 @@ export function getDatabaseAdapter(): DatabaseAdapter {
   try {
     const mobileService = MobileDatabaseService.getInstance();
     console.log('✅ Mobile SQLite database service initialized successfully');
-    
-    // ✅ IMPLEMENTAR authenticateSalesRep se não existir
-    if (!mobileService.authenticateSalesRep) {
-      (mobileService as any).authenticateSalesRep = async function(code: string, password: string) {
-        console.log('🔐 DatabaseAdapter.authenticateSalesRep called for code:', code);
-        
-        // Por enquanto, vamos fazer uma autenticação simples baseada em código
-        // Em produção, você deve implementar uma validação real
-        if (code && password) {
-          const salesRep = {
-            id: `sales_${code}`,
-            name: `Vendedor ${code}`,
-            code: code,
-            email: `${code}@empresa.com`
-          };
-          
-          console.log('✅ DatabaseAdapter: Local auth successful for:', salesRep);
-          return { success: true, salesRep };
-        }
-        
-        console.log('❌ DatabaseAdapter: Local auth failed - invalid credentials');
-        return { success: false, error: 'Credenciais inválidas' };
-      };
-    }
     
     // ✅ IMPLEMENTAR getCustomers() que corrige o parsing de visit_days
     const originalGetCustomers = mobileService.getCustomers?.bind(mobileService);
