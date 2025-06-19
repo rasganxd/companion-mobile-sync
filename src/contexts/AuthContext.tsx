@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { supabaseService } from '@/services/SupabaseService';
+import { Capacitor } from '@capacitor/core';
 import { toast } from 'sonner';
 
 interface SalesRep {
@@ -38,6 +39,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const initializeAuth = () => {
       console.log('🔄 AuthContext: Initializing authentication...');
+      console.log('🔄 Platform:', Capacitor.getPlatform(), 'IsNative:', Capacitor.isNativePlatform());
       
       const storedSalesRep = localStorage.getItem('salesRep');
       const storedToken = localStorage.getItem('sessionToken');
@@ -53,9 +55,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLastSyncDate(new Date(storedLastSync));
       }
       
-      // Verificar se precisa de sincronização inicial
+      // Para ambiente web, não precisa de sincronização inicial
+      // Para ambiente mobile, verificar se precisa de sincronização inicial
       const hasInitialData = localStorage.getItem('initial_sync_completed');
-      setNeedsInitialSync(!hasInitialData);
+      const isNative = Capacitor.isNativePlatform();
+      setNeedsInitialSync(isNative && !hasInitialData);
       
       setIsLoading(false);
     };
@@ -79,42 +83,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (code: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔐 AuthContext.login - REAL AUTH START for code:', code);
+      console.log('🔐 AuthContext.login - HYBRID AUTH START for code:', code);
+      console.log('🔐 Platform:', Capacitor.getPlatform(), 'IsNative:', Capacitor.isNativePlatform());
       
-      // Usar APENAS autenticação real via DatabaseAdapter
+      // Usar o adaptador híbrido que escolhe automaticamente entre Supabase e SQLite
       const db = getDatabaseAdapter();
       await db.initDatabase();
       
-      console.log('🔍 Attempting REAL authentication via DatabaseAdapter...');
+      console.log('🔍 Attempting hybrid authentication via DatabaseAdapter...');
       const authResult = await db.authenticateSalesRep(code, password);
       
       console.log('📊 DatabaseAdapter auth result:', authResult);
       
       if (authResult.success && authResult.salesRep) {
-        console.log('✅ Real authentication successful');
+        console.log('✅ Hybrid authentication successful');
         
         const authSalesRep = authResult.salesRep;
-        const realToken = `real_${authSalesRep.id}_${Date.now()}`;
+        const tokenPrefix = Capacitor.isNativePlatform() ? 'mobile_' : 'web_';
+        const hybridToken = `${tokenPrefix}${authSalesRep.id}_${Date.now()}`;
         
         setSalesRep(authSalesRep);
-        setSessionToken(realToken);
+        setSessionToken(hybridToken);
         
         // Armazenar no localStorage
         localStorage.setItem('salesRep', JSON.stringify(authSalesRep));
-        localStorage.setItem('sessionToken', realToken);
+        localStorage.setItem('sessionToken', hybridToken);
         
-        console.log('✅ Real authentication completed successfully');
+        console.log('✅ Hybrid authentication completed successfully');
         return { success: true };
       }
       
-      console.log('❌ Real authentication failed:', authResult.error);
+      console.log('❌ Hybrid authentication failed:', authResult.error);
       return { 
         success: false, 
         error: authResult.error || 'Credenciais inválidas' 
       };
       
     } catch (error) {
-      console.error('❌ Error in login:', error);
+      console.error('❌ Error in hybrid login:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Erro na autenticação' 
