@@ -312,8 +312,15 @@ class SupabaseService {
     try {
       console.log('🔐 SupabaseService.authenticateSalesRep - START for code:', code);
       
+      // Convert code to number since it's stored as integer
+      const codeNumber = parseInt(code);
+      if (isNaN(codeNumber)) {
+        console.log('❌ Code parsing failed. Original:', code, 'Parsed:', codeNumber);
+        return { success: false, error: 'Código deve ser um número válido' };
+      }
+
       // Buscar vendedor por código
-      const url = `${this.supabaseUrl}/rest/v1/sales_reps?code=eq.${code}&active=eq.true&select=*`;
+      const url = `${this.supabaseUrl}/rest/v1/sales_reps?code=eq.${codeNumber}&active=eq.true&select=*`;
       console.log(`🌐 Making Supabase API call: ${url}`);
       
       const response = await fetch(url, {
@@ -336,19 +343,58 @@ class SupabaseService {
       
       if (salesReps.length === 0) {
         console.log('❌ Sales rep not found');
-        return { success: false, error: 'Vendedor não encontrado' };
+        return { success: false, error: 'Vendedor não encontrado ou inativo' };
       }
       
       const salesRep = salesReps[0];
-      
-      // Verificar senha (implementação simples - em produção usar hash)
-      if (salesRep.password !== password) {
-        console.log('❌ Invalid password');
-        return { success: false, error: 'Senha incorreta' };
+      console.log('📋 Sales rep found:', {
+        id: salesRep.id,
+        code: salesRep.code,
+        name: salesRep.name,
+        hasPassword: !!salesRep.password
+      });
+
+      // Check if sales rep has a password set
+      if (!salesRep.password) {
+        console.log('❌ Sales rep has no password configured');
+        return { success: false, error: 'Senha não configurada para este vendedor. Entre em contato com o administrador.' };
       }
       
+      // Use the verify_password function to validate the password
+      console.log('🔑 Starting password verification via database function...');
+      const verifyUrl = `${this.supabaseUrl}/rest/v1/rpc/verify_password`;
+      
+      const verifyResponse = await fetch(verifyUrl, {
+        method: 'POST',
+        headers: {
+          'apikey': this.supabaseKey,
+          'Authorization': `Bearer ${this.supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          password: password,
+          hash: salesRep.password
+        })
+      });
+      
+      if (!verifyResponse.ok) {
+        const errorText = await verifyResponse.text();
+        console.error(`❌ Password verification API error: ${verifyResponse.status} - ${errorText}`);
+        return { success: false, error: 'Erro interno ao verificar senha' };
+      }
+      
+      const passwordValid = await verifyResponse.json();
+      console.log('🔑 Password verification result:', passwordValid);
+      
+      if (!passwordValid) {
+        console.log('❌ Password verification failed');
+        return { success: false, error: 'Código ou senha incorretos' };
+      }
+
+      console.log('✅ Password verification successful!');
+      
       // Gerar token de sessão
-      const sessionToken = `supabase_session_${salesRep.id}_${Date.now()}`;
+      const sessionToken = `web_${salesRep.id}_${Date.now()}`;
       
       console.log('✅ Authentication successful');
       return {
@@ -356,7 +402,7 @@ class SupabaseService {
         salesRep: {
           id: salesRep.id,
           name: salesRep.name,
-          code: salesRep.code,
+          code: salesRep.code.toString(),
           email: salesRep.email
         },
         sessionToken
