@@ -1038,50 +1038,138 @@ class MobileDatabaseService {
     }
   }
 
+  async testPasswordHash(password: string, hash: string): Promise<void> {
+    console.log('🧪 [DEBUG] Testing password hash...');
+    console.log('🧪 [DEBUG] Password to test:', `"${password}"`);
+    console.log('🧪 [DEBUG] Password length:', password.length);
+    console.log('🧪 [DEBUG] Password char codes:', password.split('').map(c => c.charCodeAt(0)));
+    console.log('🧪 [DEBUG] Hash to compare:', hash);
+    console.log('🧪 [DEBUG] Hash length:', hash.length);
+    
+    try {
+      // Test with bcrypt.compare
+      const bcryptResult = await bcrypt.compare(password, hash);
+      console.log('🧪 [DEBUG] bcrypt.compare result:', bcryptResult);
+      
+      // Test with different password variations
+      const variations = [
+        password,
+        password.trim(),
+        password.toLowerCase(),
+        password.toUpperCase()
+      ];
+      
+      for (let i = 0; i < variations.length; i++) {
+        const variation = variations[i];
+        const result = await bcrypt.compare(variation, hash);
+        console.log(`🧪 [DEBUG] Testing variation ${i} "${variation}":`, result);
+      }
+      
+    } catch (error) {
+      console.error('🧪 [DEBUG] Error testing password hash:', error);
+    }
+  }
+
   async authenticateSalesRep(code: string, password: string): Promise<{ success: boolean; salesRep?: any; error?: string }> {
     try {
-      console.log('🔐 MobileDatabaseService.authenticateSalesRep - REAL AUTH START for code:', code);
+      console.log('🔐 MobileDatabaseService.authenticateSalesRep - ENHANCED DEBUG START');
+      console.log('🔐 [DEBUG] Input code:', `"${code}"`);
+      console.log('🔐 [DEBUG] Input password:', `"${password}"`);
+      console.log('🔐 [DEBUG] Input types:', { codeType: typeof code, passwordType: typeof password });
+      
+      // Limpar e validar entradas
+      const cleanCode = code.toString().trim();
+      const cleanPassword = password.toString().trim();
+      
+      console.log('🔐 [DEBUG] Cleaned code:', `"${cleanCode}"`);
+      console.log('🔐 [DEBUG] Cleaned password:', `"${cleanPassword}"`);
       
       // Buscar o vendedor no Supabase pelo código
+      console.log('🔍 [DEBUG] Searching for sales rep with code:', parseInt(cleanCode));
+      
       const { data: salesRep, error: fetchError } = await supabase
         .from('sales_reps')
         .select('*')
-        .eq('code', parseInt(code))
+        .eq('code', parseInt(cleanCode))
         .eq('active', true)
         .single();
 
       if (fetchError) {
-        console.log('❌ Error fetching sales rep:', fetchError);
+        console.log('❌ [DEBUG] Error fetching sales rep:', fetchError);
         return { success: false, error: 'Vendedor não encontrado' };
       }
 
       if (!salesRep) {
-        console.log('❌ Sales rep not found for code:', code);
+        console.log('❌ [DEBUG] Sales rep not found for code:', cleanCode);
         return { success: false, error: 'Código do vendedor não encontrado' };
       }
 
-      console.log('📊 Sales rep found:', {
+      console.log('📊 [DEBUG] Sales rep found:', {
         id: salesRep.id,
         name: salesRep.name,
         code: salesRep.code,
-        hasPassword: !!salesRep.password
+        hasPassword: !!salesRep.password,
+        passwordLength: salesRep.password ? salesRep.password.length : 0,
+        passwordPrefix: salesRep.password ? salesRep.password.substring(0, 10) + '...' : 'none'
       });
 
-      // Verificar a senha usando bcrypt
+      // Verificar se a senha está configurada
       if (!salesRep.password) {
-        console.log('❌ Sales rep has no password set');
+        console.log('❌ [DEBUG] Sales rep has no password set');
         return { success: false, error: 'Senha não configurada para este vendedor' };
       }
 
-      console.log('🔍 Comparing passwords...');
-      const passwordMatch = await bcrypt.compare(password, salesRep.password);
+      // Executar teste detalhado da senha
+      console.log('🧪 [DEBUG] Running detailed password test...');
+      await this.testPasswordHash(cleanPassword, salesRep.password);
+
+      // Verificar a senha usando bcrypt
+      console.log('🔍 [DEBUG] Starting bcrypt password comparison...');
+      
+      let passwordMatch = false;
+      try {
+        passwordMatch = await bcrypt.compare(cleanPassword, salesRep.password);
+        console.log('🔐 [DEBUG] bcrypt.compare result:', passwordMatch);
+      } catch (bcryptError) {
+        console.error('❌ [DEBUG] bcrypt.compare error:', bcryptError);
+        return { success: false, error: 'Erro na verificação de senha' };
+      }
       
       if (!passwordMatch) {
-        console.log('❌ Password does not match');
+        console.log('❌ [DEBUG] Password does not match');
+        console.log('❌ [DEBUG] Expected password to match hash:', salesRep.password);
+        
+        // Tentar algumas variações comuns
+        const passwordVariations = [
+          cleanPassword,
+          cleanPassword.trim(),
+          password, // senha original sem limpeza
+          code // tentar o código como senha
+        ];
+        
+        console.log('🔄 [DEBUG] Trying password variations...');
+        for (let i = 0; i < passwordVariations.length; i++) {
+          const variation = passwordVariations[i];
+          try {
+            const variationMatch = await bcrypt.compare(variation, salesRep.password);
+            console.log(`🔄 [DEBUG] Variation ${i} "${variation}":`, variationMatch);
+            if (variationMatch) {
+              passwordMatch = true;
+              console.log(`✅ [DEBUG] Password matched with variation ${i}!`);
+              break;
+            }
+          } catch (error) {
+            console.log(`❌ [DEBUG] Error testing variation ${i}:`, error);
+          }
+        }
+      }
+      
+      if (!passwordMatch) {
+        console.log('❌ [DEBUG] All password attempts failed');
         return { success: false, error: 'Senha incorreta' };
       }
 
-      console.log('✅ Authentication successful');
+      console.log('✅ [DEBUG] Authentication successful');
       
       const authenticatedSalesRep = {
         id: salesRep.id,
@@ -1090,13 +1178,15 @@ class MobileDatabaseService {
         email: salesRep.email
       };
 
+      console.log('✅ [DEBUG] Returning authenticated sales rep:', authenticatedSalesRep);
+
       return { 
         success: true, 
         salesRep: authenticatedSalesRep
       };
       
     } catch (error) {
-      console.error('❌ MobileDatabaseService.authenticateSalesRep error:', error);
+      console.error('❌ [DEBUG] MobileDatabaseService.authenticateSalesRep error:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Erro na autenticação' 
