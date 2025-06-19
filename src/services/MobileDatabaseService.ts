@@ -1038,6 +1038,46 @@ class MobileDatabaseService {
     }
   }
 
+  async clearMockData(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🧹 Clearing mock data from mobile database...');
+      
+      // Clear all tables
+      await this.db!.run('DELETE FROM orders');
+      await this.db!.run('DELETE FROM clients');
+      await this.db!.run('DELETE FROM products');
+      await this.db!.run('DELETE FROM payment_tables');
+      await this.db!.run('DELETE FROM visit_routes');
+      await this.db!.run('DELETE FROM sync_log');
+      
+      console.log('✅ Mock data cleared from mobile database');
+    } catch (error) {
+      console.error('❌ Error clearing mock data:', error);
+      throw error;
+    }
+  }
+
+  async resetAllNegatedClientsStatus(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🔄 Resetting all negated clients status to pendente...');
+      
+      const result = await this.db!.run(
+        'UPDATE clients SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE status = ?',
+        ['pendente', 'negativado']
+      );
+      
+      const updatedCount = result.changes?.changes || 0;
+      console.log(`✅ Reset ${updatedCount} negated clients to pendente status`);
+    } catch (error) {
+      console.error('❌ Error resetting negated clients status:', error);
+      throw error;
+    }
+  }
+
   async testPasswordHash(password: string, hash: string): Promise<void> {
     console.log('🧪 [DEBUG] Testing password hash...');
     console.log('🧪 [DEBUG] Password to test:', `"${password}"`);
