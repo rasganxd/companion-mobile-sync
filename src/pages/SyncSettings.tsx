@@ -11,7 +11,6 @@ import { Progress } from '@/components/ui/progress';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
-
 const SyncSettings = () => {
   const navigate = useNavigate();
   const {
@@ -141,11 +140,11 @@ const SyncSettings = () => {
       
       <div className="p-4 flex-1">
         {/* Sync Method Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[9px]">
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[5px] px-[12px]">
           <h2 className="text-lg font-semibold mb-4">Método de Sincronização</h2>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200">
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200 py-[10px] px-[10px]">
               <div className="flex-1">
                 <div className="font-medium text-green-700">
                   <CheckCircle size={16} className="inline mr-2" />
@@ -218,7 +217,7 @@ const SyncSettings = () => {
         </div>
 
         {/* Status Card */}
-        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[12px]">
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[10px] px-[14px]">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Status do Sistema</h2>
             <div className="flex items-center">
