@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package2, ThumbsDown, Box, Mail } from 'lucide-react';
@@ -18,6 +19,8 @@ const ClientActivities = () => {
   const { clientName, clientId, day } = location.state || {};
   const [loading, setLoading] = useState(false);
 
+  console.log('👤 ClientActivities - Current state:', { clientName, clientId, day });
+
   if (!clientId || !clientName) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -30,6 +33,11 @@ const ClientActivities = () => {
       </div>
     );
   }
+
+  const handleGoBack = () => {
+    console.log('🔙 ClientActivities - Going back with day context:', day);
+    goBack(); // O useAppNavigation já vai preservar o contexto do dia
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -68,7 +76,7 @@ const ClientActivities = () => {
         <AppButton 
           variant="gray"
           fullWidth
-          onClick={goBack}
+          onClick={handleGoBack}
           className="flex items-center justify-center gap-2"
         >
           <ArrowLeft size={18} />

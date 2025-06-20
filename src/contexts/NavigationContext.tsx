@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
@@ -12,6 +13,7 @@ interface NavigationContextType {
   goBack: () => void;
   canGoBack: boolean;
   getCurrentPath: () => string;
+  goBackWithState: (state?: any) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
@@ -177,6 +179,45 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
     navigate(targetPath);
   };
 
+  const goBackWithState = (state?: any) => {
+    const currentPath = location.pathname;
+    
+    // Para rotas dinâmicas como /view-order-details/:orderId, usar o padrão base
+    let pathKey = currentPath;
+    if (currentPath.startsWith('/view-order-details/')) {
+      pathKey = '/view-order-details';
+    }
+    
+    const targetPath = navigationFlows[pathKey] || '/home';
+    
+    console.log(`⬅️ NavigationContext: Going back with state from ${currentPath} to ${targetPath}`, state ? 'with state' : 'no state');
+    
+    setNavigationState(prev => {
+      // Se já estamos na home, não faz nada
+      if (currentPath === '/home') {
+        return prev;
+      }
+      
+      // Atualizar stack removendo a tela atual
+      const newStack = prev.stack.filter(path => path !== currentPath);
+      if (!newStack.includes(targetPath)) {
+        newStack.push(targetPath);
+      }
+      
+      return {
+        stack: newStack,
+        currentIndex: newStack.length - 1
+      };
+    });
+    
+    // Navegar com state se fornecido
+    if (state) {
+      navigate(targetPath, { state });
+    } else {
+      navigate(targetPath);
+    }
+  };
+
   const canGoBack = location.pathname !== '/home';
 
   const getCurrentPath = () => location.pathname;
@@ -187,7 +228,8 @@ export const NavigationProvider = ({ children }: { children: ReactNode }) => {
         navigateTo, 
         goBack, 
         canGoBack, 
-        getCurrentPath 
+        getCurrentPath,
+        goBackWithState
       }}
     >
       {children}

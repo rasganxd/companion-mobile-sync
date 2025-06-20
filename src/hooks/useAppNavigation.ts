@@ -1,10 +1,11 @@
 
 import { useNavigation } from '@/contexts/NavigationContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export const useAppNavigation = () => {
-  const { navigateTo: contextNavigateTo, goBack, canGoBack, getCurrentPath } = useNavigation();
+  const { navigateTo: contextNavigateTo, goBack, canGoBack, getCurrentPath, goBackWithState } = useNavigation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const navigateTo = (path: string, state?: any) => {
     console.log('🧭 useAppNavigation.navigateTo():', path, state ? 'with state' : 'no state');
@@ -15,6 +16,22 @@ export const useAppNavigation = () => {
     } else {
       // Usar contexto de navegação quando não há estado
       contextNavigateTo(path);
+    }
+  };
+
+  const goBackWithContext = () => {
+    console.log('🧭 useAppNavigation.goBackWithContext() - preserving state from:', location.pathname);
+    
+    // Capturar o estado atual para preservar o contexto
+    const currentState = location.state;
+    
+    // Se estamos em client-activities e temos estado com dia, preservar
+    if (location.pathname === '/client-activities' && currentState?.day) {
+      console.log('🧭 Preserving day context:', currentState.day);
+      goBackWithState({ day: currentState.day });
+    } else {
+      // Usar navegação padrão
+      goBack();
     }
   };
 
@@ -101,7 +118,7 @@ export const useAppNavigation = () => {
 
   return {
     navigateTo,
-    goBack,
+    goBack: goBackWithContext, // Usar a versão que preserva contexto
     canGoBack,
     getCurrentPath,
     navigateToHome,

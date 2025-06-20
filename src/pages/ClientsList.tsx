@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -36,15 +37,21 @@ const ClientsList = () => {
   const location = useLocation();
   
   const getDayFromState = () => {
+    console.log('📅 ClientsList - Getting day from state:', location.state);
+    
     if (location.state?.day) {
+      console.log('📅 Day found in state:', location.state.day);
       return location.state.day;
     }
     
+    // Fallback para o dia atual apenas se não há state
     const today = new Date();
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     const currentDay = dayNames[today.getDay()];
     
     console.log('⚠️ Nenhum dia especificado no state, usando dia atual:', currentDay);
+    console.log('⚠️ Location state completo:', location.state);
+    
     return currentDay;
   };
   
@@ -305,7 +312,7 @@ const ClientsList = () => {
   };
   
   const handleGoBack = () => {
-    console.log('🔙 Going back to visit routes');
+    console.log('🔙 ClientsList - Going back to visit routes with day context:', day);
     goBack();
   };
 
