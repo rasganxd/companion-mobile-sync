@@ -37,8 +37,8 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <NavigationProvider>
             <div className="App">
               {/* Adicionar o gerenciador do botão voltar para mobile */}
@@ -144,8 +144,8 @@ function App() {
               <Toaster richColors position="top-center" />
             </div>
           </NavigationProvider>
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </QueryClientProvider>
   );
 }
