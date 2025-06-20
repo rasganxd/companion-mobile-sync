@@ -3,7 +3,25 @@ import { Search, User } from 'lucide-react';
 import ClientCard from './ClientCard';
 import ClientPaginatedView from './ClientPaginatedView';
 import AppButton from '@/components/AppButton';
-import { Client } from '@/types/visit-routes';
+
+interface Client {
+  id: string;
+  name: string;
+  company_name?: string;
+  code?: number;
+  active: boolean;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  visit_days?: string[];
+  status?: 'positivado' | 'negativado' | 'pendente';
+  orderTotal?: number;
+  hasLocalOrders?: boolean;
+  localOrdersCount?: number;
+  hasTransmittedOrders?: boolean;
+  transmittedOrdersCount?: number;
+}
 
 interface SalesRep {
   id: string;

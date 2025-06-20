@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,13 +9,13 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { toast } from 'sonner';
 
 const InitialSyncScreen: React.FC = () => {
-  const { salesRep, sessionToken, needsInitialSync } = useAuth();
+  const { salesRep, needsInitialSync } = useAuth();
   const { isSyncing, syncProgress, performFullSync, forceResync } = useDataSync();
   const { connected } = useNetworkStatus();
   const [syncCompleted, setSyncCompleted] = useState(false);
 
   const handleSync = async () => {
-    if (!salesRep || !sessionToken) {
+    if (!salesRep || !salesRep.sessionToken) {
       toast.error('Sessão expirada. Faça login novamente.');
       return;
     }
@@ -27,7 +26,7 @@ const InitialSyncScreen: React.FC = () => {
     }
 
     try {
-      const result = await performFullSync(salesRep.id, sessionToken);
+      const result = await performFullSync(salesRep.id, salesRep.sessionToken);
       
       if (result.success) {
         setSyncCompleted(true);
@@ -43,7 +42,7 @@ const InitialSyncScreen: React.FC = () => {
   };
 
   const handleForceResync = async () => {
-    if (!salesRep || !sessionToken) {
+    if (!salesRep || !salesRep.sessionToken) {
       toast.error('Sessão expirada. Faça login novamente.');
       return;
     }
@@ -54,7 +53,7 @@ const InitialSyncScreen: React.FC = () => {
     }
 
     try {
-      const result = await forceResync(salesRep.id, sessionToken);
+      const result = await forceResync(salesRep.id, salesRep.sessionToken);
       
       if (result.success) {
         setSyncCompleted(true);

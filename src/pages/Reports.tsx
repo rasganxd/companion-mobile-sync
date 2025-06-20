@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import Header from '@/components/Header';
 interface ReportData {
   totalOrders: number;
   totalValue: number;
@@ -128,32 +127,41 @@ const Reports = () => {
       color: "#2563eb"
     }
   };
-
-  // Componente dos filtros de período para o rightComponent
-  const PeriodFilters = () => <div className="flex space-x-1">
-      <Button variant={selectedPeriod === '7' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('7')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
-        7d
-      </Button>
-      <Button variant={selectedPeriod === '30' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('30')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
-        30d
-      </Button>
-      <Button variant={selectedPeriod === 'all' ? 'secondary' : 'ghost'} size="sm" onClick={() => setSelectedPeriod('all')} className="text-xs hover:bg-white/20 data-[state=active]:bg-white/30 text-neutral-950">
-        Todos
-      </Button>
-    </div>;
   if (loading) {
-    return <div className="min-h-screen bg-gray-50">
-        <Header title="Relatórios" showBackButton={true} backgroundColor="blue" />
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Carregando relatórios...</p>
-          </div>
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando relatórios...</p>
         </div>
       </div>;
   }
   return <div className="min-h-screen bg-gray-50">
-      <Header title="Relatórios" showBackButton={true} backgroundColor="blue" rightComponent={<PeriodFilters />} />
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/home')} className="mr-4">
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <h1 className="font-semibold text-gray-900 text-base">Relatórios</h1>
+            </div>
+            
+            {/* Filtro de período */}
+            <div className="flex space-x-2">
+              <Button variant={selectedPeriod === '7' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('7')}>
+                7 dias
+              </Button>
+              <Button variant={selectedPeriod === '30' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('30')}>
+                30 dias
+              </Button>
+              <Button variant={selectedPeriod === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('all')}>
+                Todos
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cards de métricas principais */}
@@ -216,7 +224,13 @@ const Reports = () => {
         </div>
 
         {/* Gráficos */}
-        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Gráfico de pedidos por status */}
+          
+
+          {/* Gráfico de pizza - Status dos pedidos */}
+          
+        </div>
 
         {/* Tabela de pedidos recentes */}
         

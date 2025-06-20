@@ -1,9 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
+import { DatabaseInitializer } from '@/services/database/DatabaseInitializer';
 
 interface SyncProgress {
   stage: string;
@@ -36,19 +36,18 @@ export const useDataSync = () => {
   const handleDatabaseVersionError = useCallback(async () => {
     try {
       console.log('🔄 Handling database version conflict...');
-      const db = getDatabaseAdapter();
-      await db.closeDatabase();
-      await db.initDatabase();
-      console.log('✅ Database reinitialized after version conflict');
+      await DatabaseInitializer.clearDatabase();
+      console.log('✅ Database cleared, will reinitialize on next sync attempt');
     } catch (error) {
-      console.error('❌ Error handling database version conflict:', error);
-      throw new Error('Falha ao corrigir conflito de versão do banco de dados');
+      console.error('❌ Error clearing database:', error);
+      throw new Error('Falha ao limpar banco de dados corrompido');
     }
   }, []);
 
   const clearLocalData = useCallback(async () => {
     try {
       console.log('🗑️ Limpando dados locais para forçar sincronização completa');
+      const db = getDatabaseAdapter();
       
       // Limpar metadata de sincronização
       localStorage.removeItem('last_sync_date');
@@ -57,6 +56,40 @@ export const useDataSync = () => {
       console.log('✅ Dados locais limpos com sucesso');
     } catch (error) {
       console.error('❌ Erro ao limpar dados locais:', error);
+    }
+  }, []);
+
+  const clearMockData = useCallback(async () => {
+    try {
+      console.log('🗑️ Iniciando limpeza FORÇADA de dados mock...');
+      const db = getDatabaseAdapter();
+      
+      // Forçar limpeza de dados mock
+      if ('forceClearMockData' in db && typeof db.forceClearMockData === 'function') {
+        await db.forceClearMockData();
+        console.log('✅ Dados mock limpos via forceClearMockData');
+      } else if ('clearMockData' in db && typeof db.clearMockData === 'function') {
+        await db.clearMockData();
+        console.log('✅ Dados mock limpos via clearMockData');
+      }
+      
+      console.log('✅ Limpeza forçada de dados mock concluída');
+    } catch (error) {
+      console.error('❌ Erro ao limpar dados mock:', error);
+    }
+  }, []);
+
+  const forceCleanAllProducts = useCallback(async () => {
+    try {
+      console.log('🗑️ Iniciando limpeza COMPLETA de todos os produtos...');
+      const db = getDatabaseAdapter();
+      
+      if ('forceCleanAllProducts' in db && typeof db.forceCleanAllProducts === 'function') {
+        await db.forceCleanAllProducts();
+        console.log('✅ Limpeza COMPLETA de produtos concluída');
+      }
+    } catch (error) {
+      console.error('❌ Erro na limpeza completa de produtos:', error);
     }
   }, []);
 
@@ -75,10 +108,40 @@ export const useDataSync = () => {
     });
   };
 
+  const validateSyncedData = (clients: any[], products: any[], paymentTables: any[]) => {
+    console.log('🔍 Validando dados sincronizados:', {
+      clients: clients.length,
+      products: products.length,
+      paymentTables: paymentTables.length,
+      clientsSample: clients.slice(0, 2).map(c => ({ id: c.id, name: c.name })),
+      productsSample: products.slice(0, 2).map(p => ({ id: p.id, name: p.name })),
+      paymentTablesSample: paymentTables.slice(0, 2).map(pt => ({ id: pt.id, name: pt.name }))
+    });
+
+    // Verificar se há dados mock ainda presentes
+    const hasMockClients = clients.some(c => 
+      c.name?.toLowerCase().includes('mykaela') || 
+      c.company_name?.toLowerCase().includes('mykaela')
+    );
+    const hasMockProducts = products.some(p => 
+      p.name?.toLowerCase().includes('produto premium') || 
+      p.name?.toLowerCase().includes('produto standard')
+    );
+
+    if (hasMockClients) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de clientes ainda presentes!');
+    }
+    if (hasMockProducts) {
+      console.warn('⚠️ ATENÇÃO: Dados mock de produtos ainda presentes!');
+    }
+
+    return !hasMockClients && !hasMockProducts;
+  };
+
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
     try {
       setIsSyncing(true);
-      console.log('🔄 Iniciando sincronização COMPLETA COM DADOS REAIS');
+      console.log('🔄 Iniciando sincronização COMPLETA - APENAS DADOS REAIS');
       
       // Validar parâmetros de entrada
       try {
@@ -109,8 +172,13 @@ export const useDataSync = () => {
         }
       }
 
+      // SEMPRE executar limpeza de dados mock primeiro
+      await clearMockData();
+
       if (forceClear) {
         await clearLocalData();
+        // NOVA: Limpeza completa de produtos
+        await forceCleanAllProducts();
       }
 
       let syncedClients = 0;
@@ -121,66 +189,36 @@ export const useDataSync = () => {
       let paymentTablesData: any[] = [];
 
       // Etapa 1: Buscar clientes REAIS
-      updateProgress('Carregando clientes REAIS...', 0, 4);
+      updateProgress('Carregando clientes...', 0, 4);
       try {
-        console.log('📥 ✅ FORÇANDO busca de clientes REAIS do Supabase');
+        console.log('📥 Buscando clientes REAIS do Supabase');
         clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
-        console.log(`📥 ✅ Recebidos ${clientsData.length} clientes REAIS do serviço`);
+        console.log(`📥 Recebidos ${clientsData.length} clientes do serviço`);
         
-        // Validação detalhada dos dados recebidos
         if (clientsData.length > 0) {
-          console.log('📊 ✅ VALIDAÇÃO DETALHADA DOS CLIENTES RECEBIDOS:');
-          clientsData.forEach((client, index) => {
-            console.log(`👤 Cliente ${index + 1} REAL:`, {
-              id: client.id,
-              name: client.name,
-              active: client.active,
-              sales_rep_id: client.sales_rep_id,
-              visit_days: client.visit_days,
-              visit_days_type: typeof client.visit_days,
-              visit_sequence: client.visit_sequence
-            });
-          });
-          
-          console.log('💾 ✅ Salvando clientes REAIS no banco local...');
           await db.saveClients(clientsData);
           syncedClients = clientsData.length;
           console.log(`✅ Salvos ${syncedClients} clientes REAIS`);
-          
-          // Verificar se foram salvos corretamente
-          console.log('🔍 ✅ Verificando clientes salvos no banco local...');
-          const savedClients = await db.getCustomers();
-          console.log(`🔍 ✅ Clientes encontrados no banco local: ${savedClients.length}`);
-          savedClients.forEach((client, index) => {
-            console.log(`👤 Cliente ${index + 1} salvo localmente:`, {
-              id: client.id,
-              name: client.name,
-              active: client.active,
-              sales_rep_id: client.sales_rep_id,
-              visit_days: client.visit_days,
-              visit_days_type: typeof client.visit_days
-            });
-          });
         } else {
-          console.log('ℹ️ ❌ Nenhum cliente REAL encontrado no banco de dados');
+          console.log('ℹ️ Nenhum cliente encontrado no banco de dados');
           syncedClients = 0;
         }
       } catch (error) {
-        console.error('❌ Falha ao sincronizar clientes REAIS:', error);
+        console.error('❌ Falha ao sincronizar clientes:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-        throw new Error(`Erro ao carregar clientes REAIS: ${errorMessage}`);
+        throw new Error(`Erro ao carregar clientes: ${errorMessage}`);
       }
 
-      // Etapa 2: Buscar produtos REAIS
-      updateProgress('Carregando produtos REAIS...', 1, 4);
+      // Etapa 2: Buscar produtos REAIS com limpeza completa
+      updateProgress('Carregando produtos...', 1, 4);
       try {
-        console.log('📥 ✅ FORÇANDO busca de produtos REAIS do Supabase');
+        console.log('📥 Buscando produtos REAIS do Supabase');
         productsData = await supabaseService.getProducts(sessionToken);
-        console.log(`📥 ✅ Recebidos ${productsData.length} produtos REAIS do serviço`);
+        console.log(`📥 Recebidos ${productsData.length} produtos do serviço`);
         
         // Log detalhado dos produtos recebidos
         productsData.forEach((product, index) => {
-          console.log(`📦 Produto ${index + 1} REAL do Supabase:`, {
+          console.log(`📦 Produto ${index + 1} do Supabase:`, {
             id: product.id,
             name: product.name,
             code: product.code,
@@ -189,29 +227,30 @@ export const useDataSync = () => {
         });
         
         if (productsData.length > 0) {
+          // O saveProducts já faz a limpeza completa antes de salvar
           await db.saveProducts(productsData);
           syncedProducts = productsData.length;
-          console.log(`✅ Salvos ${syncedProducts} produtos REAIS`);
+          console.log(`✅ Salvos ${syncedProducts} produtos REAIS após limpeza completa`);
         } else {
-          console.log('ℹ️ Nenhum produto REAL encontrado no banco de dados');
+          console.log('ℹ️ Nenhum produto encontrado no banco de dados');
           syncedProducts = 0;
         }
       } catch (error) {
-        console.error('❌ Falha ao sincronizar produtos REAIS:', error);
+        console.error('❌ Falha ao sincronizar produtos:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-        throw new Error(`Erro ao carregar produtos REAIS: ${errorMessage}`);
+        throw new Error(`Erro ao carregar produtos: ${errorMessage}`);
       }
 
       // Etapa 3: Buscar tabelas de pagamento REAIS
-      updateProgress('Carregando tabelas de pagamento REAIS...', 2, 4);
+      updateProgress('Carregando tabelas de pagamento...', 2, 4);
       try {
-        console.log('📥 ✅ FORÇANDO busca de tabelas de pagamento REAIS do Supabase');
+        console.log('📥 Buscando tabelas de pagamento REAIS do Supabase');
         paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
-        console.log(`📥 ✅ Recebidas ${paymentTablesData.length} tabelas de pagamento REAIS`);
+        console.log(`📥 Recebidas ${paymentTablesData.length} tabelas de pagamento`);
         
         // Log detalhado das tabelas de pagamento recebidas
         paymentTablesData.forEach((paymentTable, index) => {
-          console.log(`💳 Tabela de pagamento ${index + 1} REAL do Supabase:`, {
+          console.log(`💳 Tabela de pagamento ${index + 1} do Supabase:`, {
             id: paymentTable.id,
             name: paymentTable.name,
             type: paymentTable.type,
@@ -224,12 +263,22 @@ export const useDataSync = () => {
           syncedPaymentTables = paymentTablesData.length;
           console.log(`✅ Salvas ${syncedPaymentTables} tabelas de pagamento REAIS`);
         } else {
-          console.log('ℹ️ Nenhuma tabela de pagamento REAL encontrada no banco de dados');
+          console.log('ℹ️ Nenhuma tabela de pagamento encontrada no banco de dados');
           syncedPaymentTables = 0;
         }
       } catch (error) {
-        console.warn('⚠️ Falha ao sincronizar tabelas de pagamento REAIS:', error);
+        console.warn('⚠️ Falha ao sincronizar tabelas de pagamento:', error);
         syncedPaymentTables = 0;
+      }
+
+      // Validar dados sincronizados
+      updateProgress('Validando dados...', 3, 4);
+      const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
+
+      if (!isDataValid) {
+        console.warn('⚠️ Dados mock detectados após sincronização!');
+        // Executar segunda limpeza
+        await clearMockData();
       }
 
       // Salvar metadata de sincronização
@@ -238,11 +287,12 @@ export const useDataSync = () => {
       localStorage.setItem('sales_rep_id', salesRepId);
       setLastSyncDate(syncDate);
 
-      console.log('📊 ✅ RESUMO DA SINCRONIZAÇÃO COM DADOS REAIS:', {
+      console.log('📊 Resumo da sincronização:', {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts + syncedPaymentTables
+        total: syncedClients + syncedProducts + syncedPaymentTables,
+        dataValid: isDataValid
       });
 
       const totalSynced = syncedClients + syncedProducts;
@@ -250,11 +300,11 @@ export const useDataSync = () => {
       if (totalSynced === 0) {
         return {
           success: false,
-          error: 'Nenhum dado REAL encontrado no banco de dados. Verifique se há clientes e produtos cadastrados para este vendedor.'
+          error: 'Nenhum dado encontrado no banco de dados. Verifique se há clientes e produtos cadastrados para este vendedor.'
         };
       }
 
-      console.log('✅ Sincronização com dados REAIS concluída com sucesso');
+      console.log('✅ Sincronização concluída - APENAS dados REAIS carregados');
       
       return {
         success: true,
@@ -266,7 +316,7 @@ export const useDataSync = () => {
       };
 
     } catch (error) {
-      console.error('❌ Falha na sincronização com dados REAIS:', error);
+      console.error('❌ Falha na sincronização:', error);
       
       // Se for erro de versão, sugerir limpeza
       if (error instanceof Error && error.message.includes('version')) {
@@ -284,7 +334,7 @@ export const useDataSync = () => {
       setIsSyncing(false);
       setSyncProgress(null);
     }
-  }, [connected, clearLocalData, handleDatabaseVersionError]);
+  }, [connected, clearLocalData, clearMockData, forceCleanAllProducts, handleDatabaseVersionError]);
 
   const loadLastSyncDate = useCallback(() => {
     const saved = localStorage.getItem('last_sync_date');
@@ -306,6 +356,8 @@ export const useDataSync = () => {
     forceResync,
     loadLastSyncDate,
     clearLocalData,
+    clearMockData,
+    forceCleanAllProducts,
     canSync: connected
   };
 };

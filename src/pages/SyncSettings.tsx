@@ -1,189 +1,257 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Trash2, Download, Upload, Database, Wifi, WifiOff } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import React, { useState } from 'react';
+import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import Header from '@/components/Header';
+import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
 import { useDataSync } from '@/hooks/useDataSync';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-const SyncSettings: React.FC = () => {
-  const { salesRep, sessionToken, isOnline, lastSyncDate } = useAuth();
-  const { isSyncing, syncProgress, performFullSync, forceResync } = useDataSync();
-  const { connected } = useNetworkStatus();
-  const [syncStats, setSyncStats] = useState<any>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
-
-  const loadSyncStats = async () => {
-    setIsLoadingStats(true);
+const SyncSettings = () => {
+  const navigate = useNavigate();
+  const {
+    syncStatus
+  } = useLocalSyncStatus();
+  const {
+    salesRep
+  } = useAuth();
+  const {
+    connected
+  } = useNetworkStatus();
+  const {
+    isSyncing,
+    syncProgress,
+    lastSyncDate,
+    performFullSync,
+    forceResync,
+    loadLastSyncDate,
+    clearLocalData,
+    canSync
+  } = useDataSync();
+  const [isClearingData, setIsClearingData] = useState(false);
+  React.useEffect(() => {
+    loadLastSyncDate();
+  }, [loadLastSyncDate]);
+  const formatLastSync = () => {
+    const dateToFormat = lastSyncDate || syncStatus.lastSync;
+    if (!dateToFormat) {
+      return 'Nunca sincronizado';
+    }
     try {
-      // Implementar lógica para carregar estatísticas de sincronização
-      setSyncStats({
-        lastSyncDate: lastSyncDate ? lastSyncDate.toLocaleDateString() : 'Nunca',
-        isOnline: isOnline,
-        pendingItems: 0, // Substituir por lógica real
+      return format(dateToFormat, "dd/MM/yyyy 'às' HH:mm", {
+        locale: ptBR
       });
     } catch (error) {
-      console.error('Erro ao carregar estatísticas de sincronização:', error);
-      toast.error('Erro ao carregar estatísticas de sincronização');
+      return 'Data inválida';
+    }
+  };
+  const handleQuickSync = async () => {
+    if (!salesRep || !salesRep.sessionToken) {
+      toast.error('Vendedor não identificado. Faça login novamente.');
+      return;
+    }
+    if (!canSync) {
+      toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
+      return;
+    }
+    console.log('🔄 Iniciando sincronização rápida...');
+    try {
+      const result = await performFullSync(salesRep.id, salesRep.sessionToken);
+      if (result.success) {
+        const {
+          clients = 0,
+          products = 0,
+          paymentTables = 0
+        } = result.syncedData || {};
+        toast.success(`Sincronização concluída! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
+        console.log('✅ Sincronização rápida bem-sucedida');
+      } else {
+        toast.error('Falha na sincronização: ' + (result.error || 'Erro desconhecido'));
+        console.error('❌ Falha na sincronização rápida:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Erro durante sincronização rápida:', error);
+      toast.error('Erro durante a sincronização. Tente novamente.');
+    }
+  };
+  const handleFullResync = async () => {
+    if (!salesRep || !salesRep.sessionToken) {
+      toast.error('Vendedor não identificado. Faça login novamente.');
+      return;
+    }
+    if (!canSync) {
+      toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
+      return;
+    }
+    if (!confirm('Isso irá limpar todos os dados locais e recarregar tudo do servidor. Continuar?')) {
+      return;
+    }
+    console.log('🔄 Iniciando ressincronização completa...');
+    try {
+      const result = await forceResync(salesRep.id, salesRep.sessionToken);
+      if (result.success) {
+        const {
+          clients = 0,
+          products = 0,
+          paymentTables = 0
+        } = result.syncedData || {};
+        toast.success(`Ressincronização completa! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
+        console.log('✅ Ressincronização completa bem-sucedida');
+      } else {
+        toast.error('Falha na ressincronização: ' + (result.error || 'Erro desconhecido'));
+        console.error('❌ Falha na ressincronização completa:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Erro durante ressincronização completa:', error);
+      toast.error('Erro durante a ressincronização. Tente novamente.');
+    }
+  };
+  const handleClearLocalData = async () => {
+    if (!confirm('Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Continuar?')) {
+      return;
+    }
+    setIsClearingData(true);
+    try {
+      await clearLocalData();
+      toast.success('Dados locais limpos com sucesso');
+      console.log('✅ Dados locais limpos');
+
+      // Redirecionar para login após limpar dados
+      setTimeout(() => {
+        navigate('/login');
+      }, 1000);
+    } catch (error) {
+      console.error('❌ Erro ao limpar dados locais:', error);
+      toast.error('Erro ao limpar dados locais');
     } finally {
-      setIsLoadingStats(false);
+      setIsClearingData(false);
     }
   };
-
-  useEffect(() => {
-    loadSyncStats();
-  }, [isOnline, lastSyncDate]);
-
-  const handleFullSync = async () => {
-    if (!salesRep || !sessionToken) {
-      toast.error('Sessão expirada. Faça login novamente.');
-      return;
-    }
-
-    if (!connected) {
-      toast.error('Sem conexão com a internet');
-      return;
-    }
-
-    try {
-      const result = await performFullSync(salesRep.id, sessionToken);
+  const getProgressPercentage = () => {
+    if (!syncProgress) return 0;
+    return syncProgress.percentage || 0;
+  };
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header title="Configurações de Sync" showBackButton={true} backgroundColor="blue" />
       
-      if (result.success) {
-        const { syncedData } = result;
-        toast.success(`Sincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
-        await loadSyncStats();
-      } else {
-        toast.error('Falha na sincronização: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Sync error:', error);
-      toast.error('Erro durante a sincronização');
-    }
-  };
+      <div className="p-4 flex-1">
+        {/* Sync Method Card */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[9px]">
+          <h2 className="text-lg font-semibold mb-4">Método de Sincronização</h2>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50 border-green-200">
+              <div className="flex-1">
+                <div className="font-medium text-green-700">
+                  <CheckCircle size={16} className="inline mr-2" />
+                  Sistema Local (Offline-First)
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Todos os dados são armazenados localmente
+                </div>
+              </div>
+            </div>
+            
+            <div className="pl-4 border-l-2 border-green-200">
+              
+            </div>
+          </div>
+        </div>
 
-  const handleForceResync = async () => {
-    if (!salesRep || !sessionToken) {
-      toast.error('Sessão expirada. Faça login novamente.');
-      return;
-    }
-
-    if (!connected) {
-      toast.error('Sem conexão com a internet');
-      return;
-    }
-
-    if (!confirm('Isso irá apagar todos os dados locais e recarregar do servidor. Continuar?')) {
-      return;
-    }
-
-    try {
-      const result = await forceResync(salesRep.id, sessionToken);
-      
-      if (result.success) {
-        const { syncedData } = result;
-        toast.success(`Ressincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
-        await loadSyncStats();
-      } else {
-        toast.error('Falha na ressincronização: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Force resync error:', error);
-      toast.error('Erro durante a ressincronização');
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Database className="text-gray-500" size={24} />
-            Configurações de Sincronização
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <p className="text-gray-600 text-sm">
-              Gerencie a sincronização de dados do aplicativo.
-            </p>
+        {/* Sync Actions Card */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Sincronizar Dados</h2>
+            <div className="flex items-center">
+              {connected ? <Wifi size={20} className="text-green-500 mr-2" /> : <WifiOff size={20} className="text-red-500 mr-2" />}
+              <span className={connected ? "text-green-500" : "text-red-500"}>
+                {connected ? 'Online' : 'Offline'}
+              </span>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="shadow-sm">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-sm font-medium">
-                  Status da Conexão
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {connected ? (
-                  <Badge variant="outline" className="bg-green-100 text-green-800">
-                    <Wifi className="mr-2 h-4 w-4" />
-                    Online
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="bg-red-100 text-red-800">
-                    <WifiOff className="mr-2 h-4 w-4" />
-                    Offline
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm">
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-sm font-medium">
-                  Última Sincronização
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingStats ? (
-                  <p className="text-sm text-gray-500">Carregando...</p>
-                ) : (
-                  <p className="text-sm text-gray-500">
-                    {syncStats?.lastSyncDate || 'Nunca sincronizado'}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          {/* Progress Bar */}
+          {isSyncing && syncProgress && <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium">{syncProgress.stage}</span>
+                <span className="text-sm text-gray-500">
+                  {syncProgress.current}/{syncProgress.total}
+                </span>
+              </div>
+              <Progress value={getProgressPercentage()} className="h-2" />
+            </div>}
 
           <div className="space-y-3">
-            <Button
-              onClick={handleFullSync}
-              disabled={isSyncing || !connected}
-              className="w-full"
-            >
-              {isSyncing ? (
-                <>
-                  <RefreshCw size={16} className="animate-spin mr-2" />
+            <Button onClick={handleQuickSync} disabled={isSyncing || !canSync || !salesRep} className="w-full" variant="default">
+              {isSyncing ? <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                   Sincronizando...
-                </>
-              ) : (
-                <>
-                  <RefreshCw size={16} className="mr-2" />
-                  Sincronizar Dados
-                </>
-              )}
+                </> : <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Sincronização Rápida
+                </>}
             </Button>
 
-            <Button
-              onClick={handleForceResync}
-              disabled={isSyncing || !connected}
-              variant="outline"
-              className="w-full"
-            >
-              <Trash2 size={16} className="mr-2" />
-              Forçar Ressincronização
+            <Button onClick={handleFullResync} disabled={isSyncing || !canSync || !salesRep} className="w-full" variant="outline">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Ressincronização Completa
+            </Button>
+
+            <Button onClick={handleClearLocalData} disabled={isSyncing || isClearingData} className="w-full" variant="destructive">
+              {isClearingData ? <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Limpando...
+                </> : 'Limpar Dados Locais'}
             </Button>
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
+          <div className="text-sm text-gray-600 mt-3">
+            <p><strong>Sincronização Rápida:</strong> Atualiza dados sem limpar cache local</p>
+            <p><strong>Ressincronização Completa:</strong> Remove todos os dados e recarrega do servidor</p>
+            <p><strong>Limpar Dados:</strong> Remove todos os dados locais (requer novo login)</p>
+          </div>
+        </div>
+
+        {/* Status Card */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 py-[12px]">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Status do Sistema</h2>
+            <div className="flex items-center">
+              <Database size={20} className="text-green-500 mr-2" />
+              <span className="text-green-500">Local</span>
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            <div className="flex justify-between py-2">
+              <span className="text-gray-600">Última sincronização:</span>
+              <span className="font-medium">{formatLastSync()}</span>
+            </div>
+            
+            <div className="flex justify-between py-2">
+              <span className="text-gray-600">Pedidos para transmitir:</span>
+              <span className={syncStatus.pendingOrdersCount > 0 ? "font-medium text-amber-600" : "font-medium"}>
+                {syncStatus.pendingOrdersCount}
+              </span>
+            </div>
+
+            <div className="flex justify-between py-2">
+              <span className="text-gray-600">Vendedor:</span>
+              <span className="font-medium">{salesRep?.name || 'Não identificado'}</span>
+            </div>
+          </div>
+          
+          
+        </div>
+        
+        {/* Info Card */}
+        
+      </div>
+    </div>;
+};
 export default SyncSettings;

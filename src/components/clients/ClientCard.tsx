@@ -1,7 +1,26 @@
+
 import React from 'react';
 import { User, Phone, MapPin, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
-import { Client } from '@/types/visit-routes';
+
+interface Client {
+  id: string;
+  name: string;
+  company_name?: string;
+  code?: number;
+  active: boolean;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  visit_days?: string[];
+  status?: 'positivado' | 'negativado' | 'pendente';
+  orderTotal?: number;
+  hasLocalOrders?: boolean;
+  localOrdersCount?: number;
+  hasTransmittedOrders?: boolean;
+  transmittedOrdersCount?: number;
+}
 
 interface ClientCardProps {
   client: Client;
@@ -89,15 +108,12 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
               </div>
             )}
             
-            {(client.address || client.city || client.state || client.neighborhood) && (
+            {(client.address || client.city || client.state) && (
               <div className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   {client.address && (
                     <p className="truncate">{client.address}</p>
-                  )}
-                  {client.neighborhood && (
-                    <p className="truncate">{client.neighborhood}</p>
                   )}
                   {(client.city || client.state) && (
                     <p className="truncate">

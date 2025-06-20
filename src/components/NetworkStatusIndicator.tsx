@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Wifi, WifiOff, Cloud, CloudOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -6,27 +5,29 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useAuth } from '@/contexts/AuthContext';
 
 const NetworkStatusIndicator: React.FC = () => {
-  const { connected, connectionType } = useNetworkStatus();
-  const { isOnline, lastSyncDate } = useAuth();
-  
+  const {
+    connected,
+    connectionType
+  } = useNetworkStatus();
+  const {
+    isOnline,
+    lastSyncDate
+  } = useAuth();
   const getStatusColor = () => {
     if (!connected) return 'bg-red-100 text-red-800';
     if (isOnline) return 'bg-green-100 text-green-800';
     return 'bg-yellow-100 text-yellow-800';
   };
-  
   const getStatusText = () => {
     if (!connected) return 'Offline';
     if (isOnline) return 'Online';
     return 'Modo Offline';
   };
-  
   const getStatusIcon = () => {
     if (!connected) return <WifiOff size={12} />;
     if (isOnline) return <Cloud size={12} />;
     return <CloudOff size={12} />;
   };
-  
   const formatLastSync = () => {
     if (!lastSyncDate) return 'Nunca sincronizado';
     const now = new Date();
@@ -39,20 +40,12 @@ const NetworkStatusIndicator: React.FC = () => {
     if (minutes > 0) return `${minutes}m atrás`;
     return 'Agora mesmo';
   };
-  
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <Badge variant="outline" className={getStatusColor()}>
-        {getStatusIcon()}
-        <span className="ml-1">{getStatusText()}</span>
-      </Badge>
-      {connectionType !== 'unknown' && (
-        <span className="text-gray-500">
-          {formatLastSync()}
-        </span>
-      )}
-    </div>
-  );
+  return <div className="flex items-center gap-2 text-xs">
+      
+      
+      {connectionType !== 'unknown'}
+      
+      
+    </div>;
 };
-
 export default NetworkStatusIndicator;
