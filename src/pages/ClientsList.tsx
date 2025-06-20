@@ -81,30 +81,78 @@ const ClientsList = () => {
           return;
         }
         
-        console.log(`📅 Loading clients for: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
+        console.log(`📅 [ANDROID] Loading clients for: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
         
         const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
         
         if (!englishDay) {
-          console.log(`❌ No English day found for ${day}`);
+          console.log(`❌ [ANDROID] No English day found for ${day}`);
           setClients([]);
           return;
         }
         
-        console.log(`🔍 Fetching customers for ${day} (${englishDay}) from local database...`);
+        console.log(`🔍 [ANDROID] Fetching customers for ${day} (${englishDay}) from local database...`);
         
         // Buscar clientes do banco local
         const db = getDatabaseAdapter();
         const allCustomers = await db.getCustomers();
         
-        // Filtrar clientes ativos do vendedor que têm o dia de visita
-        const dayClients = allCustomers.filter(customer => 
-          customer.active && 
-          customer.sales_rep_id === salesRep.id &&
-          customer.visit_days && 
-          Array.isArray(customer.visit_days) && 
-          customer.visit_days.includes(englishDay)
-        );
+        console.log(`📱 [ANDROID] Total customers from database: ${allCustomers.length}`);
+        console.log(`📱 [ANDROID] First 5 customers sample:`, allCustomers.slice(0, 5).map(c => ({
+          id: c.id,
+          name: c.name,
+          sales_rep_id: c.sales_rep_id,
+          visit_days: c.visit_days,
+          visit_days_type: typeof c.visit_days,
+          active: c.active
+        })));
+        
+        // 🔄 FILTRAGEM ROBUSTA: Melhorar a filtragem de clientes
+        const dayClients = allCustomers.filter(customer => {
+          // Verificações básicas
+          if (!customer.active) {
+            console.log(`📱 [ANDROID] Cliente ${customer.name} não está ativo`);
+            return false;
+          }
+          
+          if (customer.sales_rep_id !== salesRep.id) {
+            console.log(`📱 [ANDROID] Cliente ${customer.name} não pertence ao vendedor (${customer.sales_rep_id} vs ${salesRep.id})`);
+            return false;
+          }
+          
+          // Verificação robusta de visit_days
+          let visitDays = customer.visit_days;
+          
+          // Se visit_days não existe ou é nulo, pular
+          if (!visitDays) {
+            console.log(`📱 [ANDROID] Cliente ${customer.name} não tem visit_days definido`);
+            return false;
+          }
+          
+          // Se é string, tentar fazer parse
+          if (typeof visitDays === 'string') {
+            try {
+              visitDays = JSON.parse(visitDays);
+            } catch (e) {
+              console.log(`📱 [ANDROID] Cliente ${customer.name} visit_days não é JSON válido:`, visitDays);
+              return false;
+            }
+          }
+          
+          // Se não é array, pular
+          if (!Array.isArray(visitDays)) {
+            console.log(`📱 [ANDROID] Cliente ${customer.name} visit_days não é array:`, visitDays);
+            return false;
+          }
+          
+          // Verificar se o dia está incluído
+          const hasDay = visitDays.includes(englishDay);
+          console.log(`📱 [ANDROID] Cliente ${customer.name}: visit_days=${JSON.stringify(visitDays)}, englishDay=${englishDay}, hasDay=${hasDay}`);
+          
+          return hasDay;
+        });
+        
+        console.log(`📱 [ANDROID] Filtered day clients: ${dayClients.length}`);
         
         const today = new Date().toISOString().split('T')[0];
         const clientIds = dayClients.map(client => client.id);
@@ -118,8 +166,8 @@ const ClientsList = () => {
           new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0] === today
         );
         
-        console.log('👥 Day clients for salesperson:', dayClients);
-        console.log('📱 Local orders for today:', localOrders);
+        console.log('👥 [ANDROID] Day clients for salesperson:', dayClients.length);
+        console.log('📱 [ANDROID] Local orders for today:', localOrders.length);
         
         const clientsWithStatus = dayClients.map(client => {
           const clientLocalOrders = localOrders.filter(order => 
@@ -138,18 +186,8 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
-          // DEBUG: Verificar o status do cliente no banco
-          console.log(`🔍 [DEBUG] Cliente ${client.name}:`, {
-            clientId: client.id,
-            clientStatus: client.status,
-            localOrders: clientLocalOrders.length,
-            pendingLocal: pendingLocalOrders.length,
-            transmittedLocal: transmittedLocalOrders.length
-          });
-          
           // Verificar primeiro se o cliente tem status 'negativado' no banco
           if (client.status === 'negativado') {
-            console.log(`❌ [DEBUG] Cliente ${client.name} tem status 'negativado' no banco`);
             status = 'negativado';
           } else if (clientLocalOrders.length > 0) {
             const hasPositive = clientLocalOrders.some(order => 
@@ -174,12 +212,6 @@ const ClientsList = () => {
               status = 'negativado';
             }
           }
-          
-          console.log(`🔍 [DEBUG] Cliente ${client.name} status final:`, {
-            originalStatus: client.status,
-            calculatedStatus: status,
-            orderTotal: orderTotal.toFixed(2)
-          });
           
           return {
             ...client,
@@ -228,11 +260,17 @@ const ClientsList = () => {
           return a.name.localeCompare(b.name);
         });
         
-        console.log(`✅ Clients with smart ordering for ${day} (salesperson ${salesRep.name}):`, sortedClients);
+        console.log(`✅ [ANDROID] Clients with smart ordering for ${day} (salesperson ${salesRep.name}):`, sortedClients.length);
+        console.log(`📱 [ANDROID] Final client list sample:`, sortedClients.slice(0, 3).map(c => ({
+          name: c.name,
+          visit_sequence: c.visit_sequence,
+          status: c.status
+        })));
+        
         setClients(sortedClients);
         
       } catch (error) {
-        console.error('❌ Error loading clients:', error);
+        console.error('❌ [ANDROID] Error loading clients:', error);
         toast.error('Erro ao carregar clientes');
         setClients([]);
       } finally {

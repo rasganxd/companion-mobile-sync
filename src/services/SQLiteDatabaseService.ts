@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 
@@ -163,11 +162,49 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Getting clients from SQLite database...');
+      console.log('📱 [ANDROID] Getting clients from SQLite database...');
       const result = await this.db!.query('SELECT * FROM clients');
-      return result.values || [];
+      const clients = result.values || [];
+      
+      console.log(`📱 [ANDROID] Raw clients from SQLite: ${clients.length}`);
+      
+      // 🔄 CORREÇÃO: Processar visit_days para garantir que seja array
+      const processedClients = clients.map(client => {
+        let visitDays = client.visit_days;
+        
+        // Se visit_days é string, tentar fazer parse
+        if (typeof visitDays === 'string' && visitDays) {
+          try {
+            visitDays = JSON.parse(visitDays);
+          } catch (e) {
+            console.warn(`📱 [ANDROID] Failed to parse visit_days for client ${client.name}:`, visitDays);
+            visitDays = [];
+          }
+        }
+        
+        // Se não é array, transformar em array vazio
+        if (!Array.isArray(visitDays)) {
+          visitDays = [];
+        }
+        
+        console.log(`📱 [ANDROID] Client ${client.name}:`, {
+          id: client.id,
+          visit_days: visitDays,
+          visit_sequence: client.visit_sequence,
+          sales_rep_id: client.sales_rep_id,
+          active: client.active
+        });
+        
+        return {
+          ...client,
+          visit_days: visitDays
+        };
+      });
+      
+      console.log(`📱 [ANDROID] Processed clients: ${processedClients.length}`);
+      return processedClients;
     } catch (error) {
-      console.error('❌ Error getting clients:', error);
+      console.error('❌ [ANDROID] Error getting clients:', error);
       return [];
     }
   }
@@ -512,9 +549,34 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
   
     try {
-      console.log(`📱 Saving ${clientsArray.length} clients to SQLite database...`);
+      console.log(`📱 [ANDROID] Saving ${clientsArray.length} clients to SQLite database...`);
   
       for (const client of clientsArray) {
+        // 🔄 CORREÇÃO: Garantir que visit_days seja salvo como string JSON
+        let visitDaysString = null;
+        if (client.visit_days) {
+          if (Array.isArray(client.visit_days)) {
+            visitDaysString = JSON.stringify(client.visit_days);
+          } else if (typeof client.visit_days === 'string') {
+            // Verificar se já é JSON válido
+            try {
+              JSON.parse(client.visit_days);
+              visitDaysString = client.visit_days;
+            } catch (e) {
+              // Se não é JSON válido, criar array com esse valor
+              visitDaysString = JSON.stringify([client.visit_days]);
+            }
+          }
+        }
+        
+        console.log(`📱 [ANDROID] Saving client ${client.name}:`, {
+          id: client.id,
+          visit_days_original: client.visit_days,
+          visit_days_saved: visitDaysString,
+          visit_sequence: client.visit_sequence,
+          sales_rep_id: client.sales_rep_id
+        });
+
         await this.db!.run(
           `INSERT OR REPLACE INTO clients (
             id, name, company_name, code, active, phone, address, city, state,
@@ -522,15 +584,21 @@ class SQLiteDatabaseService {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             client.id, client.name, client.company_name, client.code, client.active,
-            client.phone, client.address, client.city, client.state, client.visit_days,
-            client.visit_sequence, client.sales_rep_id, client.status
+            client.phone, client.address, client.city, client.state, visitDaysString,
+            client.visit_sequence, client.sales_rep_id, client.status || 'pendente'
           ]
         );
       }
   
-      console.log('✅ Clients saved to SQLite database');
+      console.log('✅ [ANDROID] Clients saved to SQLite database');
+      
+      // 🔄 VERIFICAÇÃO: Contar clientes salvos por vendedor
+      const verification = await this.db!.query('SELECT sales_rep_id, COUNT(*) as count FROM clients WHERE active = 1 GROUP BY sales_rep_id');
+      console.log('📱 [ANDROID] Clients count by sales_rep_id:', verification.values);
+      
     } catch (error) {
-      console.error('❌ Error saving clients:', error);
+      console.error('❌ [ANDROID] Error saving clients:', error);
+      throw error;
     }
   }
 
@@ -719,6 +787,7 @@ class SQLiteDatabaseService {
   }
 
   async getCustomers(): Promise<any[]> {
+    console.log('📱 [ANDROID] getCustomers called - redirecting to getClients');
     return this.getClients();
   }
 
