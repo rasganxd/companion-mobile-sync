@@ -35,8 +35,8 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <div className={`${getBackgroundClasses()} shadow-md header-safe-top pb-3 px-4`}>
-      <div className="flex items-center justify-between">
+    <div className={`${getBackgroundClasses()} shadow-md header-mobile-safe px-4`}>
+      <div className="header-content-container justify-between">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {showBackButton && canGoBack && (
             <button
@@ -47,12 +47,12 @@ const Header: React.FC<HeaderProps> = ({
             </button>
           )}
           
-          <h1 className="font-bold text-white text-base truncate">
+          <h1 className="font-bold text-white text-lg truncate">
             {title}
           </h1>
         </div>
         
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {rightComponent}
           {showNetworkStatus && <NetworkStatusIndicator />}
         </div>

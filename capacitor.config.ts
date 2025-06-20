@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appId: 'app.lovable.b59a35aa537b448a9b7f6ed0f1ddcd77',
   appName: 'SalesTrack Mobile',
   webDir: 'dist',
-  bundledWebRuntime: true, // Bundle runtime for standalone app
+  bundledWebRuntime: true,
   plugins: {
     App: {
       'android:exported': true
@@ -28,7 +28,7 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: 'LIGHT',
       backgroundColor: '#3B82F6',
-      overlaysWebView: true,
+      overlaysWebView: false, // Mudança importante: não sobrepor o conteúdo
       androidStatusBarBackgroundColor: '#3B82F6'
     },
     Keyboard: {
@@ -50,7 +50,9 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: 'automatic',
-    backgroundColor: '#3B82F6'
+    backgroundColor: '#3B82F6',
+    // Melhor suporte para safe areas no iOS
+    preferredContentMode: 'mobile'
   }
 };
 

@@ -107,11 +107,14 @@
 
   body {
     @apply bg-background text-foreground;
+    /* Garantir viewport otimizado para mobile */
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 @layer utilities {
-  /* Safe area utilities for mobile devices */
+  /* Safe area utilities melhoradas para mobile devices */
   .safe-area-top {
     padding-top: env(safe-area-inset-top);
   }
@@ -145,9 +148,23 @@
     padding-right: env(safe-area-inset-right);
   }
   
-  /* Header specific safe area with minimum padding fallback */
+  /* Header específico com safe area robusta - padding mínimo aumentado */
   .header-safe-top {
-    padding-top: max(env(safe-area-inset-top), 12px);
+    padding-top: max(env(safe-area-inset-top), 20px);
+    min-height: 76px; /* Altura mínima garantida: 56px base + 20px padding */
+  }
+
+  /* Header mobile robusto - classes adicionais para garantir layout consistente */
+  .header-mobile-safe {
+    padding-top: max(env(safe-area-inset-top), 24px);
+    padding-bottom: 16px;
+    min-height: 80px;
+  }
+
+  .header-content-container {
+    min-height: 56px; /* Altura base do conteúdo do header */
+    display: flex;
+    align-items: center;
   }
 
   /* Utilitários personalizados para melhor layout */
