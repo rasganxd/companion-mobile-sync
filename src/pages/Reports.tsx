@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import Header from '@/components/Header';
+import { useAppNavigation } from '@/hooks/useAppNavigation';
+
 interface ReportData {
   totalOrders: number;
   totalValue: number;
@@ -23,8 +26,11 @@ interface ReportData {
     value: number;
   }>;
 }
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
 const Reports = () => {
+  const { goBack } = useAppNavigation();
   const navigate = useNavigate();
   const [reportData, setReportData] = useState<ReportData>({
     totalOrders: 0,
@@ -37,9 +43,11 @@ const Reports = () => {
   });
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7' | '30' | 'all'>('30');
+
   useEffect(() => {
     loadReportData();
   }, [selectedPeriod]);
+
   const loadReportData = async () => {
     try {
       setLoading(true);
@@ -121,47 +129,66 @@ const Reports = () => {
       setLoading(false);
     }
   };
+
   const chartConfig = {
     count: {
       label: "Quantidade",
       color: "#2563eb"
     }
   };
+
+  // Componente dos filtros de período para o header
+  const PeriodFilters = () => (
+    <div className="flex space-x-1">
+      <Button 
+        variant={selectedPeriod === '7' ? 'default' : 'outline'} 
+        size="sm" 
+        onClick={() => setSelectedPeriod('7')}
+        className="text-xs px-2 py-1 h-7"
+      >
+        7d
+      </Button>
+      <Button 
+        variant={selectedPeriod === '30' ? 'default' : 'outline'} 
+        size="sm" 
+        onClick={() => setSelectedPeriod('30')}
+        className="text-xs px-2 py-1 h-7"
+      >
+        30d
+      </Button>
+      <Button 
+        variant={selectedPeriod === 'all' ? 'default' : 'outline'} 
+        size="sm" 
+        onClick={() => setSelectedPeriod('all')}
+        className="text-xs px-2 py-1 h-7"
+      >
+        Todos
+      </Button>
+    </div>
+  );
+
   if (loading) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando relatórios...</p>
-        </div>
-      </div>;
-  }
-  return <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/home')} className="mr-4">
-                <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <h1 className="font-semibold text-gray-900 text-base">Relatórios</h1>
-            </div>
-            
-            {/* Filtro de período */}
-            <div className="flex space-x-2">
-              <Button variant={selectedPeriod === '7' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('7')}>
-                7 dias
-              </Button>
-              <Button variant={selectedPeriod === '30' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('30')}>
-                30 dias
-              </Button>
-              <Button variant={selectedPeriod === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod('all')}>
-                Todos
-              </Button>
-            </div>
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Header title="Relatórios" showBackButton backgroundColor="blue" />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando relatórios...</p>
           </div>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        title="Relatórios" 
+        showBackButton 
+        backgroundColor="blue" 
+        rightComponent={<PeriodFilters />}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Cards de métricas principais */}
@@ -235,6 +262,8 @@ const Reports = () => {
         {/* Tabela de pedidos recentes */}
         
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Reports;
