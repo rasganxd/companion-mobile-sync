@@ -108,6 +108,43 @@ class SupabaseService {
     ];
   }
 
+  private async retryWithBackoff(attemptFn: () => Promise<Response>, maxAttempts: number = 3): Promise<Response> {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        console.log(`🔄 Attempt ${attempt}/${maxAttempts} to reach Supabase...`);
+        const response = await attemptFn();
+        
+        if (response.ok) {
+          console.log(`✅ Success on attempt ${attempt}`);
+          return response;
+        }
+        
+        if (attempt === maxAttempts) {
+          console.log(`❌ All ${maxAttempts} attempts failed`);
+          return response;
+        }
+        
+        // Backoff exponencial: 1s, 2s, 4s...
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        console.log(`⏳ Waiting ${backoffMs}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+        
+      } catch (error) {
+        console.error(`❌ Attempt ${attempt} failed with error:`, error);
+        
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+        
+        // Backoff para erros de rede
+        const backoffMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      }
+    }
+    
+    throw new Error('Max attempts reached');
+  }
+
   async getClientsForSalesRep(salesRepId: string, sessionToken: string) {
     console.log('📥 Fetching clients for sales rep:', salesRepId);
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
@@ -137,63 +174,81 @@ class SupabaseService {
       throw new Error('Token de sessão é obrigatório para buscar clientes');
     }
     
+    // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
     try {
+      console.log('🌐 Attempting to fetch REAL data from Supabase...');
+      
       const requestBody = { 
         type: 'clients',
         sales_rep_id: salesRepId,
-        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
+        sales_rep_code: salesRepCode
       };
       
-      console.log('📤 Sending request body with sales_rep_code:', requestBody);
+      console.log('📤 Sending request body:', requestBody);
 
-      const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`,
-          'apikey': this.anonKey
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const response = await this.retryWithBackoff(() => 
+        fetch(`${this.baseUrl}/mobile-data-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+            'apikey': this.anonKey
+          },
+          body: JSON.stringify(requestBody)
+        })
+      );
 
       console.log('📡 Clients sync response status:', response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Clients sync error response:', errorText);
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: 'Erro ao buscar clientes: ' + errorText };
-        }
-        
-        // For local tokens, return empty array instead of throwing error
-        if (sessionToken.startsWith('local_')) {
-          console.log('🔄 Local token detected, returning empty array for graceful degradation');
-          return [];
-        }
-        
-        throw new Error(errorData.error || 'Erro ao buscar clientes');
+      if (response.ok) {
+        const data = await response.json();
+        const clients = data.clients || [];
+        console.log(`✅ Successfully fetched ${clients.length} REAL clients from Supabase`);
+        return clients;
       }
 
-      const data = await response.json();
-      console.log(`✅ Successfully fetched ${data.clients?.length || 0} clients`);
-      return data.clients || [];
+      const errorText = await response.text();
+      console.error('❌ Clients sync error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: 'Erro ao buscar clientes: ' + errorText };
+      }
+      
+      throw new Error(errorData.error || 'Erro ao buscar clientes do Supabase');
+      
     } catch (error) {
-      console.error('❌ Network error fetching clients:', error);
+      console.error('❌ Failed to fetch clients from Supabase:', error);
       
-      // For local tokens, return empty array instead of throwing error
-      if (sessionToken.startsWith('local_')) {
-        console.log('🔄 Local token with network error, returning empty array');
-        return [];
+      // 🔄 NOVA LÓGICA: Em caso de erro, verificar se há dados locais salvos
+      console.log('🔍 Checking for previously synced local data...');
+      
+      try {
+        const { getDatabaseAdapter } = await import('./DatabaseAdapter');
+        const db = getDatabaseAdapter();
+        const localClients = await db.getCustomers();
+        
+        if (localClients && localClients.length > 0) {
+          console.log(`✅ Found ${localClients.length} previously synced clients in local database`);
+          return localClients.filter(client => 
+            client.sales_rep_id === salesRepId && client.active
+          );
+        }
+        
+        console.log('📭 No previously synced clients found in local database');
+        
+      } catch (dbError) {
+        console.error('❌ Error accessing local database:', dbError);
       }
       
+      // Se não há dados locais e não conseguiu buscar online, retornar erro
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erro de conexão ao buscar clientes. Verifique sua internet.');
+        throw new Error('Erro de conexão ao buscar clientes. Verifique sua internet e tente novamente.');
       }
-      throw error;
+      
+      throw new Error('Não foi possível buscar clientes do Supabase nem encontrar dados locais. Execute uma sincronização quando houver conexão.');
     }
   }
 
@@ -221,61 +276,77 @@ class SupabaseService {
       throw new Error('Token de sessão é obrigatório para buscar produtos');
     }
     
+    // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
     try {
+      console.log('🌐 Attempting to fetch REAL products from Supabase...');
+      
       const requestBody = { 
         type: 'products',
-        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
+        sales_rep_code: salesRepCode
       };
-      console.log('📤 Sending request body with sales_rep_code:', requestBody);
+      console.log('📤 Sending request body:', requestBody);
 
-      const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`,
-          'apikey': this.anonKey
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const response = await this.retryWithBackoff(() => 
+        fetch(`${this.baseUrl}/mobile-data-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+            'apikey': this.anonKey
+          },
+          body: JSON.stringify(requestBody)
+        })
+      );
 
       console.log('📡 Products sync response status:', response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Products sync error response:', errorText);
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: 'Erro ao buscar produtos: ' + errorText };
-        }
-        
-        // For local tokens, return empty array instead of throwing error
-        if (sessionToken.startsWith('local_')) {
-          console.log('🔄 Local token detected, returning empty array for graceful degradation');
-          return [];
-        }
-        
-        throw new Error(errorData.error || 'Erro ao buscar produtos');
+      if (response.ok) {
+        const data = await response.json();
+        const products = data.products || [];
+        console.log(`✅ Successfully fetched ${products.length} REAL products from Supabase`);
+        return products;
       }
 
-      const data = await response.json();
-      console.log(`✅ Successfully fetched ${data.products?.length || 0} products`);
-      return data.products || [];
+      const errorText = await response.text();
+      console.error('❌ Products sync error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: 'Erro ao buscar produtos: ' + errorText };
+      }
+      
+      throw new Error(errorData.error || 'Erro ao buscar produtos do Supabase');
+      
     } catch (error) {
-      console.error('❌ Network error fetching products:', error);
+      console.error('❌ Failed to fetch products from Supabase:', error);
       
-      // For local tokens, return empty array instead of throwing error
-      if (sessionToken.startsWith('local_')) {
-        console.log('🔄 Local token with network error, returning empty array');
-        return [];
+      // 🔄 NOVA LÓGICA: Em caso de erro, verificar se há dados locais salvos
+      console.log('🔍 Checking for previously synced local products...');
+      
+      try {
+        const { getDatabaseAdapter } = await import('./DatabaseAdapter');
+        const db = getDatabaseAdapter();
+        const localProducts = await db.getProducts();
+        
+        if (localProducts && localProducts.length > 0) {
+          console.log(`✅ Found ${localProducts.length} previously synced products in local database`);
+          return localProducts.filter(product => product.active);
+        }
+        
+        console.log('📭 No previously synced products found in local database');
+        
+      } catch (dbError) {
+        console.error('❌ Error accessing local database:', dbError);
       }
       
+      // Se não há dados locais e não conseguiu buscar online, retornar erro
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erro de conexão ao buscar produtos. Verifique sua internet.');
+        throw new Error('Erro de conexão ao buscar produtos. Verifique sua internet e tente novamente.');
       }
-      throw error;
+      
+      throw new Error('Não foi possível buscar produtos do Supabase nem encontrar dados locais. Execute uma sincronização quando houver conexão.');
     }
   }
 
@@ -303,61 +374,77 @@ class SupabaseService {
       throw new Error('Token de sessão é obrigatório para buscar tabelas de pagamento');
     }
     
+    // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
     try {
+      console.log('🌐 Attempting to fetch REAL payment tables from Supabase...');
+      
       const requestBody = { 
         type: 'payment_tables',
-        sales_rep_code: salesRepCode // ✅ ADICIONANDO sales_rep_code
+        sales_rep_code: salesRepCode
       };
-      console.log('📤 Sending request body with sales_rep_code:', requestBody);
+      console.log('📤 Sending request body:', requestBody);
 
-      const response = await fetch(`${this.baseUrl}/mobile-data-sync`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionToken}`,
-          'apikey': this.anonKey
-        },
-        body: JSON.stringify(requestBody)
-      });
+      const response = await this.retryWithBackoff(() => 
+        fetch(`${this.baseUrl}/mobile-data-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+            'apikey': this.anonKey
+          },
+          body: JSON.stringify(requestBody)
+        })
+      );
 
       console.log('📡 Payment tables sync response status:', response.status);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Payment tables sync error response:', errorText);
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { error: 'Erro ao buscar tabelas de pagamento: ' + errorText };
-        }
-        
-        // For local tokens, return empty array instead of throwing error
-        if (sessionToken.startsWith('local_') ) {
-          console.log('🔄 Local token detected, returning empty array for graceful degradation');
-          return [];
-        }
-        
-        throw new Error(errorData.error || 'Erro ao buscar tabelas de pagamento');
+      if (response.ok) {
+        const data = await response.json();
+        const paymentTables = data.payment_tables || [];
+        console.log(`✅ Successfully fetched ${paymentTables.length} REAL payment tables from Supabase`);
+        return paymentTables;
       }
 
-      const data = await response.json();
-      console.log(`✅ Successfully fetched ${data.payment_tables?.length || 0} payment tables`);
-      return data.payment_tables || [];
+      const errorText = await response.text();
+      console.error('❌ Payment tables sync error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: 'Erro ao buscar tabelas de pagamento: ' + errorText };
+      }
+      
+      throw new Error(errorData.error || 'Erro ao buscar tabelas de pagamento do Supabase');
+      
     } catch (error) {
-      console.error('❌ Network error fetching payment tables:', error);
+      console.error('❌ Failed to fetch payment tables from Supabase:', error);
       
-      // For local tokens, return empty array instead of throwing error
-      if (sessionToken.startsWith('local_') ) {
-        console.log('🔄 Local token with network error, returning empty array');
-        return [];
+      // 🔄 NOVA LÓGICA: Em caso de erro, verificar se há dados locais salvos
+      console.log('🔍 Checking for previously synced local payment tables...');
+      
+      try {
+        const { getDatabaseAdapter } = await import('./DatabaseAdapter');
+        const db = getDatabaseAdapter();
+        const localPaymentTables = await db.getPaymentTables();
+        
+        if (localPaymentTables && localPaymentTables.length > 0) {
+          console.log(`✅ Found ${localPaymentTables.length} previously synced payment tables in local database`);
+          return localPaymentTables.filter(table => table.active);
+        }
+        
+        console.log('📭 No previously synced payment tables found in local database');
+        
+      } catch (dbError) {
+        console.error('❌ Error accessing local database:', dbError);
       }
       
+      // Se não há dados locais e não conseguiu buscar online, retornar erro
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('Erro de conexão ao buscar tabelas de pagamento. Verifique sua internet.');
+        throw new Error('Erro de conexão ao buscar tabelas de pagamento. Verifique sua internet e tente novamente.');
       }
-      throw error;
+      
+      throw new Error('Não foi possível buscar tabelas de pagamento do Supabase nem encontrar dados locais. Execute uma sincronização quando houver conexão.');
     }
   }
 
