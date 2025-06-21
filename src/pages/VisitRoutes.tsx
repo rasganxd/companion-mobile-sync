@@ -295,11 +295,11 @@ const VisitRoutes = () => {
       
       <div className="p-2 flex-1">
         {/* Resumo do Dia */}
-        <div className="bg-white rounded-lg shadow-sm p-2 mb-2">
+        <div className="bg-white rounded-lg shadow-sm p-2 mb-2 px-[5px] py-[4px]">
             <h2 className="text-base font-semibold mb-1 text-gray-800">Resumo do Dia</h2>
             <div className="grid grid-cols-2 gap-2">
                 {/* Card Positivados */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center flex flex-col justify-center">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-center flex flex-col justify-center py-[6px] px-[6px]">
                     <div className="flex items-center justify-center gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                       <div className="text-lg font-bold text-green-700">{salesData.totalPositivados}</div>
@@ -309,7 +309,7 @@ const VisitRoutes = () => {
                 </div>
                 
                 {/* Card Negativados */}
-                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center flex flex-col justify-center">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-center flex flex-col justify-center py-[6px] px-[6px]">
                     <div className="flex items-center justify-center gap-2">
                       <XCircle className="h-4 w-4 text-red-500" />
                       <div className="text-lg font-bold text-red-600">{salesData.totalNegativados}</div>
