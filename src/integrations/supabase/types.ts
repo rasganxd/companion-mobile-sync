@@ -377,6 +377,69 @@ export type Database = {
           },
         ]
       }
+      maintenance_logs: {
+        Row: {
+          completed_at: string | null
+          created_by: string | null
+          details: Json | null
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          operation_type: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_by?: string | null
+          details?: Json | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          operation_type: string
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_by?: string | null
+          details?: Json | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          operation_type?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      maintenance_settings: {
+        Row: {
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       mobile_order_items: {
         Row: {
           created_at: string
@@ -1105,6 +1168,45 @@ export type Database = {
           password?: string | null
           phone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      system_backups: {
+        Row: {
+          backup_type: string
+          created_at: string
+          created_by: string | null
+          data_snapshot: Json
+          description: string | null
+          file_size: number
+          id: string
+          name: string
+          notes: string | null
+          status: string
+        }
+        Insert: {
+          backup_type: string
+          created_at?: string
+          created_by?: string | null
+          data_snapshot?: Json
+          description?: string | null
+          file_size?: number
+          id?: string
+          name: string
+          notes?: string | null
+          status?: string
+        }
+        Update: {
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          data_snapshot?: Json
+          description?: string | null
+          file_size?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: string
         }
         Relationships: []
       }

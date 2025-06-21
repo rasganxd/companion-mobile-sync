@@ -1,3 +1,4 @@
+
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -253,7 +254,7 @@ class SupabaseService {
   }
 
   async getProducts(sessionToken: string) {
-    console.log('📥 Fetching products from Supabase');
+    console.log('📥 Fetching products from Supabase with hierarchical data');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
     // Extrair código do vendedor do localStorage
@@ -278,11 +279,12 @@ class SupabaseService {
     
     // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
     try {
-      console.log('🌐 Attempting to fetch REAL products from Supabase...');
+      console.log('🌐 Attempting to fetch REAL products with hierarchical data from Supabase...');
       
       const requestBody = { 
         type: 'products',
-        sales_rep_code: salesRepCode
+        sales_rep_code: salesRepCode,
+        include_hierarchy: true // ✅ NOVO: Solicitar dados hierárquicos
       };
       console.log('📤 Sending request body:', requestBody);
 
@@ -303,7 +305,18 @@ class SupabaseService {
       if (response.ok) {
         const data = await response.json();
         const products = data.products || [];
-        console.log(`✅ Successfully fetched ${products.length} REAL products from Supabase`);
+        console.log(`✅ Successfully fetched ${products.length} REAL products with hierarchy from Supabase`);
+        
+        // ✅ NOVO: Log para verificar se os dados hierárquicos estão chegando
+        if (products.length > 0) {
+          console.log('🔍 Sample product with hierarchy:', {
+            name: products[0].name,
+            group_name: products[0].group_name,
+            brand_name: products[0].brand_name,
+            category_name: products[0].category_name
+          });
+        }
+        
         return products;
       }
 

@@ -23,6 +23,9 @@ interface Product {
   max_discount_percent?: number;
   category_id?: string;
   category_name?: string;
+  // ✅ NOVO: Campos para ordenação hierárquica
+  group_name?: string;
+  brand_name?: string;
 }
 
 interface OrderItem {
@@ -115,11 +118,50 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         price: product.sale_price || product.price || 0,
         sale_price: product.sale_price || product.price || 0,
         max_discount_percent: product.max_discount_percent || 0,
-        category_name: product.category_name || 'Sem Categoria'
+        category_name: product.category_name || 'Sem Categoria',
+        // ✅ NOVO: Normalizar campos hierárquicos
+        group_name: product.group_name || 'Sem Grupo',
+        brand_name: product.brand_name || 'Sem Marca'
       }));
       
-      // Agrupar produtos por categoria
-      const groupedByCategory: Record<string, ProductsByCategory> = normalizedProducts.reduce((acc, product) => {
+      // ✅ NOVO: Implementar ordenação hierárquica (Grupo → Marca → Categoria → Nome)
+      console.log('🔄 Aplicando ordenação hierárquica: Grupo → Marca → Categoria → Nome');
+      
+      const hierarchicallySortedProducts = normalizedProducts.sort((a, b) => {
+        // 1. Primeiro por Grupo
+        const groupComparison = (a.group_name || '').localeCompare(b.group_name || '');
+        if (groupComparison !== 0) return groupComparison;
+        
+        // 2. Depois por Marca
+        const brandComparison = (a.brand_name || '').localeCompare(b.brand_name || '');
+        if (brandComparison !== 0) return brandComparison;
+        
+        // 3. Depois por Categoria
+        const categoryComparison = (a.category_name || '').localeCompare(b.category_name || '');
+        if (categoryComparison !== 0) return categoryComparison;
+        
+        // 4. Por último por Nome
+        return a.name.localeCompare(b.name);
+      });
+      
+      console.log('✅ Produtos ordenados hierarquicamente:', {
+        total: hierarchicallySortedProducts.length,
+        firstProduct: {
+          name: hierarchicallySortedProducts[0]?.name,
+          group: hierarchicallySortedProducts[0]?.group_name,
+          brand: hierarchicallySortedProducts[0]?.brand_name,
+          category: hierarchicallySortedProducts[0]?.category_name
+        },
+        lastProduct: {
+          name: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.name,
+          group: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.group_name,
+          brand: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.brand_name,
+          category: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.category_name
+        }
+      });
+      
+      // Agrupar produtos por categoria (mantendo para compatibilidade com componentes existentes)
+      const groupedByCategory: Record<string, ProductsByCategory> = hierarchicallySortedProducts.reduce((acc, product) => {
         const categoryId = product.category_id || 'no-category';
         const categoryName = product.category_name || 'Sem Categoria';
         
@@ -135,30 +177,24 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         return acc;
       }, {} as Record<string, ProductsByCategory>);
 
-      // Converter para array e ordenar categorias
-      const categoriesArray = Object.values(groupedByCategory).sort((a, b) => 
-        a.categoryName.localeCompare(b.categoryName)
-      );
+      // Converter para array e manter ordem hierárquica
+      const categoriesArray = Object.values(groupedByCategory);
 
-      // Ordenar produtos dentro de cada categoria
-      categoriesArray.forEach(category => {
-        category.products.sort((a, b) => a.name.localeCompare(b.name));
-      });
-
-      console.log('📂 Produtos agrupados por categoria:', categoriesArray);
+      console.log('📂 Produtos agrupados por categoria (mantendo ordem hierárquica):', categoriesArray);
       
       setProductsByCategory(categoriesArray);
       
-      // Criar lista plana para navegação mantendo ordem por categoria
-      const flatProducts = categoriesArray.flatMap(category => category.products);
-      setProducts(flatProducts);
+      // ✅ MODIFICADO: Usar produtos já ordenados hierarquicamente
+      setProducts(hierarchicallySortedProducts);
       
       // Log detalhado dos produtos para debug de desconto máximo
-      flatProducts.forEach((product, index) => {
+      hierarchicallySortedProducts.forEach((product, index) => {
         if (product.max_discount_percent && product.max_discount_percent > 0) {
           console.log(`📦 Produto ${index + 1} COM DESCONTO MÁXIMO:`, {
             id: product.id,
             name: product.name,
+            group: product.group_name,
+            brand: product.brand_name,
             category: product.category_name,
             code: product.code,
             sale_price: product.sale_price,
@@ -178,13 +214,17 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.code.toString().includes(searchTerm) ||
-    (product.category_name && product.category_name.toLowerCase().includes(searchTerm.toLowerCase()))
+    (product.category_name && product.category_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.group_name && product.group_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.brand_name && product.brand_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const selectProduct = (product: Product) => {
     console.log('📦 PRODUTO SELECIONADO:', {
       id: product.id,
       name: product.name,
+      group: product.group_name,
+      brand: product.brand_name,
       category: product.category_name,
       code: product.code,
       sale_price: product.sale_price,
@@ -204,7 +244,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     }
     
     console.log('💰 Desconto máximo configurado:', product.max_discount_percent || 'Nenhum');
-    console.log('📂 Categoria:', product.category_name || 'Sem categoria');
+    console.log('🏷️ Hierarquia:', `${product.group_name} → ${product.brand_name} → ${product.category_name}`);
     
     // Log informações sobre unidades
     if (product.has_subunit) {
