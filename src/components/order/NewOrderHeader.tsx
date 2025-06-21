@@ -9,7 +9,7 @@ const NewOrderHeader: React.FC<NewOrderHeaderProps> = ({
 }) => {
   return <div className="text-white p-4 shadow-lg bg-blue-700">
       <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={onGoBack} className="text-white p-2 bg-sky-500 hover:bg-sky-400">
+        <Button variant="ghost" onClick={onGoBack} className="text-white p-2 bg-inherit">
           <ArrowLeft size={20} />
         </Button>
         <h1 className="font-bold text-base">Digitação de Pedidos</h1>
