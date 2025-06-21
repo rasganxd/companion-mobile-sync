@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -145,6 +144,12 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
     }
   };
 
+  // ✅ NOVO: Função para lidar com o mousedown do botão OK
+  const handleOkButtonMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault(); // Previne que o input perca o foco
+    handleCodeSubmit();
+  };
+
   console.log('🔍 NewOrderProductDetails - Renderizando:', {
     productName: currentProduct.name,
     hasDiscountRestriction: hasDiscountRestriction(),
@@ -170,14 +175,13 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
                 value={tempCode}
                 onChange={(e) => setTempCode(e.target.value)}
                 onKeyDown={handleCodeKeyDown}
-                onBlur={handleCodeCancel}
                 className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
                 placeholder="Código"
               />
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleCodeSubmit}
+                onMouseDown={handleOkButtonMouseDown}
                 className="h-7 px-2 bg-green-100 border-green-300 hover:bg-green-200 text-green-900"
               >
                 <Check size={12} />
