@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, Check } from 'lucide-react';
 import { useProductPriceValidation } from '@/hooks/useProductPriceValidation';
 import { usePriceMask } from '@/hooks/usePriceMask';
 import { toast } from 'sonner';
@@ -163,16 +163,26 @@ const NewOrderProductDetails: React.FC<NewOrderProductDetailsProps> = ({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 py-[12px]">
         <div className="flex items-center gap-2 mb-2">
           {isEditingCode ? (
-            <Input
-              ref={inputRef}
-              type="text"
-              value={tempCode}
-              onChange={(e) => setTempCode(e.target.value)}
-              onKeyDown={handleCodeKeyDown}
-              onBlur={handleCodeCancel}
-              className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
-              placeholder="Código"
-            />
+            <div className="flex items-center gap-1">
+              <Input
+                ref={inputRef}
+                type="text"
+                value={tempCode}
+                onChange={(e) => setTempCode(e.target.value)}
+                onKeyDown={handleCodeKeyDown}
+                onBlur={handleCodeCancel}
+                className="w-20 h-7 text-xs font-bold bg-white border-blue-300"
+                placeholder="Código"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCodeSubmit}
+                className="h-7 px-2 bg-green-100 border-green-300 hover:bg-green-200 text-green-900"
+              >
+                <Check size={12} />
+              </Button>
+            </div>
           ) : (
             <Button
               variant="outline"
