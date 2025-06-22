@@ -3,9 +3,9 @@
  * Utilitário para validação e normalização de dados específico para Android
  */
 
-export const ensureArray = <T>(data: any): T[] => {
+export const ensureArray = <T = any>(data: any): T[] => {
   if (Array.isArray(data)) {
-    return data;
+    return data as T[];
   }
   
   console.warn('🔧 [ANDROID] Data is not an array, converting:', typeof data, data);
@@ -15,7 +15,7 @@ export const ensureArray = <T>(data: any): T[] => {
   }
   
   if (typeof data === 'object' && data.values) {
-    return Array.isArray(data.values) ? data.values : [];
+    return Array.isArray(data.values) ? (data.values as T[]) : [];
   }
   
   return [];
@@ -64,4 +64,23 @@ export const logAndroidDebug = (context: string, data: any) => {
     isValuesArray: Array.isArray(data?.values),
     data: data
   });
+};
+
+// Helper function para cast seguro de objetos
+export const safeCast = <T>(data: any): T | null => {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+  return data as T;
+};
+
+// Helper function para arrays de objetos específicos
+export const ensureTypedArray = <T>(data: any, validator?: (item: any) => boolean): T[] => {
+  const array = ensureArray<T>(data);
+  
+  if (validator) {
+    return array.filter(validator);
+  }
+  
+  return array;
 };

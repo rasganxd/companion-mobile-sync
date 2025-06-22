@@ -1,6 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
-import { ensureArray, safeJsonParse, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
+import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
 
 class SQLiteDatabaseService {
   private static instance: SQLiteDatabaseService | null = null;
@@ -168,13 +168,16 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getClients result', result);
       
-      // ✅ CORREÇÃO: Garantir array válido sempre
-      const clients = ensureArray(result.values || result);
+      // ✅ CORREÇÃO: Garantir array válido sempre com validação
+      const clients = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       console.log(`📱 [ANDROID] Raw clients from SQLite: ${clients.length}`);
       
       // 🔄 CORREÇÃO: Processar visit_days para garantir que seja array
-      const processedClients = clients.map(client => {
+      const processedClients = clients.map((clientData: any) => {
+        const client = safeCast<any>(clientData);
+        if (!client) return null;
+        
         let visitDays = client.visit_days;
         
         // Se visit_days é string, tentar fazer parse
@@ -199,7 +202,7 @@ class SQLiteDatabaseService {
           ...client,
           visit_days: visitDays
         };
-      });
+      }).filter(client => client !== null);
       
       console.log(`📱 [ANDROID] Processed clients: ${processedClients.length}`);
       return processedClients;
@@ -218,7 +221,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getVisitRoutes result', result);
       
-      return ensureArray(result.values || result);
+      return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
     } catch (error) {
       console.error('❌ Error getting visit routes:', error);
       return [];
@@ -242,7 +245,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getOrders result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       // ✅ CORREÇÃO: Validar e normalizar cada pedido
       return orders.map(order => validateOrderData(order)).filter(order => order !== null);
@@ -261,7 +264,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getProducts result', result);
       
-      return ensureArray(result.values || result);
+      return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
     } catch (error) {
       console.error('❌ Error getting products:', error);
       return [];
@@ -277,7 +280,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug(`getPendingSyncItems ${table} result`, result);
       
-      return ensureArray(result.values || result);
+      return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
     } catch (error) {
       console.error(`❌ Error getting pending sync items from ${table}:`, error);
       return [];
@@ -393,7 +396,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getClientById result', result);
       
-      const clients = ensureArray(result.values || result);
+      const clients = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       if (clients.length > 0) {
         const client = validateOrderData(clients[0]);
@@ -436,7 +439,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getPendingOrders result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       // ✅ CORREÇÃO CRÍTICA: Validar e normalizar cada pedido
       const validatedOrders = orders.map(order => validateOrderData(order)).filter(order => order !== null);
@@ -493,7 +496,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getClientOrders result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
@@ -541,7 +544,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getTransmittedOrders result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
@@ -559,7 +562,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getAllOrders result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
@@ -726,10 +729,11 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('isClientNegated result', result);
       
-      const clients = ensureArray(result.values || result);
+      const clients = ensureTypedArray(result.values || result, (item: any) => !!item);
       
       if (clients.length > 0) {
-        const clientStatus = clients[0].status;
+        const client = safeCast<any>(clients[0]);
+        const clientStatus = client?.status;
         console.log(`📱 Client ${clientId} status: ${clientStatus}`);
         return clientStatus === 'negativado';
       }
@@ -826,7 +830,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getActivePendingOrder result', result);
       
-      const orders = ensureArray(result.values || result);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       if (orders.length > 0) {
         return validateOrderData(orders[0]);
@@ -853,7 +857,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getPaymentTables result', result);
       
-      const paymentTables = ensureArray(result.values || result);
+      const paymentTables = ensureTypedArray(result.values || result, (item: any) => !!item);
       
       console.log(`📱 Found ${paymentTables.length} active payment tables:`, paymentTables);
       return paymentTables;
@@ -919,7 +923,7 @@ class SQLiteDatabaseService {
       
       logAndroidDebug('getOrderById orderResult', orderResult);
       
-      const orders = ensureArray(orderResult.values || orderResult);
+      const orders = ensureTypedArray(orderResult.values || orderResult, (item: any) => !!item?.id);
       
       if (orders.length === 0) {
         console.log('❌ [ANDROID] Order not found');
@@ -957,7 +961,7 @@ class SQLiteDatabaseService {
         
         logAndroidDebug('getOrderById itemsResult', itemsResult);
         
-        const orderItems = ensureArray(itemsResult.values || itemsResult);
+        const orderItems = ensureTypedArray(itemsResult.values || itemsResult);
 
         console.log(`📱 [ANDROID] Found ${orderItems.length} items for order ${orderId}`);
 

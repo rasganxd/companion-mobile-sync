@@ -7,7 +7,7 @@ import { logOrderAction } from '@/utils/orderAuditLogger';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
-import { ensureArray, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
+import { ensureTypedArray, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
 
 export const useOrderTransmission = () => {
   const { salesRep, isOnline } = useAuth();
@@ -26,9 +26,9 @@ export const useOrderTransmission = () => {
       
       console.log('🔄 [ANDROID] Loading orders for transmission page...');
       
-      // ✅ CORREÇÃO CRÍTICA: Garantir arrays válidos sempre
+      // ✅ CORREÇÃO CRÍTICA: Garantir arrays válidos sempre com tipos corretos
       const pendingResult = await db.getPendingOrders();
-      const pending = ensureArray(pendingResult);
+      const pending = ensureTypedArray<LocalOrder>(pendingResult, (item: any) => !!item?.id);
       
       logAndroidDebug('loadOrders pending', pending);
       
@@ -36,7 +36,7 @@ export const useOrderTransmission = () => {
       setPendingOrders(pending);
       
       const transmittedResult = await db.getTransmittedOrders();
-      const transmitted = ensureArray(transmittedResult);
+      const transmitted = ensureTypedArray<LocalOrder>(transmittedResult, (item: any) => !!item?.id);
       
       logAndroidDebug('loadOrders transmitted', transmitted);
       
@@ -44,12 +44,12 @@ export const useOrderTransmission = () => {
       setTransmittedOrders(transmitted);
       
       const allOrdersResult = await db.getAllOrders();
-      const allOrders = ensureArray(allOrdersResult);
+      const allOrders = ensureTypedArray<LocalOrder>(allOrdersResult, (item: any) => !!item?.id);
       
       logAndroidDebug('loadOrders allOrders', allOrders);
       
       // ✅ CORREÇÃO: Filtrar pedidos com erro de forma segura
-      const errorOrdersList = allOrders.filter(order => order && order.sync_status === 'error');
+      const errorOrdersList = allOrders.filter((order: LocalOrder) => order && order.sync_status === 'error');
       console.log(`❌ [ANDROID] Loaded ${errorOrdersList.length} error orders`);
       setErrorOrders(errorOrdersList);
       
@@ -104,7 +104,7 @@ export const useOrderTransmission = () => {
       }
       
       // ✅ CORREÇÃO: Validar items de forma segura
-      const orderItems = ensureArray(order.items);
+      const orderItems = ensureTypedArray(order.items);
       if (orderItems.length === 0) {
         errors.push('Pedido sem itens');
       }
@@ -153,7 +153,7 @@ export const useOrderTransmission = () => {
     console.log('🔧 [ANDROID] Normalizing order data:', order);
     
     // ✅ CORREÇÃO: Garantir que items seja array antes de normalizar
-    const orderItems = ensureArray(order.items);
+    const orderItems = ensureTypedArray(order.items);
     
     // Normalizar itens do pedido
     const normalizedItems = orderItems.map((item: any) => {
@@ -239,7 +239,7 @@ export const useOrderTransmission = () => {
 
   const transmitAllOrders = async () => {
     // ✅ CORREÇÃO: Verificar se pendingOrders é array válido
-    const validPendingOrders = ensureArray(pendingOrders);
+    const validPendingOrders = ensureTypedArray<LocalOrder>(pendingOrders, (item: any) => !!item?.id);
     
     if (validPendingOrders.length === 0) {
       toast.warning('Não há pedidos pendentes para transmitir');
@@ -383,7 +383,7 @@ export const useOrderTransmission = () => {
       
       // Mark all orders as error if transmission failed completely
       const db = getDatabaseAdapter();
-      const validPendingOrders = ensureArray(pendingOrders);
+      const validPendingOrders = ensureTypedArray<LocalOrder>(pendingOrders, (item: any) => !!item?.id);
       for (const order of validPendingOrders) {
         await db.updateSyncStatus('orders', order.id, 'error');
       }
@@ -420,7 +420,7 @@ export const useOrderTransmission = () => {
   };
 
   const retryAllErrorOrders = async () => {
-    const validErrorOrders = ensureArray(errorOrders);
+    const validErrorOrders = ensureTypedArray<LocalOrder>(errorOrders, (item: any) => !!item?.id);
     
     if (validErrorOrders.length === 0) {
       toast.warning('Não há pedidos com erro para tentar novamente');
@@ -452,8 +452,8 @@ export const useOrderTransmission = () => {
   };
 
   const deleteTransmittedOrder = async (orderId: string) => {
-    const validTransmittedOrders = ensureArray(transmittedOrders);
-    const orderToDelete = validTransmittedOrders.find(order => order && order.id === orderId);
+    const validTransmittedOrders = ensureTypedArray<LocalOrder>(transmittedOrders, (item: any) => !!item?.id);
+    const orderToDelete = validTransmittedOrders.find((order: LocalOrder) => order && order.id === orderId);
     
     if (!confirm('Tem certeza que deseja excluir este pedido transmitido permanentemente? Esta ação não pode ser desfeita.')) {
       return;
@@ -482,6 +482,38 @@ export const useOrderTransmission = () => {
       console.error('❌ [ANDROID] Error deleting order:', error);
       toast.error('Erro ao excluir pedido');
     }
+  };
+
+  const validateSalesRep = () => {
+    if (!salesRep || !salesRep.id) {
+      const errorMsg = 'Vendedor não identificado. Faça login novamente.';
+      setTransmissionError(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    if (!salesRep.sessionToken) {
+      const errorMsg = 'Token de sessão expirado. Faça login novamente.';
+      setTransmissionError(errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    // Verificar se o token não é muito antigo (para tokens mobile)
+    if (salesRep.sessionToken.startsWith('mobile_')) {
+      const tokenParts = salesRep.sessionToken.split('_');
+      if (tokenParts.length >= 3) {
+        const timestamp = parseInt(tokenParts[2]);
+        const tokenAge = Date.now() - timestamp;
+        const maxAge = 20 * 60 * 60 * 1000; // 20 horas (menos que o limite de 24h do servidor)
+        
+        if (tokenAge > maxAge) {
+          const errorMsg = 'Sessão expirada. Faça login novamente.';
+          setTransmissionError(errorMsg);
+          throw new Error(errorMsg);
+        }
+      }
+    }
+    
+    return true;
   };
 
   useEffect(() => {
