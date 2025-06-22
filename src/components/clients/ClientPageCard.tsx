@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User, Building, Phone, MapPin, Hash, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -110,23 +109,21 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
         )}
 
         {/* Informações de contato e endereço - unificadas em uma única div */}
-        {((client.address || client.neighborhood || client.city || client.state) || client.phone) && (
+        {((client.address || client.neighborhood || client.city) || client.phone) && (
           <div className="p-2 bg-white rounded border mb-4 space-y-3">
             {/* Endereço */}
-            {(client.address || client.neighborhood || client.city || client.state) && (
+            {(client.address || client.neighborhood || client.city) && (
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
                 <div>
                   <p className="text-xs text-gray-500">Endereço</p>
                   <div className="text-sm font-medium">
                     {client.address && <p className="text-xs">{client.address}</p>}
-                    {(client.neighborhood || client.city || client.state) && (
+                    {(client.neighborhood || client.city) && (
                       <p className="text-xs">
                         {client.neighborhood}
-                        {client.neighborhood && (client.city || client.state) && ', '}
+                        {client.neighborhood && client.city && ', '}
                         {client.city}
-                        {client.city && client.state && ', '}
-                        {client.state}
                       </p>
                     )}
                   </div>

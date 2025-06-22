@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { User, Phone, MapPin, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
@@ -109,20 +108,18 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
               </div>
             )}
             
-            {(client.address || client.neighborhood || client.city || client.state) && (
+            {(client.address || client.neighborhood || client.city) && (
               <div className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   {client.address && (
                     <p className="truncate">{client.address}</p>
                   )}
-                  {(client.neighborhood || client.city || client.state) && (
+                  {(client.neighborhood || client.city) && (
                     <p className="truncate">
                       {client.neighborhood}
-                      {client.neighborhood && (client.city || client.state) && ', '}
+                      {client.neighborhood && client.city && ', '}
                       {client.city}
-                      {client.city && client.state && ', '}
-                      {client.state}
                     </p>
                   )}
                 </div>
