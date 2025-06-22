@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Search, User } from 'lucide-react';
 import ClientCard from './ClientCard';
@@ -12,6 +13,7 @@ interface Client {
   active: boolean;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   visit_days?: string[];

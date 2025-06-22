@@ -13,6 +13,7 @@ interface Client {
   active: boolean;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   visit_days?: string[];

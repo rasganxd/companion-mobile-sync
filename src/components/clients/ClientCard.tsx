@@ -11,6 +11,7 @@ interface Client {
   active: boolean;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   visit_days?: string[];
@@ -108,15 +109,17 @@ const ClientCard: React.FC<ClientCardProps> = ({ client, onSelect, onViewDetails
               </div>
             )}
             
-            {(client.address || client.city || client.state) && (
+            {(client.address || client.neighborhood || client.city || client.state) && (
               <div className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   {client.address && (
                     <p className="truncate">{client.address}</p>
                   )}
-                  {(client.city || client.state) && (
+                  {(client.neighborhood || client.city || client.state) && (
                     <p className="truncate">
+                      {client.neighborhood}
+                      {client.neighborhood && (client.city || client.state) && ', '}
                       {client.city}
                       {client.city && client.state && ', '}
                       {client.state}

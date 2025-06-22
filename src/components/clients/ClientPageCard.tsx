@@ -12,6 +12,7 @@ interface Client {
   active: boolean;
   phone?: string;
   address?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
   visit_days?: string[];
@@ -109,18 +110,20 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
         )}
 
         {/* Informações de contato e endereço - unificadas em uma única div */}
-        {((client.address || client.city || client.state) || client.phone) && (
+        {((client.address || client.neighborhood || client.city || client.state) || client.phone) && (
           <div className="p-2 bg-white rounded border mb-4 space-y-3">
             {/* Endereço */}
-            {(client.address || client.city || client.state) && (
+            {(client.address || client.neighborhood || client.city || client.state) && (
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
                 <div>
                   <p className="text-xs text-gray-500">Endereço</p>
                   <div className="text-sm font-medium">
                     {client.address && <p className="text-xs">{client.address}</p>}
-                    {(client.city || client.state) && (
+                    {(client.neighborhood || client.city || client.state) && (
                       <p className="text-xs">
+                        {client.neighborhood}
+                        {client.neighborhood && (client.city || client.state) && ', '}
                         {client.city}
                         {client.city && client.state && ', '}
                         {client.state}
