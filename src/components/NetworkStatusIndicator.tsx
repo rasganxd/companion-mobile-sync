@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Wifi, WifiOff, Cloud, CloudOff, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -44,7 +45,9 @@ const NetworkStatusIndicator: React.FC = () => {
         <span className="text-xs font-medium">{getStatusText()}</span>
       </Badge>
       
-      {lastSyncDate}
+      <span className="text-xs text-gray-500">
+        Sync: {formatLastSync()}
+      </span>
     </div>;
 };
 export default NetworkStatusIndicator;
