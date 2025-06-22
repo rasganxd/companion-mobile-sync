@@ -219,11 +219,11 @@
 
   /* Order status tabs styling */
   .tab-pending-active {
-    @apply bg-orange-500 text-white border-orange-500 hover:bg-orange-600;
+    @apply bg-blue-600 text-white border-blue-600 hover:bg-blue-700;
   }
   
   .tab-pending-inactive {
-    @apply text-orange-600 border-orange-300 hover:bg-orange-50;
+    @apply text-blue-600 border-blue-300 hover:bg-blue-50;
   }
   
   .tab-success-active {
@@ -276,7 +276,7 @@
   }
   
   .tab-pending-bg {
-    @apply bg-orange-500;
+    @apply bg-blue-600;
   }
   
   .tab-pending-text {
@@ -284,10 +284,10 @@
   }
   
   .tab-pending-border {
-    @apply border-orange-500;
+    @apply border-blue-600;
   }
   
   .tab-pending-light {
-    @apply bg-white border-orange-200;
+    @apply bg-white border-blue-200;
   }
 }
