@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
+import { ensureArray, safeJsonParse, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
 
 class SQLiteDatabaseService {
   private static instance: SQLiteDatabaseService | null = null;
@@ -164,7 +165,11 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 [ANDROID] Getting clients from SQLite database...');
       const result = await this.db!.query('SELECT * FROM clients');
-      const clients = result.values || [];
+      
+      logAndroidDebug('getClients result', result);
+      
+      // ✅ CORREÇÃO: Garantir array válido sempre
+      const clients = ensureArray(result.values || result);
       
       console.log(`📱 [ANDROID] Raw clients from SQLite: ${clients.length}`);
       
@@ -174,12 +179,7 @@ class SQLiteDatabaseService {
         
         // Se visit_days é string, tentar fazer parse
         if (typeof visitDays === 'string' && visitDays) {
-          try {
-            visitDays = JSON.parse(visitDays);
-          } catch (e) {
-            console.warn(`📱 [ANDROID] Failed to parse visit_days for client ${client.name}:`, visitDays);
-            visitDays = [];
-          }
+          visitDays = safeJsonParse(visitDays) || [];
         }
         
         // Se não é array, transformar em array vazio
@@ -215,7 +215,10 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting visit routes from SQLite database...');
       const result = await this.db!.query('SELECT * FROM visit_routes');
-      return result.values || [];
+      
+      logAndroidDebug('getVisitRoutes result', result);
+      
+      return ensureArray(result.values || result);
     } catch (error) {
       console.error('❌ Error getting visit routes:', error);
       return [];
@@ -236,7 +239,13 @@ class SQLiteDatabaseService {
       }
 
       const result = await this.db!.query(query, values);
-      return result.values || [];
+      
+      logAndroidDebug('getOrders result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      // ✅ CORREÇÃO: Validar e normalizar cada pedido
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
       console.error('❌ Error getting orders:', error);
       return [];
@@ -249,7 +258,10 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting products from SQLite database...');
       const result = await this.db!.query('SELECT * FROM products');
-      return result.values || [];
+      
+      logAndroidDebug('getProducts result', result);
+      
+      return ensureArray(result.values || result);
     } catch (error) {
       console.error('❌ Error getting products:', error);
       return [];
@@ -262,7 +274,10 @@ class SQLiteDatabaseService {
     try {
       console.log(`📱 Getting pending sync items from ${table}...`);
       const result = await this.db!.query(`SELECT * FROM ${table} WHERE sync_status = ?`, ['pending_sync']);
-      return result.values || [];
+      
+      logAndroidDebug(`getPendingSyncItems ${table} result`, result);
+      
+      return ensureArray(result.values || result);
     } catch (error) {
       console.error(`❌ Error getting pending sync items from ${table}:`, error);
       return [];
@@ -376,9 +391,14 @@ class SQLiteDatabaseService {
       console.log(`📱 Getting client by ID: ${clientId}`);
       const result = await this.db!.query('SELECT * FROM clients WHERE id = ?', [clientId]);
       
-      if (result.values && result.values.length > 0) {
-        console.log('✅ Client found:', result.values[0]);
-        return result.values[0];
+      logAndroidDebug('getClientById result', result);
+      
+      const clients = ensureArray(result.values || result);
+      
+      if (clients.length > 0) {
+        const client = validateOrderData(clients[0]);
+        console.log('✅ Client found:', client);
+        return client;
       } else {
         console.log('❌ Client not found');
         return null;
@@ -413,7 +433,17 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting pending orders from SQLite database...');
       const result = await this.db!.query('SELECT * FROM orders WHERE sync_status = ?', ['pending_sync']);
-      return result.values || [];
+      
+      logAndroidDebug('getPendingOrders result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      // ✅ CORREÇÃO CRÍTICA: Validar e normalizar cada pedido
+      const validatedOrders = orders.map(order => validateOrderData(order)).filter(order => order !== null);
+      
+      console.log(`📱 [ANDROID] Validated ${validatedOrders.length} pending orders from ${orders.length} raw orders`);
+      
+      return validatedOrders;
     } catch (error) {
       console.error('❌ Error getting pending orders:', error);
       return [];
@@ -460,7 +490,12 @@ class SQLiteDatabaseService {
     try {
       console.log(`📱 Getting orders for client ID: ${clientId}`);
       const result = await this.db!.query('SELECT * FROM orders WHERE customer_id = ?', [clientId]);
-      return result.values || [];
+      
+      logAndroidDebug('getClientOrders result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
       console.error('❌ Error getting client orders:', error);
       return [];
@@ -503,7 +538,12 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting transmitted orders from SQLite database...');
       const result = await this.db!.query('SELECT * FROM orders WHERE sync_status = ?', ['transmitted']);
-      return result.values || [];
+      
+      logAndroidDebug('getTransmittedOrders result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
       console.error('❌ Error getting transmitted orders:', error);
       return [];
@@ -516,7 +556,12 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting all orders from SQLite database...');
       const result = await this.db!.query('SELECT * FROM orders');
-      return result.values || [];
+      
+      logAndroidDebug('getAllOrders result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
     } catch (error) {
       console.error('❌ Error getting all orders:', error);
       return [];
@@ -679,8 +724,12 @@ class SQLiteDatabaseService {
         [clientId]
       );
       
-      if (result.values && result.values.length > 0) {
-        const clientStatus = result.values[0].status;
+      logAndroidDebug('isClientNegated result', result);
+      
+      const clients = ensureArray(result.values || result);
+      
+      if (clients.length > 0) {
+        const clientStatus = clients[0].status;
         console.log(`📱 Client ${clientId} status: ${clientStatus}`);
         return clientStatus === 'negativado';
       }
@@ -775,8 +824,12 @@ class SQLiteDatabaseService {
       console.log(`📱 Getting active pending order for client ${clientId}...`);
       const result = await this.db!.query('SELECT * FROM orders WHERE customer_id = ? AND status = ?', [clientId, 'pending']);
       
-      if (result.values && result.values.length > 0) {
-        return result.values[0];
+      logAndroidDebug('getActivePendingOrder result', result);
+      
+      const orders = ensureArray(result.values || result);
+      
+      if (orders.length > 0) {
+        return validateOrderData(orders[0]);
       } else {
         return null;
       }
@@ -797,8 +850,13 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Getting payment tables from SQLite database...');
       const result = await this.db!.query('SELECT * FROM payment_tables WHERE active = 1');
-      console.log(`📱 Found ${result.values?.length || 0} active payment tables:`, result.values);
-      return result.values || [];
+      
+      logAndroidDebug('getPaymentTables result', result);
+      
+      const paymentTables = ensureArray(result.values || result);
+      
+      console.log(`📱 Found ${paymentTables.length} active payment tables:`, paymentTables);
+      return paymentTables;
     } catch (error) {
       console.error('❌ Error getting payment tables:', error);
       return [];
@@ -854,54 +912,71 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log(`📱 Getting order by ID: ${orderId}`);
+      console.log(`📱 [ANDROID] Getting order by ID: ${orderId}`);
       
-      // Buscar dados básicos do pedido
+      // ✅ CORREÇÃO: Buscar dados básicos do pedido com validação robusta
       const orderResult = await this.db!.query('SELECT * FROM orders WHERE id = ?', [orderId]);
       
-      if (!orderResult.values || orderResult.values.length === 0) {
-        console.log('❌ Order not found');
+      logAndroidDebug('getOrderById orderResult', orderResult);
+      
+      const orders = ensureArray(orderResult.values || orderResult);
+      
+      if (orders.length === 0) {
+        console.log('❌ [ANDROID] Order not found');
         return null;
       }
 
-      const order = orderResult.values[0];
-      console.log('✅ Order found:', order);
-
-      // Buscar itens do pedido com nomes dos produtos
-      const itemsQuery = `
-        SELECT 
-          oi.*,
-          p.name as product_name
-        FROM order_items oi
-        LEFT JOIN products p ON CAST(oi.product_code AS TEXT) = CAST(p.code AS TEXT)
-        WHERE oi.order_id = ?
-        ORDER BY oi.created_at
-      `;
+      const order = validateOrderData(orders[0]);
       
-      const itemsResult = await this.db!.query(itemsQuery, [orderId]);
-      const orderItems = itemsResult.values || [];
+      if (!order) {
+        console.log('❌ [ANDROID] Order validation failed');
+        return null;
+      }
+      
+      console.log('✅ [ANDROID] Order found and validated:', {
+        id: order.id,
+        customer_name: order.customer_name,
+        total: order.total,
+        status: order.status,
+        itemsCount: order.items?.length || 0
+      });
 
-      console.log(`📱 Found ${orderItems.length} items for order ${orderId}`);
+      // ✅ CORREÇÃO: Tentar buscar itens da tabela order_items se existir
+      try {
+        const itemsQuery = `
+          SELECT 
+            oi.*,
+            p.name as product_name
+          FROM order_items oi
+          LEFT JOIN products p ON CAST(oi.product_code AS TEXT) = CAST(p.code AS TEXT)
+          WHERE oi.order_id = ?
+          ORDER BY oi.created_at
+        `;
+        
+        const itemsResult = await this.db!.query(itemsQuery, [orderId]);
+        
+        logAndroidDebug('getOrderById itemsResult', itemsResult);
+        
+        const orderItems = ensureArray(itemsResult.values || itemsResult);
 
-      // Se não há itens na tabela order_items, verificar se há itens no campo JSON
-      if (orderItems.length === 0 && order.items) {
-        try {
-          const jsonItems = JSON.parse(order.items);
-          if (Array.isArray(jsonItems) && jsonItems.length > 0) {
-            console.log(`📱 Using JSON items from order field: ${jsonItems.length} items`);
-            order.items = jsonItems;
-          }
-        } catch (e) {
-          console.log('📱 Could not parse JSON items from order');
+        console.log(`📱 [ANDROID] Found ${orderItems.length} items for order ${orderId}`);
+
+        // Se não há itens na tabela order_items mas há itens no JSON, usar JSON
+        if (orderItems.length === 0 && order.items && Array.isArray(order.items) && order.items.length > 0) {
+          console.log(`📱 [ANDROID] Using JSON items from order field: ${order.items.length} items`);
+        } else if (orderItems.length > 0) {
+          // Usar itens da tabela order_items se disponível
+          order.items = orderItems;
+          console.log(`📱 [ANDROID] Using items from order_items table: ${orderItems.length} items`);
         }
-      } else {
-        // Usar itens da tabela order_items
-        order.items = orderItems;
+      } catch (itemsError) {
+        console.error('❌ [ANDROID] Error getting order items (using fallback):', itemsError);
+        // Manter os itens do JSON se a busca na tabela falhar
       }
 
       return order;
     } catch (error) {
-      console.error('❌ Error getting order by ID:', error);
+      console.error('❌ [ANDROID] Error getting order by ID:', error);
       return null;
     }
   }

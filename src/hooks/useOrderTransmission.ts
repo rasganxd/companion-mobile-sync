@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -6,6 +7,7 @@ import { logOrderAction } from '@/utils/orderAuditLogger';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
+import { ensureArray, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
 
 export const useOrderTransmission = () => {
   const { salesRep, isOnline } = useAuth();
@@ -22,24 +24,43 @@ export const useOrderTransmission = () => {
       setIsLoading(true);
       const db = getDatabaseAdapter();
       
-      console.log('🔄 Loading orders for transmission page...');
+      console.log('🔄 [ANDROID] Loading orders for transmission page...');
       
-      const pending = await db.getPendingOrders();
-      console.log(`📋 Loaded ${pending.length} pending orders`);
+      // ✅ CORREÇÃO CRÍTICA: Garantir arrays válidos sempre
+      const pendingResult = await db.getPendingOrders();
+      const pending = ensureArray(pendingResult);
+      
+      logAndroidDebug('loadOrders pending', pending);
+      
+      console.log(`📋 [ANDROID] Loaded ${pending.length} pending orders`);
       setPendingOrders(pending);
       
-      const transmitted = await db.getTransmittedOrders();
-      console.log(`📤 Loaded ${transmitted.length} transmitted orders`);
+      const transmittedResult = await db.getTransmittedOrders();
+      const transmitted = ensureArray(transmittedResult);
+      
+      logAndroidDebug('loadOrders transmitted', transmitted);
+      
+      console.log(`📤 [ANDROID] Loaded ${transmitted.length} transmitted orders`);
       setTransmittedOrders(transmitted);
       
-      const allOrders = await db.getAllOrders();
-      const errorOrdersList = allOrders.filter(order => order.sync_status === 'error');
-      console.log(`❌ Loaded ${errorOrdersList.length} error orders`);
+      const allOrdersResult = await db.getAllOrders();
+      const allOrders = ensureArray(allOrdersResult);
+      
+      logAndroidDebug('loadOrders allOrders', allOrders);
+      
+      // ✅ CORREÇÃO: Filtrar pedidos com erro de forma segura
+      const errorOrdersList = allOrders.filter(order => order && order.sync_status === 'error');
+      console.log(`❌ [ANDROID] Loaded ${errorOrdersList.length} error orders`);
       setErrorOrders(errorOrdersList);
       
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('❌ [ANDROID] Error loading orders:', error);
       toast.error('Erro ao carregar pedidos');
+      
+      // ✅ CORREÇÃO: Definir arrays vazios em caso de erro
+      setPendingOrders([]);
+      setTransmittedOrders([]);
+      setErrorOrders([]);
     } finally {
       setIsLoading(false);
     }
@@ -47,6 +68,12 @@ export const useOrderTransmission = () => {
 
   const validateOrderData = (order: LocalOrder): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
+    
+    // ✅ CORREÇÃO: Verificar se o pedido existe antes de validar
+    if (!order) {
+      errors.push('Pedido inválido ou corrompido');
+      return { isValid: false, errors };
+    }
     
     // Validar campos obrigatórios
     if (!order.customer_id) {
@@ -64,11 +91,11 @@ export const useOrderTransmission = () => {
         errors.push('Motivo da negação ausente para pedido cancelado');
       }
       // Pedidos cancelados podem ter total 0 e sem itens - isso é válido
-      console.log('🔍 Validating cancelled order (negativation):', {
+      console.log('🔍 [ANDROID] Validating cancelled order (negativation):', {
         orderId: order.id,
         reason: order.reason,
         total: order.total,
-        itemsCount: order.items?.length || 0
+        itemsCount: Array.isArray(order.items) ? order.items.length : 0
       });
     } else {
       // Para pedidos normais, aplicar validações tradicionais
@@ -76,13 +103,20 @@ export const useOrderTransmission = () => {
         errors.push('Total do pedido inválido');
       }
       
-      if (!order.items || order.items.length === 0) {
+      // ✅ CORREÇÃO: Validar items de forma segura
+      const orderItems = ensureArray(order.items);
+      if (orderItems.length === 0) {
         errors.push('Pedido sem itens');
       }
       
       // Validar itens do pedido apenas para pedidos não cancelados
-      if (order.items) {
-        order.items.forEach((item: any, index: number) => {
+      if (orderItems.length > 0) {
+        orderItems.forEach((item: any, index: number) => {
+          if (!item) {
+            errors.push(`Item ${index + 1}: Item inválido`);
+            return;
+          }
+          
           if (!item.productId && !item.product_id) {
             errors.push(`Item ${index + 1}: ID do produto ausente`);
           }
@@ -102,7 +136,7 @@ export const useOrderTransmission = () => {
       }
     }
     
-    console.log('🔍 Order validation result:', {
+    console.log('🔍 [ANDROID] Order validation result:', {
       orderId: order.id,
       status: order.status,
       isValid: errors.length === 0,
@@ -116,10 +150,18 @@ export const useOrderTransmission = () => {
   };
 
   const normalizeOrderData = (order: LocalOrder): any => {
-    console.log('🔧 Normalizing order data:', order);
+    console.log('🔧 [ANDROID] Normalizing order data:', order);
+    
+    // ✅ CORREÇÃO: Garantir que items seja array antes de normalizar
+    const orderItems = ensureArray(order.items);
     
     // Normalizar itens do pedido
-    const normalizedItems = order.items?.map((item: any) => {
+    const normalizedItems = orderItems.map((item: any) => {
+      if (!item) {
+        console.warn('🔧 [ANDROID] Skipping invalid item:', item);
+        return null;
+      }
+      
       const normalizedItem = {
         product_id: item.productId || item.product_id,
         product_name: item.productName || item.product_name,
@@ -131,14 +173,14 @@ export const useOrderTransmission = () => {
         total: (item.price || item.unit_price || 0) * item.quantity
       };
       
-      console.log('🔧 Normalized item:', {
+      console.log('🔧 [ANDROID] Normalized item:', {
         ...normalizedItem,
         originalUnit: item.unit,
         preservedUnit: normalizedItem.unit
       });
       
       return normalizedItem;
-    }) || [];
+    }).filter(item => item !== null); // Remover itens inválidos
     
     const normalizedOrder = {
       ...order,
@@ -146,7 +188,7 @@ export const useOrderTransmission = () => {
       payment_table_id: order.payment_table_id
     };
     
-    console.log('✅ Normalized order with preserved units and payment table:', {
+    console.log('✅ [ANDROID] Normalized order with preserved units and payment table:', {
       orderId: normalizedOrder.id,
       customerName: normalizedOrder.customer_name,
       status: normalizedOrder.status,
@@ -196,7 +238,10 @@ export const useOrderTransmission = () => {
   };
 
   const transmitAllOrders = async () => {
-    if (pendingOrders.length === 0) {
+    // ✅ CORREÇÃO: Verificar se pendingOrders é array válido
+    const validPendingOrders = ensureArray(pendingOrders);
+    
+    if (validPendingOrders.length === 0) {
       toast.warning('Não há pedidos pendentes para transmitir');
       return;
     }
@@ -210,7 +255,7 @@ export const useOrderTransmission = () => {
       validateSalesRep();
       setTransmissionError(null);
     } catch (error) {
-      console.error('❌ Sales rep validation failed:', error);
+      console.error('❌ [ANDROID] Sales rep validation failed:', error);
       return;
     }
 
@@ -219,21 +264,21 @@ export const useOrderTransmission = () => {
     try {
       const db = getDatabaseAdapter();
 
-      console.log('📤 Starting transmission to Supabase...');
+      console.log('📤 [ANDROID] Starting transmission to Supabase...');
       console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
       
       // Validar e normalizar dados dos pedidos antes da transmissão
       const validatedOrders: LocalOrder[] = [];
       const invalidOrders: { order: LocalOrder; errors: string[] }[] = [];
       
-      for (const order of pendingOrders) {
+      for (const order of validPendingOrders) {
         const validation = validateOrderData(order);
         
         if (validation.isValid) {
           const normalizedOrder = normalizeOrderData(order);
           validatedOrders.push(normalizedOrder);
         } else {
-          console.error(`❌ Invalid order data for ${order.id}:`, validation.errors);
+          console.error(`❌ [ANDROID] Invalid order data for ${order.id}:`, validation.errors);
           invalidOrders.push({ order, errors: validation.errors });
           
           // Marcar pedidos inválidos como erro
@@ -243,7 +288,7 @@ export const useOrderTransmission = () => {
       
       if (invalidOrders.length > 0) {
         const errorMsg = `${invalidOrders.length} pedido(s) com dados inválidos foram marcados como erro`;
-        console.error('❌ Invalid orders:', invalidOrders);
+        console.error('❌ [ANDROID] Invalid orders:', invalidOrders);
         toast.error(errorMsg);
       }
       
@@ -257,10 +302,10 @@ export const useOrderTransmission = () => {
         salesRep.sessionToken!
       );
 
-      console.log('📊 Transmission result:', transmissionResult);
+      console.log('📊 [ANDROID] Transmission result:', transmissionResult);
 
       if (transmissionResult.success && transmissionResult.successCount > 0) {
-        console.log(`✅ ${transmissionResult.successCount} orders transmitted successfully`);
+        console.log(`✅ [ANDROID] ${transmissionResult.successCount} orders transmitted successfully`);
         
         // Mark successfully transmitted orders
         for (const order of validatedOrders) {
@@ -276,17 +321,17 @@ export const useOrderTransmission = () => {
               syncStatus: 'transmitted',
               details: { 
                 total: order.total, 
-                itemsCount: order.items?.length || 0,
+                itemsCount: Array.isArray(order.items) ? order.items.length : 0,
                 paymentTableId: order.payment_table_id,
                 status: order.status,
                 reason: order.reason
               }
             });
             
-            console.log('✅ Order marked as transmitted:', order.id);
+            console.log('✅ [ANDROID] Order marked as transmitted:', order.id);
             
           } catch (error) {
-            console.error('❌ Error marking order as transmitted:', order.id, error);
+            console.error('❌ [ANDROID] Error marking order as transmitted:', order.id, error);
             await db.updateSyncStatus('orders', order.id, 'error');
           }
         }
@@ -295,7 +340,7 @@ export const useOrderTransmission = () => {
       }
       
       if (transmissionResult.errorCount > 0) {
-        console.error('❌ Some orders failed transmission:', transmissionResult.errors);
+        console.error('❌ [ANDROID] Some orders failed transmission:', transmissionResult.errors);
         
         // Mark failed orders as error
         const db = getDatabaseAdapter();
@@ -317,7 +362,7 @@ export const useOrderTransmission = () => {
       await loadOrders();
 
     } catch (error) {
-      console.error('❌ Error in transmission process:', error);
+      console.error('❌ [ANDROID] Error in transmission process:', error);
       
       let errorMsg = 'Erro no processo de transmissão';
       
@@ -338,7 +383,8 @@ export const useOrderTransmission = () => {
       
       // Mark all orders as error if transmission failed completely
       const db = getDatabaseAdapter();
-      for (const order of pendingOrders) {
+      const validPendingOrders = ensureArray(pendingOrders);
+      for (const order of validPendingOrders) {
         await db.updateSyncStatus('orders', order.id, 'error');
       }
       await loadOrders();
@@ -374,7 +420,9 @@ export const useOrderTransmission = () => {
   };
 
   const retryAllErrorOrders = async () => {
-    if (errorOrders.length === 0) {
+    const validErrorOrders = ensureArray(errorOrders);
+    
+    if (validErrorOrders.length === 0) {
       toast.warning('Não há pedidos com erro para tentar novamente');
       return;
     }
@@ -382,7 +430,7 @@ export const useOrderTransmission = () => {
     try {
       const db = getDatabaseAdapter();
       
-      for (const order of errorOrders) {
+      for (const order of validErrorOrders) {
         await db.updateSyncStatus('orders', order.id, 'pending_sync');
         
         logOrderAction({
@@ -395,16 +443,17 @@ export const useOrderTransmission = () => {
         });
       }
       
-      toast.success(`${errorOrders.length} pedido(s) recolocados na fila de transmissão`);
+      toast.success(`${validErrorOrders.length} pedido(s) recolocados na fila de transmissão`);
       await loadOrders();
     } catch (error) {
-      console.error('Error retrying error orders:', error);
+      console.error('❌ [ANDROID] Error retrying error orders:', error);
       toast.error('Erro ao tentar novamente');
     }
   };
 
   const deleteTransmittedOrder = async (orderId: string) => {
-    const orderToDelete = transmittedOrders.find(order => order.id === orderId);
+    const validTransmittedOrders = ensureArray(transmittedOrders);
+    const orderToDelete = validTransmittedOrders.find(order => order && order.id === orderId);
     
     if (!confirm('Tem certeza que deseja excluir este pedido transmitido permanentemente? Esta ação não pode ser desfeita.')) {
       return;
@@ -430,7 +479,7 @@ export const useOrderTransmission = () => {
       toast.success('Pedido transmitido excluído com sucesso');
       await loadOrders();
     } catch (error) {
-      console.error('Error deleting order:', error);
+      console.error('❌ [ANDROID] Error deleting order:', error);
       toast.error('Erro ao excluir pedido');
     }
   };
