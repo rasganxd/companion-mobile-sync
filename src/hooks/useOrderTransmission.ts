@@ -484,38 +484,6 @@ export const useOrderTransmission = () => {
     }
   };
 
-  const validateSalesRep = () => {
-    if (!salesRep || !salesRep.id) {
-      const errorMsg = 'Vendedor não identificado. Faça login novamente.';
-      setTransmissionError(errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    if (!salesRep.sessionToken) {
-      const errorMsg = 'Token de sessão expirado. Faça login novamente.';
-      setTransmissionError(errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    // Verificar se o token não é muito antigo (para tokens mobile)
-    if (salesRep.sessionToken.startsWith('mobile_')) {
-      const tokenParts = salesRep.sessionToken.split('_');
-      if (tokenParts.length >= 3) {
-        const timestamp = parseInt(tokenParts[2]);
-        const tokenAge = Date.now() - timestamp;
-        const maxAge = 20 * 60 * 60 * 1000; // 20 horas (menos que o limite de 24h do servidor)
-        
-        if (tokenAge > maxAge) {
-          const errorMsg = 'Sessão expirada. Faça login novamente.';
-          setTransmissionError(errorMsg);
-          throw new Error(errorMsg);
-        }
-      }
-    }
-    
-    return true;
-  };
-
   useEffect(() => {
     loadOrders();
   }, []);
