@@ -56,32 +56,46 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
 
   console.log('🔢 Generated order code:', codeData);
 
-  // ✅ NOVO: Validação obrigatória de payment_table_id
-  if (!orderData.payment_table_id) {
-    console.error('❌ Payment table ID is required but missing');
-    throw new Error('Payment table ID is required');
+  // ✅ NOVO: Verificar se é pedido cancelado (negação) - não exigir payment_table_id
+  const isCancelledOrder = orderData.status === 'cancelled' || orderData.status === 'canceled';
+  
+  if (!isCancelledOrder) {
+    // ✅ Validação obrigatória de payment_table_id apenas para pedidos normais
+    if (!orderData.payment_table_id) {
+      console.error('❌ Payment table ID is required for normal orders but missing');
+      throw new Error('Payment table ID is required');
+    }
+  } else {
+    console.log('ℹ️ Cancelled order (negation) - skipping payment_table_id validation');
   }
 
-  // ✅ NOVO: Buscar dados da tabela de pagamento se só temos o ID
+  // ✅ NOVO: Buscar dados da tabela de pagamento apenas para pedidos normais
   let paymentMethodName = orderData.payment_method;
   
-  if (!paymentMethodName && orderData.payment_table_id) {
-    console.log('🔍 Payment method name missing, searching by payment_table_id:', orderData.payment_table_id);
-    
-    const { data: paymentTable, error: paymentError } = await supabase
-      .from('payment_tables')
-      .select('name, description')
-      .eq('id', orderData.payment_table_id)
-      .eq('active', true)
-      .single();
-    
-    if (paymentError || !paymentTable) {
-      console.error('❌ Payment table not found:', orderData.payment_table_id, paymentError);
-      throw new Error(`Payment table not found for ID: ${orderData.payment_table_id}`);
+  if (!isCancelledOrder) {
+    // Para pedidos normais, buscar método de pagamento se necessário
+    if (!paymentMethodName && orderData.payment_table_id) {
+      console.log('🔍 Payment method name missing, searching by payment_table_id:', orderData.payment_table_id);
+      
+      const { data: paymentTable, error: paymentError } = await supabase
+        .from('payment_tables')
+        .select('name, description')
+        .eq('id', orderData.payment_table_id)
+        .eq('active', true)
+        .single();
+      
+      if (paymentError || !paymentTable) {
+        console.error('❌ Payment table not found:', orderData.payment_table_id, paymentError);
+        throw new Error(`Payment table not found for ID: ${orderData.payment_table_id}`);
+      }
+      
+      paymentMethodName = paymentTable.name;
+      console.log('✅ Payment method name found:', paymentMethodName);
     }
-    
-    paymentMethodName = paymentTable.name;
-    console.log('✅ Payment method name found:', paymentMethodName);
+  } else {
+    // Para pedidos cancelados, definir método de pagamento como N/A
+    paymentMethodName = 'N/A';
+    console.log('ℹ️ Cancelled order - payment method set to N/A');
   }
 
   // Preparar dados do pedido para inserção na tabela mobile_orders
@@ -95,9 +109,9 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     status: orderData.status,
     total: orderData.total,
     notes: orderData.notes || '',
-    // ✅ CORRIGIDO: Garantir que ambos os campos sejam salvos
+    // ✅ CORRIGIDO: Para pedidos cancelados, permitir payment_table_id como null
     payment_method: paymentMethodName,
-    payment_table_id: orderData.payment_table_id,
+    payment_table_id: isCancelledOrder ? null : orderData.payment_table_id,
     code: codeData,
     mobile_order_id: `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     sync_status: 'pending',
@@ -108,14 +122,26 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     visit_notes: orderData.notes || ''
   };
 
-  console.log('💳 Mobile order data to insert with validated payment:', {
-    payment_method: orderToInsert.payment_method,
-    payment_table_id: orderToInsert.payment_table_id,
-    total: orderToInsert.total,
-    status: orderToInsert.status,
-    customer_name: orderToInsert.customer_name,
-    table: 'mobile_orders'
-  });
+  if (isCancelledOrder) {
+    console.log('🚫 Cancelled order (negation) data to insert:', {
+      payment_method: orderToInsert.payment_method,
+      payment_table_id: orderToInsert.payment_table_id,
+      total: orderToInsert.total,
+      status: orderToInsert.status,
+      customer_name: orderToInsert.customer_name,
+      reason: orderToInsert.rejection_reason,
+      table: 'mobile_orders'
+    });
+  } else {
+    console.log('💳 Normal order data to insert with validated payment:', {
+      payment_method: orderToInsert.payment_method,
+      payment_table_id: orderToInsert.payment_table_id,
+      total: orderToInsert.total,
+      status: orderToInsert.status,
+      customer_name: orderToInsert.customer_name,
+      table: 'mobile_orders'
+    });
+  }
 
   // Inserir pedido na tabela mobile_orders
   const { data: createdOrder, error: orderError } = await supabase
@@ -129,8 +155,14 @@ export const createOrder = async (orderData: MobileOrder, salesRep: SalesRep, cu
     throw new Error(`Failed to create mobile order: ${orderError.message}`);
   }
 
-  console.log('✅ Mobile order created successfully:', createdOrder.id);
-  console.log('💳 Payment data saved - Method:', createdOrder.payment_method, 'Table ID:', createdOrder.payment_table_id);
+  if (isCancelledOrder) {
+    console.log('✅ Cancelled order (negation) created successfully:', createdOrder.id);
+    console.log('🚫 Visit registered - Reason:', createdOrder.rejection_reason);
+  } else {
+    console.log('✅ Normal order created successfully:', createdOrder.id);
+    console.log('💳 Payment data saved - Method:', createdOrder.payment_method, 'Table ID:', createdOrder.payment_table_id);
+  }
+  
   return createdOrder;
 };
 
@@ -166,7 +198,7 @@ export const createOrderItems = async (orderData: MobileOrder, orderId: string, 
     }
 
     console.log('✅ Mobile order items created successfully with preserved units');
-  } else if (orderData.status === 'cancelled') {
+  } else if (orderData.status === 'cancelled' || orderData.status === 'canceled') {
     console.log('ℹ️ No items to create for cancelled mobile order (negation)');
   }
 };
