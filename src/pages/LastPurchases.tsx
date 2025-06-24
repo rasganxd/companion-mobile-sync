@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { ArrowLeft, Package, RefreshCw, Filter } from 'lucide-react';
@@ -9,7 +8,7 @@ import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useClientPurchaseHistory } from '@/hooks/useClientPurchaseHistory';
 
 const LastPurchases = () => {
-  const { navigateToViewOrderDetails } = useAppNavigation();
+  const { navigateToViewOrderDetails, goBack } = useAppNavigation();
   const location = useLocation();
   const [filterPeriod, setFilterPeriod] = useState<'all' | '30d' | '6m'>('all');
   
@@ -28,8 +27,8 @@ const LastPurchases = () => {
   const handleGoBack = () => {
     console.log('🔙 LastPurchases - Going back with preserved client state:', { clientName, clientId, day });
     
-    // Usar navegação direta com estado preservado
-    window.history.back();
+    // Usar o método de navegação que preserva o estado
+    goBack();
   };
 
   if (!clientId || !clientName) {
