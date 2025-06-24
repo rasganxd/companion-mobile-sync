@@ -1073,24 +1073,21 @@ class SQLiteDatabaseService {
       for (const order of ordersArray) {
         console.log('💾 Saving order:', order.id, order.customer_name);
         
-        const stmt = await this.db.prepare(`
-          INSERT OR REPLACE INTO orders (
+        await this.db.run(
+          `INSERT OR REPLACE INTO orders (
             id, customer_id, customer_name, date, total, status, sync_status, items
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `);
-        
-        await stmt.execute([
-          order.id,
-          order.customer_id,
-          order.customer_name,
-          order.date,
-          order.total || 0,
-          order.status || 'pending',
-          order.sync_status || 'synced',
-          JSON.stringify(order.items || [])
-        ]);
-        
-        await stmt.finalize();
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            order.id,
+            order.customer_id,
+            order.customer_name,
+            order.date,
+            order.total || 0,
+            order.status || 'pending',
+            order.sync_status || 'synced',
+            JSON.stringify(order.items || [])
+          ]
+        );
       }
       
       console.log('✅ Successfully saved', ordersArray.length, 'orders to SQLite database');
