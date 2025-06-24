@@ -1,3 +1,4 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
@@ -354,6 +355,10 @@ class SQLiteDatabaseService {
     }
   }
 
+  async getCustomers(): Promise<any[]> {
+    return this.getClients();
+  }
+
   async getVisitRoutes(): Promise<any[]> {
     if (!this.db) await this.initDatabase();
 
@@ -443,6 +448,50 @@ class SQLiteDatabaseService {
     }
   }
 
+  async getPaymentTables(): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('📱 Getting payment tables from SQLite database...');
+      const result = await this.db!.query('SELECT * FROM payment_tables');
+      
+      logAndroidDebug('getPaymentTables result', result);
+      
+      const paymentTables = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      
+      // ✅ CORREÇÃO: Processar dados completos das tabelas de pagamento
+      const processedTables = paymentTables.map((tableData: any) => {
+        const table = safeCast<PaymentTableData>(tableData);
+        if (!table) return null;
+        
+        let installments = table.installments;
+        let terms = table.terms;
+        
+        // Se installments é string, tentar fazer parse
+        if (typeof installments === 'string' && installments) {
+          installments = safeJsonParse(installments) || [];
+        }
+        
+        // Se terms é string, tentar fazer parse
+        if (typeof terms === 'string' && terms) {
+          terms = safeJsonParse(terms) || {};
+        }
+        
+        return {
+          ...table,
+          installments,
+          terms
+        };
+      }).filter(table => table !== null);
+      
+      console.log(`📱 Found ${processedTables.length} payment tables in SQLite`);
+      return processedTables;
+    } catch (error) {
+      console.error('❌ Error getting payment tables:', error);
+      return [];
+    }
+  }
+
   async saveClients(clientsArray: any[]): Promise<void> {
     if (!this.db) await this.initDatabase();
   
@@ -490,32 +539,33 @@ class SQLiteDatabaseService {
     }
   }
 
-  async saveOrder(order: any): Promise<void> {
+  async saveProducts(productsArray: any[]): Promise<void> {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Saving order to SQLite database with complete structure');
-      
-      // ✅ CORREÇÃO: Incluir todos os campos da estrutura completa
-      await this.db!.run(
-        `INSERT INTO orders (
-          id, customer_id, customer_name, sales_rep_id, code, date, due_date, status, total, discount,
-          sync_status, source_project, payment_method, payment_table_id, payments,
-          delivery_address, delivery_city, delivery_state, delivery_zip, visit_notes,
-          reason, notes, items
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          order.id, order.customer_id, order.customer_name, order.sales_rep_id, order.code,
-          order.date, order.due_date, order.status, order.total, order.discount || 0,
-          order.sync_status, order.source_project, order.payment_method, order.payment_table_id,
-          order.payments ? JSON.stringify(order.payments) : null,
-          order.delivery_address, order.delivery_city, order.delivery_state, order.delivery_zip,
-          order.visit_notes, order.reason, order.notes, JSON.stringify(order.items)
-        ]
-      );
-      console.log('✅ Order saved with complete structure');
+      console.log(`📱 Saving ${productsArray.length} products to SQLite database...`);
+
+      for (const product of productsArray) {
+        await this.db!.run(
+          `INSERT OR REPLACE INTO products (
+            id, name, code, sale_price, cost_price, stock, active, unit, has_subunit, subunit,
+            subunit_ratio, max_discount_percent, category_id, category_name, group_name, brand_name,
+            main_unit_id, sub_unit_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            product.id, product.name, product.code, product.sale_price, product.cost_price,
+            product.stock, product.active, product.unit, product.has_subunit, product.subunit,
+            product.subunit_ratio, product.max_discount_percent, product.category_id,
+            product.category_name, product.group_name, product.brand_name,
+            product.main_unit_id, product.sub_unit_id
+          ]
+        );
+      }
+
+      console.log('✅ All products saved with complete structure');
     } catch (error) {
-      console.error('❌ Error saving order:', error);
+      console.error('❌ Error saving products:', error);
+      throw error;
     }
   }
 
@@ -552,45 +602,424 @@ class SQLiteDatabaseService {
     }
   }
 
-  async getPaymentMethods(): Promise<any[]> {
+  async saveClient(client: any): Promise<void> {
+    await this.saveClients([client]);
+  }
+
+  async saveProduct(product: any): Promise<void> {
+    await this.saveProducts([product]);
+  }
+
+  async saveOrder(order: any): Promise<void> {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Getting payment methods from SQLite database...');
-      const result = await this.db!.query('SELECT * FROM payment_methods');
+      console.log('📱 Saving order to SQLite database with complete structure');
       
+      // ✅ CORREÇÃO: Incluir todos os campos da estrutura completa
+      await this.db!.run(
+        `INSERT INTO orders (
+          id, customer_id, customer_name, sales_rep_id, code, date, due_date, status, total, discount,
+          sync_status, source_project, payment_method, payment_table_id, payments,
+          delivery_address, delivery_city, delivery_state, delivery_zip, visit_notes,
+          reason, notes, items
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          order.id, order.customer_id, order.customer_name, order.sales_rep_id, order.code,
+          order.date, order.due_date, order.status, order.total, order.discount || 0,
+          order.sync_status, order.source_project, order.payment_method, order.payment_table_id,
+          order.payments ? JSON.stringify(order.payments) : null,
+          order.delivery_address, order.delivery_city, order.delivery_state, order.delivery_zip,
+          order.visit_notes, order.reason, order.notes, JSON.stringify(order.items)
+        ]
+      );
+      console.log('✅ Order saved with complete structure');
+    } catch (error) {
+      console.error('❌ Error saving order:', error);
+    }
+  }
+
+  async saveMobileOrder(order: any): Promise<void> {
+    await this.saveOrder(order);
+  }
+
+  // ✅ IMPLEMENTAR MÉTODOS FALTANTES PARA DATABASEADAPTER
+
+  async getPendingSyncItems(table: string): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Getting pending sync items for table: ${table}`);
+      
+      // Para orders, buscar items com sync_status != 'synced'
+      if (table === 'orders') {
+        const result = await this.db!.query(
+          'SELECT * FROM orders WHERE sync_status != ? AND sync_status != ?',
+          ['synced', 'transmitted']
+        );
+        return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      }
+      
+      // Para outras tabelas, buscar todos (assumindo que precisam sync)
+      const result = await this.db!.query(`SELECT * FROM ${table}`);
       return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
     } catch (error) {
-      console.error('❌ Error getting payment methods:', error);
+      console.error(`❌ Error getting pending sync items for ${table}:`, error);
       return [];
     }
   }
 
-  async getUnits(): Promise<any[]> {
+  async updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void> {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Getting units from SQLite database...');
-      const result = await this.db!.query('SELECT * FROM units');
+      console.log(`📱 Updating sync status for ${table} ${id} to ${status}`);
       
-      return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      if (table === 'orders') {
+        await this.db!.run(
+          'UPDATE orders SET sync_status = ? WHERE id = ?',
+          [status, id]
+        );
+      } else if (table === 'customers') {
+        // Para customers, podemos atualizar um campo de status se necessário
+        await this.db!.run(
+          'UPDATE customers SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          [id]
+        );
+      }
+      
+      console.log(`✅ Sync status updated for ${table} ${id}`);
     } catch (error) {
-      console.error('❌ Error getting units:', error);
+      console.error(`❌ Error updating sync status for ${table} ${id}:`, error);
+    }
+  }
+
+  async logSync(type: string, status: string, details?: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const id = `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      await this.db!.run(
+        'INSERT INTO sync_log (id, type, status, details) VALUES (?, ?, ?, ?)',
+        [id, type, status, details || '']
+      );
+      
+      console.log(`✅ Sync logged: ${type} - ${status}`);
+    } catch (error) {
+      console.error('❌ Error logging sync:', error);
+    }
+  }
+
+  async updateClientStatus(clientId: string, status: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Updating client ${clientId} status to ${status}`);
+      
+      await this.db!.run(
+        'UPDATE customers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [status, clientId]
+      );
+      
+      console.log(`✅ Client status updated for ${clientId}`);
+    } catch (error) {
+      console.error(`❌ Error updating client status for ${clientId}:`, error);
+    }
+  }
+
+  async getClientById(clientId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Getting client by ID: ${clientId}`);
+      
+      const result = await this.db!.query('SELECT * FROM customers WHERE id = ?', [clientId]);
+      const clients = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      
+      if (clients.length === 0) return null;
+      
+      const client = safeCast<CustomerData>(clients[0]);
+      if (!client) return null;
+      
+      // Processar visit_days se necessário
+      let visitDays = client.visit_days;
+      if (typeof visitDays === 'string' && visitDays) {
+        visitDays = safeJsonParse(visitDays) || [];
+      }
+      if (!Array.isArray(visitDays)) {
+        visitDays = [];
+      }
+      
+      return {
+        ...client,
+        visit_days: visitDays
+      };
+    } catch (error) {
+      console.error(`❌ Error getting client by ID ${clientId}:`, error);
+      return null;
+    }
+  }
+
+  async closeDatabase(): Promise<void> {
+    try {
+      if (this.db) {
+        await this.db.close();
+        this.db = null;
+      }
+      this.isInitialized = false;
+      console.log('✅ SQLite database closed');
+    } catch (error) {
+      console.error('❌ Error closing database:', error);
+    }
+  }
+
+  // ✅ MÉTODOS PARA FLUXO OFFLINE
+  async getPendingOrders(): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE sync_status = ?',
+        ['pending_sync']
+      );
+      
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
+    } catch (error) {
+      console.error('❌ Error getting pending orders:', error);
       return [];
     }
   }
 
-  async getOrderItems(orderId: string): Promise<any[]> {
+  async markOrderAsTransmitted(orderId: string): Promise<void> {
+    await this.updateSyncStatus('orders', orderId, 'transmitted');
+  }
+
+  async getOfflineOrdersCount(): Promise<number> {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log(`📱 Getting order items for order ${orderId}`);
-      const result = await this.db!.query('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
+      const result = await this.db!.query(
+        'SELECT COUNT(*) as count FROM orders WHERE sync_status != ?',
+        ['synced']
+      );
+      
+      const count = result.values?.[0]?.count || 0;
+      return typeof count === 'number' ? count : parseInt(count) || 0;
+    } catch (error) {
+      console.error('❌ Error getting offline orders count:', error);
+      return 0;
+    }
+  }
+
+  // ✅ MÉTODOS PARA GERENCIAMENTO MELHORADO DE PEDIDOS
+  async getClientOrders(clientId: string): Promise<any[]> {
+    return this.getOrders(clientId);
+  }
+
+  async deleteOrder(orderId: string): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Deleting order ${orderId}`);
+      
+      await this.db!.run('DELETE FROM orders WHERE id = ?', [orderId]);
+      
+      console.log(`✅ Order ${orderId} deleted`);
+    } catch (error) {
+      console.error(`❌ Error deleting order ${orderId}:`, error);
+    }
+  }
+
+  async deleteAllOrders(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('📱 Deleting all orders');
+      
+      await this.db!.run('DELETE FROM orders');
+      
+      console.log('✅ All orders deleted');
+    } catch (error) {
+      console.error('❌ Error deleting all orders:', error);
+    }
+  }
+
+  async getTransmittedOrders(): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE sync_status = ?',
+        ['transmitted']
+      );
+      
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      return orders.map(order => validateOrderData(order)).filter(order => order !== null);
+    } catch (error) {
+      console.error('❌ Error getting transmitted orders:', error);
+      return [];
+    }
+  }
+
+  async getAllOrders(): Promise<any[]> {
+    return this.getOrders();
+  }
+
+  async getOrderById(orderId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log(`📱 Getting order by ID: ${orderId}`);
+      
+      const result = await this.db!.query('SELECT * FROM orders WHERE id = ?', [orderId]);
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      
+      if (orders.length === 0) return null;
+      
+      return validateOrderData(orders[0]);
+    } catch (error) {
+      console.error(`❌ Error getting order by ID ${orderId}:`, error);
+      return null;
+    }
+  }
+
+  // ✅ MÉTODOS PARA VALIDAÇÕES E CONTROLE DE STATUS
+  async isClientNegated(clientId: string): Promise<boolean> {
+    const client = await this.getClientById(clientId);
+    return client?.status === 'negado' || false;
+  }
+
+  async unnegateClient(clientId: string, reason: string): Promise<void> {
+    await this.updateClientStatus(clientId, 'ativo');
+    await this.logSync('client_unnegate', 'completed', `Client ${clientId} unnegated: ${reason}`);
+  }
+
+  async getClientStatusHistory(clientId: string): Promise<any[]> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM sync_log WHERE details LIKE ? ORDER BY timestamp DESC',
+        [`%${clientId}%`]
+      );
       
       return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
     } catch (error) {
-      console.error('❌ Error getting order items:', error);
+      console.error(`❌ Error getting client status history for ${clientId}:`, error);
       return [];
+    }
+  }
+
+  async hasClientPendingOrders(clientId: string): Promise<boolean> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const result = await this.db!.query(
+        'SELECT COUNT(*) as count FROM orders WHERE customer_id = ? AND sync_status != ?',
+        [clientId, 'synced']
+      );
+      
+      const count = result.values?.[0]?.count || 0;
+      return (typeof count === 'number' ? count : parseInt(count) || 0) > 0;
+    } catch (error) {
+      console.error(`❌ Error checking pending orders for client ${clientId}:`, error);
+      return false;
+    }
+  }
+
+  async canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }> {
+    try {
+      const isNegated = await this.isClientNegated(clientId);
+      if (isNegated) {
+        return {
+          canCreate: false,
+          reason: 'Cliente negado'
+        };
+      }
+
+      const existingOrder = await this.getActivePendingOrder(clientId);
+      if (existingOrder) {
+        return {
+          canCreate: false,
+          reason: 'Cliente já possui pedido ativo',
+          existingOrder
+        };
+      }
+
+      return { canCreate: true };
+    } catch (error) {
+      console.error(`❌ Error checking if can create order for client ${clientId}:`, error);
+      return {
+        canCreate: false,
+        reason: 'Erro ao verificar status do cliente'
+      };
+    }
+  }
+
+  async getActivePendingOrder(clientId: string): Promise<any | null> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      const result = await this.db!.query(
+        'SELECT * FROM orders WHERE customer_id = ? AND sync_status = ? LIMIT 1',
+        [clientId, 'pending_sync']
+      );
+      
+      const orders = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      
+      if (orders.length === 0) return null;
+      
+      return validateOrderData(orders[0]);
+    } catch (error) {
+      console.error(`❌ Error getting active pending order for client ${clientId}:`, error);
+      return null;
+    }
+  }
+
+  // ✅ MÉTODOS OPCIONAIS PARA LIMPEZA E ATUALIZAÇÃO
+  async clearMockData?(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('📱 Clearing mock data from SQLite...');
+      
+      await this.db!.run('DELETE FROM customers WHERE name LIKE ?', ['%Mock%']);
+      await this.db!.run('DELETE FROM products WHERE name LIKE ?', ['%Mock%']);
+      await this.db!.run('DELETE FROM orders WHERE customer_name LIKE ?', ['%Mock%']);
+      
+      console.log('✅ Mock data cleared from SQLite');
+    } catch (error) {
+      console.error('❌ Error clearing mock data:', error);
+    }
+  }
+
+  async updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void> {
+    try {
+      const hasPendingOrders = await this.hasClientPendingOrders(clientId);
+      if (!hasPendingOrders) {
+        await this.updateClientStatus(clientId, 'pendente');
+      }
+    } catch (error) {
+      console.error(`❌ Error updating client status after order deletion for ${clientId}:`, error);
+    }
+  }
+
+  async resetAllNegatedClientsStatus?(): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('📱 Resetting all negated clients status...');
+      
+      await this.db!.run(
+        'UPDATE customers SET status = ? WHERE status = ?',
+        ['pendente', 'negado']
+      );
+      
+      console.log('✅ All negated clients status reset to pending');
+    } catch (error) {
+      console.error('❌ Error resetting negated clients status:', error);
     }
   }
 }
