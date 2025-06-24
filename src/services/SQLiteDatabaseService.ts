@@ -1,6 +1,17 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
+
+// ✅ NOVO: Interface para definir a estrutura das colunas retornadas pelo PRAGMA table_info
+interface TableColumnInfo {
+  cid: number;
+  name: string;
+  type: string;
+  notnull: number;
+  dflt_value: any;
+  pk: number;
+}
 
 class SQLiteDatabaseService {
   private static instance: SQLiteDatabaseService | null = null;
@@ -143,7 +154,10 @@ class SQLiteDatabaseService {
         // Tentar verificar se a coluna 'unit' existe
         const result = await this.db.query('PRAGMA table_info(products)');
         const columns = result.values || [];
-        const hasUnitColumn = columns.some((col: any) => col.name === 'unit');
+        
+        // ✅ CORREÇÃO: Usar type assertion para TableColumnInfo[]
+        const typedColumns = columns as TableColumnInfo[];
+        const hasUnitColumn = typedColumns.some((col) => col.name === 'unit');
         
         if (!hasUnitColumn) {
           console.log('📱 [MIGRATION] Products table needs migration - adding missing columns...');
