@@ -1,4 +1,3 @@
-
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -458,6 +457,112 @@ class SupabaseService {
       }
       
       throw new Error('Não foi possível buscar tabelas de pagamento do Supabase nem encontrar dados locais. Execute uma sincronização quando houver conexão.');
+    }
+  }
+
+  async getClientOrdersHistory(salesRepId: string, sessionToken: string) {
+    console.log('📥 Fetching client orders history for sales rep:', salesRepId);
+    console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
+    
+    // Extrair código do vendedor do localStorage
+    const salesRepData = localStorage.getItem('salesRep');
+    let salesRepCode = null;
+    
+    if (salesRepData) {
+      try {
+        const parsedData = JSON.parse(salesRepData);
+        salesRepCode = parsedData.code;
+        console.log('📋 Sales rep code extracted for orders history:', salesRepCode);
+      } catch (error) {
+        console.error('❌ Error parsing salesRep data:', error);
+      }
+    }
+    
+    // Validar parâmetros antes de fazer a requisição
+    if (!salesRepId) {
+      console.error('❌ Sales rep ID is required');
+      throw new Error('ID do vendedor é obrigatório para buscar histórico de pedidos');
+    }
+
+    if (!sessionToken) {
+      console.error('❌ Session token is required');
+      throw new Error('Token de sessão é obrigatório para buscar histórico de pedidos');
+    }
+    
+    // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
+    try {
+      console.log('🌐 Attempting to fetch REAL orders history from Supabase...');
+      
+      const requestBody = { 
+        type: 'orders_history',
+        sales_rep_id: salesRepId,
+        sales_rep_code: salesRepCode,
+        limit: 100 // Limitar aos últimos 100 pedidos
+      };
+      
+      console.log('📤 Sending request body:', requestBody);
+
+      const response = await this.retryWithBackoff(() => 
+        fetch(`${this.baseUrl}/mobile-data-sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+            'apikey': this.anonKey
+          },
+          body: JSON.stringify(requestBody)
+        })
+      );
+
+      console.log('📡 Orders history sync response status:', response.status);
+
+      if (response.ok) {
+        const data = await response.json();
+        const orders = data.orders || [];
+        console.log(`✅ Successfully fetched ${orders.length} REAL orders from Supabase`);
+        return orders;
+      }
+
+      const errorText = await response.text();
+      console.error('❌ Orders history sync error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: 'Erro ao buscar histórico de pedidos: ' + errorText };
+      }
+      
+      throw new Error(errorData.error || 'Erro ao buscar histórico de pedidos do Supabase');
+      
+    } catch (error) {
+      console.error('❌ Failed to fetch orders history from Supabase:', error);
+      
+      // 🔄 NOVA LÓGICA: Em caso de erro, verificar se há dados locais salvos
+      console.log('🔍 Checking for previously synced local orders...');
+      
+      try {
+        const { getDatabaseAdapter } = await import('./DatabaseAdapter');
+        const db = getDatabaseAdapter();
+        const localOrders = await db.getAllOrders();
+        
+        if (localOrders && localOrders.length > 0) {
+          console.log(`✅ Found ${localOrders.length} previously synced orders in local database`);
+          return localOrders;
+        }
+        
+        console.log('📭 No previously synced orders found in local database');
+        
+      } catch (dbError) {
+        console.error('❌ Error accessing local database:', dbError);
+      }
+      
+      // Se não há dados locais e não conseguiu buscar online, retornar erro
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Erro de conexão ao buscar histórico de pedidos. Verifique sua internet e tente novamente.');
+      }
+      
+      throw new Error('Não foi possível buscar histórico de pedidos do Supabase nem encontrar dados locais. Execute uma sincronização quando houver conexão.');
     }
   }
 

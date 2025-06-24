@@ -1,4 +1,3 @@
-
 import WebDatabaseService from './WebDatabaseService';
 import SQLiteDatabaseService from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
@@ -53,6 +52,9 @@ interface DatabaseAdapter {
   // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
+  
+  // ✅ NOVO: Método para salvar histórico de pedidos
+  saveOrders(ordersArray: any[]): Promise<void>;
 }
 
 // Esta função determinará qual implementação de banco de dados usar

@@ -163,16 +163,18 @@ export const useDataSync = () => {
       let syncedClients = 0;
       let syncedProducts = 0;
       let syncedPaymentTables = 0;
+      let syncedOrders = 0; // ✅ NOVO: Contador para pedidos
       let clientsData: any[] = [];
       let productsData: any[] = [];
       let paymentTablesData: any[] = [];
+      let ordersData: any[] = []; // ✅ NOVO: Array para pedidos
 
       // 🔄 NOVA LÓGICA: Se online, buscar dados do Supabase; se offline, usar dados locais
       if (isOnline) {
         console.log('🌐 ONLINE MODE: Fetching fresh data from Supabase...');
         
         // Etapa 1: Buscar clientes REAIS do Supabase
-        updateProgress('Carregando clientes do Supabase...', 0, 4);
+        updateProgress('Carregando clientes do Supabase...', 0, 5); // Aumentar para 5 etapas
         try {
           console.log('📥 Buscando clientes REAIS do Supabase');
           clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
@@ -198,7 +200,7 @@ export const useDataSync = () => {
         }
 
         // Etapa 2: Buscar produtos REAIS do Supabase
-        updateProgress('Carregando produtos do Supabase...', 1, 4);
+        updateProgress('Carregando produtos do Supabase...', 1, 5);
         try {
           console.log('📥 Buscando produtos REAIS do Supabase');
           productsData = await supabaseService.getProducts(sessionToken);
@@ -224,7 +226,7 @@ export const useDataSync = () => {
         }
 
         // Etapa 3: Buscar tabelas de pagamento REAIS do Supabase
-        updateProgress('Carregando tabelas de pagamento do Supabase...', 2, 4);
+        updateProgress('Carregando tabelas de pagamento do Supabase...', 2, 5);
         try {
           console.log('📥 Buscando tabelas de pagamento REAIS do Supabase');
           paymentTablesData = await supabaseService.getPaymentTables(sessionToken);
@@ -248,12 +250,38 @@ export const useDataSync = () => {
             console.error('❌ Falha no fallback de tabelas de pagamento:', fallbackError);
           }
         }
+
+        // ✅ NOVA ETAPA 4: Buscar histórico de pedidos REAIS do Supabase
+        updateProgress('Carregando histórico de pedidos do Supabase...', 3, 5);
+        try {
+          console.log('📥 Buscando histórico de pedidos REAIS do Supabase');
+          ordersData = await supabaseService.getClientOrdersHistory(salesRepId, sessionToken);
+          console.log(`📥 Recebidos ${ordersData.length} pedidos do Supabase`);
+          
+          if (ordersData.length > 0) {
+            await db.saveOrders(ordersData);
+            syncedOrders = ordersData.length;
+            console.log(`✅ Salvos ${syncedOrders} pedidos REAIS no SQLite`);
+          } else {
+            console.log('ℹ️ Nenhum pedido encontrado no Supabase');
+          }
+        } catch (error) {
+          console.warn('⚠️ Falha ao sincronizar histórico de pedidos:', error);
+          // Tentar usar dados locais como fallback
+          try {
+            ordersData = await db.getAllOrders();
+            syncedOrders = ordersData.length;
+            console.log(`🔄 Usando ${syncedOrders} pedidos do cache local`);
+          } catch (fallbackError) {
+            console.error('❌ Falha no fallback de pedidos:', fallbackError);
+          }
+        }
         
       } else {
         console.log('📱 OFFLINE MODE: Using previously synced local data...');
         
         // Usar dados já sincronizados anteriormente
-        updateProgress('Carregando dados locais...', 0, 4);
+        updateProgress('Carregando dados locais...', 0, 5);
         
         try {
           clientsData = await db.getCustomers();
@@ -278,10 +306,19 @@ export const useDataSync = () => {
         } catch (error) {
           console.error('❌ Erro ao carregar tabelas de pagamento locais:', error);
         }
+
+        // ✅ NOVO: Carregar pedidos locais também
+        try {
+          ordersData = await db.getAllOrders();
+          syncedOrders = ordersData.length;
+          console.log(`📱 Carregados ${syncedOrders} pedidos do cache local`);
+        } catch (error) {
+          console.error('❌ Erro ao carregar pedidos locais:', error);
+        }
       }
 
       // Validar dados sincronizados
-      updateProgress('Validando dados...', 3, 4);
+      updateProgress('Validando dados...', 4, 5);
       const isDataValid = validateSyncedData(clientsData, productsData, paymentTablesData);
 
       // Salvar metadata de sincronização
@@ -295,7 +332,8 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        total: syncedClients + syncedProducts + syncedPaymentTables,
+        orders: syncedOrders, // ✅ NOVO: Incluir no resumo
+        total: syncedClients + syncedProducts + syncedOrders,
         dataValid: isDataValid
       });
 
