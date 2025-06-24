@@ -90,11 +90,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
           </div>
 
           {/* Contact and address */}
-          <div className="space-y-1 mb-3">
-            {client.phone}
-            
-            {client.address || client.neighborhood || client.city}
-          </div>
+          
 
           {/* Action buttons */}
           <div className="flex gap-2">
