@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
@@ -725,6 +724,41 @@ class SQLiteDatabaseService {
       console.log(`✅ Client status updated for ${clientId}`);
     } catch (error) {
       console.error(`❌ Error updating client status for ${clientId}:`, error);
+    }
+  }
+
+  async updateOrder(orderId: string, order: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('📱 Updating order in SQLite database:', orderId, order);
+      
+      // Ensure the order has the correct ID
+      order.id = orderId;
+      order.updated_at = new Date().toISOString();
+      
+      // ✅ CORREÇÃO: Usar UPDATE com todos os campos da estrutura completa
+      await this.db!.run(
+        `UPDATE orders SET 
+          customer_id = ?, customer_name = ?, sales_rep_id = ?, code = ?, date = ?, due_date = ?, 
+          status = ?, total = ?, discount = ?, sync_status = ?, source_project = ?, payment_method = ?, 
+          payment_table_id = ?, payments = ?, delivery_address = ?, delivery_city = ?, delivery_state = ?, 
+          delivery_zip = ?, visit_notes = ?, reason = ?, notes = ?, items = ?, updated_at = ?
+         WHERE id = ?`,
+        [
+          order.customer_id, order.customer_name, order.sales_rep_id, order.code,
+          order.date, order.due_date, order.status, order.total, order.discount || 0,
+          order.sync_status, order.source_project, order.payment_method, order.payment_table_id,
+          order.payments ? JSON.stringify(order.payments) : null,
+          order.delivery_address, order.delivery_city, order.delivery_state, order.delivery_zip,
+          order.visit_notes, order.reason, order.notes, JSON.stringify(order.items),
+          order.updated_at, orderId
+        ]
+      );
+      console.log('✅ Order updated in SQLite database');
+    } catch (error) {
+      console.error('❌ Error updating order in SQLite:', error);
+      throw error;
     }
   }
 
