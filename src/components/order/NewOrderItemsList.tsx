@@ -26,13 +26,13 @@ const NewOrderItemsList: React.FC<NewOrderItemsListProps> = ({
         <div className="space-y-2">
           {orderItems.map(item => <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded border">
               <div className="flex-1">
-                <div className="font-semibold text-sm">{item.code} - {item.productName}</div>
-                <div className="text-sm text-gray-600">
+                <div className="font-semibold text-xs">{item.code} - {item.productName}</div>
+                <div className="text-xs text-gray-600">
                   {item.quantity} {item.unit} × R$ {item.price.toFixed(2)}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-green-600">
+                <span className="font-semibold text-green-600 text-sm">
                   R$ {(item.quantity * item.price).toFixed(2)}
                 </span>
                 <Button variant="destructive" size="sm" onClick={() => onRemoveItem(item.id)}>
