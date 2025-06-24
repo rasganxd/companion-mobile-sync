@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ChevronLeft, User, Building, Phone, MapPin, Hash } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronLeft, User, Building, Phone, MapPin, Hash, Send } from 'lucide-react';
 import Header from '@/components/Header';
 import AppButton from '@/components/AppButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useClientValidation } from '@/hooks/useClientValidation';
+import { usePDFWhatsAppShare } from '@/hooks/usePDFWhatsAppShare';
 import ClientNegationConfirmModal from '@/components/clients/ClientNegationConfirmModal';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
+import PDFWhatsAppShareModal from '@/components/clients/PDFWhatsAppShareModal';
 
 interface Client {
   id: string;
@@ -32,6 +34,7 @@ const ClientFullScreenView = () => {
   const location = useLocation();
   const { goBack } = useAppNavigation();
   const { handleClientAction, unnegateClient, isValidating } = useClientValidation();
+  const { isGenerating, showModal, setShowModal, shareOrderPDF } = usePDFWhatsAppShare();
   
   const {
     clients,
@@ -110,6 +113,10 @@ const ClientFullScreenView = () => {
         handleStartActivity();
       }, 500);
     }
+  };
+  
+  const handlePDFWhatsAppShare = async (phoneNumber?: string) => {
+    await shareOrderPDF(currentClient.id, currentClient.company_name || currentClient.name, phoneNumber);
   };
   
   const getStatusInfo = (client: Client) => {
@@ -191,6 +198,23 @@ const ClientFullScreenView = () => {
                   <div>
                     <p className="text-xs text-gray-600">Código</p>
                     <p className="text-sm font-medium">{currentClient.code}</p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Botão de Envio PDF WhatsApp - Próximo ao código */}
+              {currentClient.status === 'positivado' && (
+                <div 
+                  className="flex items-center gap-3 p-2 bg-green-50 rounded-lg border border-green-200 cursor-pointer hover:bg-green-100 transition-colors"
+                  onClick={() => setShowModal(true)}
+                >
+                  <Send className="h-4 w-4 text-green-600" />
+                  <div className="flex-1">
+                    <p className="text-xs text-green-600">Ação Disponível</p>
+                    <p className="text-sm font-medium text-green-800">Enviar PDF WhatsApp</p>
+                  </div>
+                  <div className="text-green-600">
+                    <ArrowRight size={16} />
                   </div>
                 </div>
               )}
@@ -299,6 +323,14 @@ const ClientFullScreenView = () => {
           orderItemsCount={existingOrder?.items?.length || 0}
         />
       )}
+      
+      <PDFWhatsAppShareModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={handlePDFWhatsAppShare}
+        clientName={currentClient?.company_name || currentClient?.name || ''}
+        isLoading={isGenerating}
+      />
     </div>
   );
 };
