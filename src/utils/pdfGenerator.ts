@@ -1,4 +1,3 @@
-
 import { jsPDF } from 'jspdf';
 
 export const generateOrderPDF = async (order: any, clientName: string): Promise<Blob> => {
@@ -16,7 +15,7 @@ export const generateOrderPDF = async (order: any, clientName: string): Promise<
   doc.text('DADOS DO CLIENTE', 20, 40);
   doc.setFontSize(10);
   doc.text(`Nome: ${clientName || 'N/A'}`, 20, 50);
-  doc.text(`Código: ${order.customer_id || order.client_id || 'N/A'}`, 20, 56);
+  doc.text(`Código: ${order.customer_code || 'N/A'}`, 20, 56);
   doc.text(`Data: ${new Date(order.date || Date.now()).toLocaleDateString('pt-BR')}`, 20, 62);
   
   // Status e total

@@ -23,6 +23,7 @@ interface OrderItem {
 interface Client {
   id: string;
   name: string;
+  code: string;
 }
 
 const OrderDetails = () => {
@@ -35,7 +36,7 @@ const OrderDetails = () => {
   // Create default state values
   const defaultState = {
     orderItems: [] as OrderItem[],
-    client: { id: '0', name: 'Cliente não selecionado' } as Client,
+    client: { id: '0', name: 'Cliente não selecionado', code: 'S/N' } as Client,
     paymentMethod: 'Não definido'
   };
   
@@ -132,7 +133,7 @@ const OrderDetails = () => {
       />
       
       <div className="bg-app-blue text-white px-3 py-1 text-xs">
-        <span className="font-semibold">{client.id}</span> - {client.name}
+        <span className="font-semibold">{client.code || 'S/N'}</span> - {client.name}
       </div>
       
       <div className="flex flex-col flex-1 p-3 gap-3 overflow-hidden">
