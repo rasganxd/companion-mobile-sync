@@ -32,7 +32,7 @@ interface Client {
 }
 
 const ClientsList = () => {
-  const { goBack, navigateToClientFullScreen } = useAppNavigation();
+  const { goBack, navigateToClientFullScreen, navigateToEditOrder } = useAppNavigation();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -310,6 +310,18 @@ const ClientsList = () => {
     
     navigateToClientFullScreen(filteredClients, initialIndex, day);
   };
+
+  const handleViewOrder = (client: Client) => {
+    console.log('📋 View order for client:', client.name, client.id);
+    console.log('📅 Day:', day);
+    
+    // Navegar para tela de edição de pedido
+    navigateToEditOrder(
+      client.company_name || client.name,
+      client.id,
+      day
+    );
+  };
   
   const handleGoBack = () => {
     console.log('🔙 ClientsList - Going back to visit routes with day context:', day);
@@ -356,6 +368,7 @@ const ClientsList = () => {
             salesRep={salesRep}
             onClientSelect={handleClientSelect}
             onClientViewDetails={handleClientViewDetails}
+            onViewOrder={handleViewOrder}
           />
         </ScrollArea>
       </div>

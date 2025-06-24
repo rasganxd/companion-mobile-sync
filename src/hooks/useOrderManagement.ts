@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -38,6 +39,7 @@ export const useOrderManagement = () => {
   const { salesRep } = useAuth();
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   const addOrderItem = (item: OrderItem) => {
     setOrderItems(prev => [...prev, item]);
@@ -51,12 +53,58 @@ export const useOrderManagement = () => {
 
   const clearCart = () => {
     setOrderItems([]);
+    setEditingOrderId(null);
     toast.success('Carrinho limpo');
   };
 
   const calculateTotal = () => {
     const total = orderItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
     return total.toFixed(2);
+  };
+
+  const loadExistingOrder = async (clientId: string) => {
+    try {
+      console.log('📋 useOrderManagement.loadExistingOrder() - Loading existing order for client:', clientId);
+      
+      const db = getDatabaseAdapter();
+      const allOrders = await db.getAllOrders();
+      
+      // Buscar pedido do cliente que não esteja cancelado ou com erro
+      const existingOrder = allOrders.find(order => 
+        order.customer_id === clientId && 
+        order.sales_rep_id === salesRep?.id &&
+        order.sync_status !== 'error' &&
+        (order.status === 'pending' || order.status === 'processed')
+      );
+
+      if (existingOrder && existingOrder.items) {
+        console.log('✅ Existing order found:', existingOrder.id, 'with', existingOrder.items.length, 'items');
+        
+        // Converter items do banco para o formato esperado
+        const formattedItems = existingOrder.items.map((item: any, index: number) => ({
+          id: index + 1,
+          productId: item.productId || item.product_id || '',
+          productName: item.productName || item.product_name || 'Produto',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          code: item.code || item.product_code || '',
+          unit: item.unit || 'UN'
+        }));
+
+        setOrderItems(formattedItems);
+        setEditingOrderId(existingOrder.id);
+        
+        toast.success(`Pedido existente carregado com ${formattedItems.length} item(s)`);
+        return true;
+      } else {
+        console.log('❌ No existing order found for client:', clientId);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error loading existing order:', error);
+      toast.error('Erro ao carregar pedido existente');
+      return false;
+    }
   };
 
   const validateOrderItems = async (): Promise<boolean> => {
@@ -121,7 +169,8 @@ export const useOrderManagement = () => {
         clientName: selectedClient.name,
         items: orderItems,
         total: calculateTotal(),
-        savedAt: new Date().toISOString()
+        savedAt: new Date().toISOString(),
+        editingOrderId // Incluir se estamos editando
       };
 
       localStorage.setItem(draftKey, JSON.stringify(draftData));
@@ -168,37 +217,51 @@ export const useOrderManagement = () => {
 
       console.log('✅ Tabela de pagamento encontrada:', selectedPaymentTable);
 
-      const orderData = {
-        id: uuidv4(),
-        customer_id: selectedClient.id,
-        customer_name: selectedClient.name,
-        total: parseFloat(calculateTotal()),
-        date: new Date().toISOString(),
-        status: 'pending' as const,
-        sync_status: 'pending_sync' as const,
-        items: orderItems,
-        sales_rep_id: salesRep?.id,
-        // ✅ NOVO: Enviar tanto o UUID quanto o nome da tabela de pagamento
-        payment_table_id: paymentTableId,
-        payment_method: selectedPaymentTable.name
-      };
+      if (editingOrderId) {
+        // ✅ ATUALIZAR PEDIDO EXISTENTE
+        console.log('📝 Updating existing order:', editingOrderId);
+        
+        const orderData = {
+          id: editingOrderId,
+          customer_id: selectedClient.id,
+          customer_name: selectedClient.name,
+          total: parseFloat(calculateTotal()),
+          date: new Date().toISOString(),
+          status: 'pending' as const,
+          sync_status: 'pending_sync' as const,
+          items: orderItems,
+          sales_rep_id: salesRep?.id,
+          payment_table_id: paymentTableId,
+          payment_method: selectedPaymentTable.name
+        };
 
-      console.log('💾 Salvando pedido com dados completos de pagamento:', {
-        orderId: orderData.id,
-        paymentTableId: orderData.payment_table_id,
-        paymentMethod: orderData.payment_method,
-        customerName: orderData.customer_name,
-        total: orderData.total,
-        itemsCount: orderData.items.length
-      });
+        await db.updateOrder(editingOrderId, orderData);
+        toast.success('Pedido atualizado com sucesso!');
+      } else {
+        // ✅ CRIAR NOVO PEDIDO
+        console.log('✨ Creating new order');
+        
+        const orderData = {
+          id: uuidv4(),
+          customer_id: selectedClient.id,
+          customer_name: selectedClient.name,
+          total: parseFloat(calculateTotal()),
+          date: new Date().toISOString(),
+          status: 'pending' as const,
+          sync_status: 'pending_sync' as const,
+          items: orderItems,
+          sales_rep_id: salesRep?.id,
+          payment_table_id: paymentTableId,
+          payment_method: selectedPaymentTable.name
+        };
 
-      await db.saveOrder(orderData);
+        await db.saveOrder(orderData);
+        toast.success('Pedido criado com sucesso!');
+      }
       
       // Limpar rascunho se existir
       const draftKey = `draft_order_${selectedClient.id}`;
       localStorage.removeItem(draftKey);
-      
-      toast.success('Pedido criado com sucesso!');
       
       // Extrair dados do estado atual para preservar na navegação
       const { day } = location.state || {};
@@ -215,7 +278,7 @@ export const useOrderManagement = () => {
       
     } catch (error) {
       console.error('❌ Erro ao salvar pedido:', error);
-      toast.error('Erro ao criar pedido');
+      toast.error('Erro ao criar/atualizar pedido');
     } finally {
       setIsSubmitting(false);
     }
@@ -224,11 +287,13 @@ export const useOrderManagement = () => {
   return {
     orderItems,
     isSubmitting,
+    editingOrderId,
     addOrderItem,
     removeOrderItem,
     clearCart,
     calculateTotal,
     saveAsDraft,
-    finishOrder
+    finishOrder,
+    loadExistingOrder
   };
 };

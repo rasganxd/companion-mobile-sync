@@ -116,6 +116,12 @@ export const useAppNavigation = () => {
     navigateTo('/client-fullscreen', { clients, initialIndex, day });
   };
 
+  const navigateToEditOrder = (clientName: string, clientId: string, day?: string) => {
+    console.log('🧭 useAppNavigation.navigateToEditOrder():', clientName, clientId, day || 'no day');
+    // Navegar para tela de novo pedido mas em modo de edição
+    navigateTo('/new-order', { clientName, clientId, day, editMode: true });
+  };
+
   return {
     navigateTo,
     goBack: goBackWithContext, // Usar a versão que preserva contexto
@@ -136,5 +142,6 @@ export const useAppNavigation = () => {
     navigateToTransmitOrders,
     navigateToClientActivities,
     navigateToClientFullScreen,
+    navigateToEditOrder,
   };
 };
