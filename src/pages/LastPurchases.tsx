@@ -9,7 +9,7 @@ import { useAppNavigation } from '@/hooks/useAppNavigation';
 import { useClientPurchaseHistory } from '@/hooks/useClientPurchaseHistory';
 
 const LastPurchases = () => {
-  const { goBack, navigateToViewOrderDetails } = useAppNavigation();
+  const { navigateToViewOrderDetails } = useAppNavigation();
   const location = useLocation();
   const [filterPeriod, setFilterPeriod] = useState<'all' | '30d' | '6m'>('all');
   
@@ -23,6 +23,13 @@ const LastPurchases = () => {
 
   const handleRefresh = () => {
     refetch();
+  };
+
+  const handleGoBack = () => {
+    console.log('🔙 LastPurchases - Going back with preserved client state:', { clientName, clientId, day });
+    
+    // Usar navegação direta com estado preservado
+    window.history.back();
   };
 
   if (!clientId || !clientName) {
@@ -143,7 +150,7 @@ const LastPurchases = () => {
         <AppButton 
           variant="gray"
           fullWidth
-          onClick={goBack}
+          onClick={handleGoBack}
           className="flex items-center justify-center gap-2"
         >
           <ArrowLeft size={18} />
