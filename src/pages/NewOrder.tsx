@@ -179,7 +179,7 @@ const PlaceOrder = () => {
         {selectedClient && <PaymentSection paymentTables={paymentTables} selectedPaymentTable={selectedPaymentTable} onPaymentTableChange={selectPaymentTable} />}
 
         {/* Produto atual e navegação */}
-        <div className="bg-white rounded-lg shadow p-4 py-[5px] px-[5px] mx-[4px]">
+        <div className="bg-white rounded-lg shadow p-4 px-[6px] py-[6px] mx-0 my-0">
           <div className="flex items-center justify-between mb-4">
             {/* Mostra total geral de produtos e categorias */}
           </div>
