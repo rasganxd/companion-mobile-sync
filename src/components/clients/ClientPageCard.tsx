@@ -105,7 +105,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
             </h2>
             {client.company_name && client.name && (
               <p className="font-bold text-gray-900 mb-1 text-sm">
-                Razão Social: {client.name}
+                Nome Fantasia: {client.name}
               </p>
             )}
           </div>
