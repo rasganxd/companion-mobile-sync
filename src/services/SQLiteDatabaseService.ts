@@ -13,6 +13,30 @@ interface TableColumnInfo {
   pk: number;
 }
 
+// ✅ NOVO: Interface para definir a estrutura dos produtos
+interface ProductData {
+  id: string;
+  name: string;
+  code: number;
+  sale_price: number;
+  cost_price: number;
+  stock: number;
+  active: boolean;
+  unit?: string;
+  has_subunit?: boolean;
+  subunit?: string;
+  subunit_ratio?: number;
+  max_discount_percent?: number;
+  category_id?: string;
+  category_name?: string;
+  group_name?: string;
+  brand_name?: string;
+  main_unit_id?: string;
+  sub_unit_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 class SQLiteDatabaseService {
   private static instance: SQLiteDatabaseService | null = null;
   private sqlite: SQLiteConnection | null = null;
@@ -339,8 +363,16 @@ class SQLiteDatabaseService {
       
       console.log(`📱 [ANDROID] Found ${products.length} products in SQLite`);
       
+      // ✅ CORREÇÃO: Usar type assertion e safeCast para cada produto
+      const typedProducts = products.map(productData => {
+        const product = safeCast<ProductData>(productData);
+        if (!product) return null;
+        
+        return product;
+      }).filter(product => product !== null) as ProductData[];
+      
       // ✅ NOVO: Log detalhado das unidades dos produtos para debug
-      products.forEach((product, index) => {
+      typedProducts.forEach((product, index) => {
         if (index < 5) { // Log apenas os primeiros 5 produtos para não poluir
           console.log(`📱 [ANDROID] Product ${index + 1}:`, {
             id: product.id,
@@ -357,7 +389,7 @@ class SQLiteDatabaseService {
         }
       });
       
-      return products;
+      return typedProducts;
     } catch (error) {
       console.error('❌ [ANDROID] Error getting products:', error);
       return [];
