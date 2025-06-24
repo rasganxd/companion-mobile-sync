@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { User, Building, Phone, MapPin, Hash, ArrowRight } from 'lucide-react';
+import { User, Building, Phone, MapPin, Hash, ArrowRight, FileText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import AppButton from '@/components/AppButton';
 
@@ -28,12 +27,14 @@ interface ClientPageCardProps {
   client: Client;
   onSelect: (client: Client) => void;
   onViewOrder?: (client: Client) => void;
+  onExportPDF?: (client: Client) => void;
 }
 
 const ClientPageCard: React.FC<ClientPageCardProps> = ({
   client,
   onSelect,
-  onViewOrder
+  onViewOrder,
+  onExportPDF
 }) => {
   const getStatusInfo = (client: Client) => {
     switch (client.status) {
@@ -73,7 +74,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
       <CardContent className="p-4 flex flex-col justify-between h-full">
         {/* Seção superior */}
         <div className="flex-1">
-          {/* Header com código e status - mais compacto */}
+          {/* Header com código, botão PDF e status */}
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center gap-2">
               {client.code && (
@@ -81,6 +82,15 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
                   <Hash className="h-3 w-3 text-gray-600" />
                   <span className="font-bold text-sm">{client.code}</span>
                 </div>
+              )}
+              {client.status === 'positivado' && onExportPDF && (
+                <button
+                  onClick={() => onExportPDF(client)}
+                  className="bg-white p-1.5 rounded border hover:bg-gray-50 transition-colors"
+                  title="Exportar PDF do pedido"
+                >
+                  <FileText className="h-3 w-3 text-red-600" />
+                </button>
               )}
             </div>
             <div className={`px-3 py-1 rounded border text-xs font-medium ${statusInfo.color}`}>

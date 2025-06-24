@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { ChevronLeft, ChevronRight, List, User, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
 import ClientPageCard from './ClientPageCard';
+import { usePDFWhatsAppShare } from '@/hooks/usePDFWhatsAppShare';
 
 interface Client {
   id: string;
@@ -41,6 +41,17 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
   onToggleView,
   onViewOrder
 }) => {
+  const { shareOrderPDF } = usePDFWhatsAppShare();
+
+  const handleExportPDF = async (client: Client) => {
+    console.log('📄 Exporting PDF for client:', client.name, client.id);
+    await shareOrderPDF(
+      client.id,
+      client.company_name || client.name,
+      client.phone
+    );
+  };
+
   if (clients.length === 0) {
     return (
       <div className="space-y-4">
@@ -99,6 +110,7 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
         client={currentClient}
         onSelect={onClientSelect}
         onViewOrder={onViewOrder}
+        onExportPDF={handleExportPDF}
       />
 
       {/* Navegação entre clientes - agora embaixo */}
