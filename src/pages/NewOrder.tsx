@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -17,6 +16,7 @@ import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
 import PaymentSection from '@/components/order/PaymentSection';
 import ActionButtons from '@/components/order/ActionButtons';
+import { toast } from 'sonner';
 
 const PlaceOrder = () => {
   const {
@@ -32,6 +32,9 @@ const PlaceOrder = () => {
     day,
     editMode
   } = location.state || {};
+
+  // ✅ CORREÇÃO: Estado para controle de carregamento do pedido
+  const [orderLoaded, setOrderLoaded] = React.useState(false);
 
   // ✅ MELHORADA: Função de voltar mais inteligente
   const handleGoBack = () => {
@@ -125,13 +128,35 @@ const PlaceOrder = () => {
 
   const [showProductSearch, setShowProductSearch] = React.useState(false);
 
-  // ✅ NOVO: Carregar pedido existente se estivermos em modo de edição
+  // ✅ CORREÇÃO: Carregar pedido existente apenas uma vez com controle adequado
   React.useEffect(() => {
-    if (editMode && clientId && selectedClient) {
+    // Só carregar se estamos em modo de edição, temos cliente selecionado e ainda não carregamos
+    if (editMode && clientId && selectedClient && !orderLoaded) {
       console.log('📋 NewOrder: Edit mode detected, loading existing order for client:', clientId);
-      loadExistingOrder(clientId);
+      
+      const loadOrder = async () => {
+        try {
+          const result = await loadExistingOrder(clientId, true); // Mostrar toast agora
+          if (result.success) {
+            setOrderLoaded(true); // Marcar como carregado para evitar loops
+            console.log('✅ Order loaded successfully with', result.itemsCount, 'items');
+          }
+        } catch (error) {
+          console.error('❌ Error loading existing order:', error);
+          toast.error('Erro ao carregar pedido existente');
+        }
+      };
+
+      loadOrder();
     }
-  }, [editMode, clientId, selectedClient, loadExistingOrder]);
+  }, [editMode, clientId, selectedClient, orderLoaded, loadExistingOrder]);
+
+  // ✅ CORREÇÃO: Reset orderLoaded quando mudamos de cliente
+  React.useEffect(() => {
+    if (selectedClient?.id !== clientId) {
+      setOrderLoaded(false);
+    }
+  }, [selectedClient, clientId]);
 
   // Product navigation functions
   const handleProductNavigation = (direction: 'prev' | 'next' | 'first' | 'last') => {

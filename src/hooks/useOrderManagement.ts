@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -62,7 +61,8 @@ export const useOrderManagement = () => {
     return total.toFixed(2);
   };
 
-  const loadExistingOrder = async (clientId: string) => {
+  // ✅ CORREÇÃO: Memoizar função e remover toast automático
+  const loadExistingOrder = useCallback(async (clientId: string, showToast: boolean = false) => {
     try {
       console.log('📋 useOrderManagement.loadExistingOrder() - Loading existing order for client:', clientId);
       
@@ -94,18 +94,23 @@ export const useOrderManagement = () => {
         setOrderItems(formattedItems);
         setEditingOrderId(existingOrder.id);
         
-        toast.success(`Pedido existente carregado com ${formattedItems.length} item(s)`);
-        return true;
+        // ✅ CORREÇÃO: Toast opcional e controlado externamente
+        if (showToast) {
+          toast.success(`Pedido existente carregado com ${formattedItems.length} item(s)`);
+        }
+        return { success: true, itemsCount: formattedItems.length };
       } else {
         console.log('❌ No existing order found for client:', clientId);
-        return false;
+        return { success: false, itemsCount: 0 };
       }
     } catch (error) {
       console.error('❌ Error loading existing order:', error);
-      toast.error('Erro ao carregar pedido existente');
-      return false;
+      if (showToast) {
+        toast.error('Erro ao carregar pedido existente');
+      }
+      return { success: false, itemsCount: 0, error: error };
     }
-  };
+  }, [salesRep?.id]);
 
   const validateOrderItems = async (): Promise<boolean> => {
     if (orderItems.length === 0) {
