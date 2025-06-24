@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, Phone, MapPin, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
@@ -70,9 +71,6 @@ const ClientCard: React.FC<ClientCardProps> = ({
               <h3 className="font-semibold text-gray-900 truncate text-sm">
                 {client.company_name || client.name}
               </h3>
-              {client.company_name && client.name && <p className="text-sm text-gray-600 truncate">
-                  Razão Social: {client.name}
-                </p>}
             </div>
             <span className={`text-xs px-2 py-1 rounded-full ml-2 flex-shrink-0 ${statusInfo.color}`}>
               {statusInfo.text}
@@ -88,9 +86,6 @@ const ClientCard: React.FC<ClientCardProps> = ({
                 {formatCurrency(client.orderTotal)}
               </span>}
           </div>
-
-          {/* Contact and address */}
-          
 
           {/* Action buttons */}
           <div className="flex gap-2">
