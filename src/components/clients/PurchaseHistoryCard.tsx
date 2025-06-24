@@ -12,7 +12,7 @@ interface PurchaseHistoryItem {
   total: number;
   status: string;
   itemsCount: number;
-  source: 'orders' | 'mobile_orders';
+  source: 'orders';
 }
 
 interface PurchaseHistoryCardProps {
