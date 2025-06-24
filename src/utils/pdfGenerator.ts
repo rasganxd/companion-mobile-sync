@@ -1,5 +1,5 @@
 
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 export const generateOrderPDF = async (order: any, clientName: string): Promise<Blob> => {
   const doc = new jsPDF();
