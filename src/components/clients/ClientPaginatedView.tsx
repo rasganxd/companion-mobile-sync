@@ -82,8 +82,8 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Controles de navegação */}
-      <div className="flex justify-between items-center bg-white rounded-lg shadow p-3">
+      {/* Botão Ver Lista - separado */}
+      <div className="flex justify-start">
         <AppButton
           variant="gray"
           onClick={onToggleView}
@@ -92,7 +92,17 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
           <List size={16} />
           <span className="text-sm">Ver Lista</span>
         </AppButton>
+      </div>
 
+      {/* Card do cliente atual */}
+      <ClientPageCard
+        client={currentClient}
+        onSelect={onClientSelect}
+        onViewOrder={onViewOrder}
+      />
+
+      {/* Navegação entre clientes - agora embaixo */}
+      <div className="flex items-center justify-center bg-white rounded-lg shadow p-3">
         <div className="flex items-center gap-3">
           <AppButton
             variant="gray"
@@ -117,13 +127,6 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
           </AppButton>
         </div>
       </div>
-
-      {/* Card do cliente atual */}
-      <ClientPageCard
-        client={currentClient}
-        onSelect={onClientSelect}
-        onViewOrder={onViewOrder}
-      />
     </div>
   );
 };
