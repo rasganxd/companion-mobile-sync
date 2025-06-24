@@ -4,13 +4,12 @@ import { SalesAppDBSchema, DatabaseInstance } from './types';
 
 export class DatabaseInitializer {
   private static readonly DB_NAME = 'sales-app-db';
-  private static readonly DB_VERSION = 2;
+  private static readonly DB_VERSION = 3; // ✅ ATUALIZADO: Nova versão com estruturas completas
 
   static async initialize(): Promise<DatabaseInstance> {
     try {
       console.log('🔧 Initializing database with version', this.DB_VERSION);
       
-      // Store version in local constant to avoid 'this' context issues
       const targetVersion = this.DB_VERSION;
       
       const db = await openDB<SalesAppDBSchema>(this.DB_NAME, targetVersion, {
@@ -47,6 +46,25 @@ export class DatabaseInitializer {
             if (!db.objectStoreNames.contains('payment_tables')) {
               console.log('📋 Creating payment_tables table');
               db.createObjectStore('payment_tables', { keyPath: 'id' });
+            }
+            
+            // ✅ NOVO: Create payment_methods table
+            if (!db.objectStoreNames.contains('payment_methods')) {
+              console.log('📋 Creating payment_methods table');
+              db.createObjectStore('payment_methods', { keyPath: 'id' });
+            }
+            
+            // ✅ NOVO: Create units table
+            if (!db.objectStoreNames.contains('units')) {
+              console.log('📋 Creating units table');
+              db.createObjectStore('units', { keyPath: 'id' });
+            }
+            
+            // ✅ NOVO: Create order_items table
+            if (!db.objectStoreNames.contains('order_items')) {
+              console.log('📋 Creating order_items table');
+              const orderItemsStore = db.createObjectStore('order_items', { keyPath: 'id' });
+              orderItemsStore.createIndex('order_id', 'order_id');
             }
             
             // Create sync_log table
