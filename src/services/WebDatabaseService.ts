@@ -1,4 +1,3 @@
-
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { SalesAppDBSchema, ValidTableName, isValidTableName, DatabaseInstance } from './database/types';
 
@@ -195,6 +194,24 @@ class WebDatabaseService {
       console.log('✅ Order saved to Web database');
     } catch (error) {
       console.error('❌ Error saving order:', error);
+    }
+  }
+
+  async updateOrder(orderId: string, order: any): Promise<void> {
+    if (!this.db) await this.initDatabase();
+
+    try {
+      console.log('🌐 Updating order in Web database:', orderId, order);
+      
+      // Ensure the order has the correct ID
+      order.id = orderId;
+      order.updated_at = new Date().toISOString();
+      
+      await this.db!.put('orders', order);
+      console.log('✅ Order updated in Web database');
+    } catch (error) {
+      console.error('❌ Error updating order:', error);
+      throw error;
     }
   }
 
