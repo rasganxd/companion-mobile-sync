@@ -110,7 +110,7 @@ class SQLiteDatabaseService {
         )
       `);
 
-      // Products table
+      // ✅ NOVA ESTRUTURA: Tabela products COMPLETA com todas as colunas necessárias
       await this.db.execute(`
         CREATE TABLE IF NOT EXISTS products (
           id TEXT PRIMARY KEY,
@@ -120,10 +120,67 @@ class SQLiteDatabaseService {
           cost_price REAL DEFAULT 0,
           stock REAL DEFAULT 0,
           active BOOLEAN DEFAULT 1,
+          unit TEXT,
+          has_subunit BOOLEAN DEFAULT 0,
+          subunit TEXT,
+          subunit_ratio REAL,
+          max_discount_percent REAL,
+          category_id TEXT,
+          category_name TEXT,
+          group_name TEXT,
+          brand_name TEXT,
+          main_unit_id TEXT,
+          sub_unit_id TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // ✅ MIGRAÇÃO: Verificar se tabela products existe com estrutura antiga e migrar
+      console.log('📱 [MIGRATION] Checking if products table needs migration...');
+      
+      try {
+        // Tentar verificar se a coluna 'unit' existe
+        const result = await this.db.query('PRAGMA table_info(products)');
+        const columns = result.values || [];
+        const hasUnitColumn = columns.some((col: any) => col.name === 'unit');
+        
+        if (!hasUnitColumn) {
+          console.log('📱 [MIGRATION] Products table needs migration - adding missing columns...');
+          
+          // Adicionar colunas faltantes uma por uma
+          const newColumns = [
+            'unit TEXT',
+            'has_subunit BOOLEAN DEFAULT 0',
+            'subunit TEXT',
+            'subunit_ratio REAL',
+            'max_discount_percent REAL',
+            'category_id TEXT',
+            'category_name TEXT',
+            'group_name TEXT',
+            'brand_name TEXT',
+            'main_unit_id TEXT',
+            'sub_unit_id TEXT'
+          ];
+          
+          for (const column of newColumns) {
+            try {
+              await this.db.execute(`ALTER TABLE products ADD COLUMN ${column}`);
+              console.log(`✅ [MIGRATION] Added column: ${column}`);
+            } catch (error) {
+              // Coluna já existe ou erro - continuar
+              console.log(`⚠️ [MIGRATION] Column might already exist: ${column}`);
+            }
+          }
+          
+          console.log('✅ [MIGRATION] Products table migration completed');
+        } else {
+          console.log('✅ [MIGRATION] Products table already has correct structure');
+        }
+      } catch (migrationError) {
+        console.error('❌ [MIGRATION] Error during products table migration:', migrationError);
+        // Continuar mesmo com erro de migração
+      }
 
       // ✅ CORREÇÃO: Tabela payment_tables com TODAS as colunas necessárias
       await this.db.execute(`
@@ -259,14 +316,36 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Getting products from SQLite database...');
+      console.log('📱 [ANDROID] Getting products from SQLite database...');
       const result = await this.db!.query('SELECT * FROM products');
       
       logAndroidDebug('getProducts result', result);
       
-      return ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      const products = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
+      
+      console.log(`📱 [ANDROID] Found ${products.length} products in SQLite`);
+      
+      // ✅ NOVO: Log detalhado das unidades dos produtos para debug
+      products.forEach((product, index) => {
+        if (index < 5) { // Log apenas os primeiros 5 produtos para não poluir
+          console.log(`📱 [ANDROID] Product ${index + 1}:`, {
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            unit: product.unit,
+            has_subunit: product.has_subunit,
+            subunit: product.subunit,
+            subunit_ratio: product.subunit_ratio,
+            category_name: product.category_name,
+            group_name: product.group_name,
+            brand_name: product.brand_name
+          });
+        }
+      });
+      
+      return products;
     } catch (error) {
-      console.error('❌ Error getting products:', error);
+      console.error('❌ [ANDROID] Error getting products:', error);
       return [];
     }
   }
@@ -654,23 +733,65 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
   
     try {
-      console.log(`📱 Saving ${productsArray.length} products to SQLite database...`);
+      console.log(`📱 [ANDROID] Saving ${productsArray.length} products to SQLite database...`);
   
       for (const product of productsArray) {
+        console.log(`📱 [ANDROID] Saving product: ${product.name}`, {
+          id: product.id,
+          code: product.code,
+          unit: product.unit,
+          has_subunit: product.has_subunit,
+          subunit: product.subunit,
+          subunit_ratio: product.subunit_ratio,
+          category_name: product.category_name,
+          group_name: product.group_name,
+          brand_name: product.brand_name,
+          max_discount_percent: product.max_discount_percent
+        });
+
         await this.db!.run(
           `INSERT OR REPLACE INTO products (
-            id, name, code, sale_price, cost_price, stock, active
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            id, name, code, sale_price, cost_price, stock, active,
+            unit, has_subunit, subunit, subunit_ratio, max_discount_percent,
+            category_id, category_name, group_name, brand_name, main_unit_id, sub_unit_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
-            product.id, product.name, product.code, product.sale_price,
-            product.cost_price, product.stock, product.active
+            product.id, 
+            product.name, 
+            product.code, 
+            product.sale_price,
+            product.cost_price, 
+            product.stock, 
+            product.active,
+            product.unit,
+            product.has_subunit ? 1 : 0,
+            product.subunit,
+            product.subunit_ratio,
+            product.max_discount_percent,
+            product.category_id,
+            product.category_name,
+            product.group_name,
+            product.brand_name,
+            product.main_unit_id,
+            product.sub_unit_id
           ]
         );
       }
   
-      console.log('✅ Products saved to SQLite database');
+      console.log('✅ [ANDROID] Products saved to SQLite database');
+      
+      // ✅ VERIFICAÇÃO: Contar produtos salvos e verificar unidades
+      const verification = await this.db!.query('SELECT COUNT(*) as total, COUNT(CASE WHEN unit IS NOT NULL AND unit != "" THEN 1 END) as with_units FROM products WHERE active = 1');
+      const stats = verification.values?.[0];
+      console.log('📱 [ANDROID] Products verification after save:', {
+        total: stats?.total || 0,
+        withUnits: stats?.with_units || 0,
+        withoutUnits: (stats?.total || 0) - (stats?.with_units || 0)
+      });
+      
     } catch (error) {
-      console.error('❌ Error saving products:', error);
+      console.error('❌ [ANDROID] Error saving products:', error);
+      throw error;
     }
   }
 

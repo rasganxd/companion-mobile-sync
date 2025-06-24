@@ -94,7 +94,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
     try {
       const db = getDatabaseAdapter();
       const productsData = await db.getProducts();
-      console.log('📦 Produtos carregados do banco local:', productsData);
+      console.log('📦 [ANDROID] Produtos carregados do banco local:', productsData);
       
       // Validar que apenas produtos reais são carregados
       const validProducts = productsData.filter(product => {
@@ -110,22 +110,42 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         return isValid;
       });
       
-      console.log(`✅ ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
+      console.log(`✅ [ANDROID] ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
       
-      // Ensure products have the correct price field and max_discount_percent
-      const normalizedProducts = validProducts.map(product => ({
-        ...product,
-        price: product.sale_price || product.price || 0,
-        sale_price: product.sale_price || product.price || 0,
-        max_discount_percent: product.max_discount_percent || 0,
-        category_name: product.category_name || 'Sem Categoria',
-        // ✅ NOVO: Normalizar campos hierárquicos
-        group_name: product.group_name || 'Sem Grupo',
-        brand_name: product.brand_name || 'Sem Marca'
-      }));
+      // ✅ CORREÇÃO: Normalizar produtos garantindo que unidades sejam preservadas
+      const normalizedProducts = validProducts.map(product => {
+        const normalizedProduct = {
+          ...product,
+          price: product.sale_price || product.price || 0,
+          sale_price: product.sale_price || product.price || 0,
+          max_discount_percent: product.max_discount_percent || 0,
+          category_name: product.category_name || 'Sem Categoria',
+          group_name: product.group_name || 'Sem Grupo',
+          brand_name: product.brand_name || 'Sem Marca',
+          // ✅ CRÍTICO: Garantir que unidades sejam preservadas e não sobrescritas
+          unit: product.unit || 'UN', // Usar 'UN' apenas como fallback se realmente não tiver unidade
+          has_subunit: Boolean(product.has_subunit),
+          subunit: product.subunit || undefined,
+          subunit_ratio: product.subunit_ratio || undefined
+        };
+        
+        // ✅ DEBUG: Log produtos com unidades diferentes de 'UN'
+        if (product.unit && product.unit !== 'UN') {
+          console.log(`📦 [ANDROID] Produto com unidade especial:`, {
+            name: product.name,
+            code: product.code,
+            unit: product.unit,
+            has_subunit: product.has_subunit,
+            subunit: product.subunit,
+            subunit_ratio: product.subunit_ratio
+          });
+        }
+        
+        return normalizedProduct;
+      });
       
       // ✅ NOVO: Implementar ordenação hierárquica (Grupo → Marca → Categoria → Nome)
-      console.log('🔄 Aplicando ordenação hierárquica: Grupo → Marca → Categoria → Nome');
+      console.log('🔄 [ANDROID] Aplicando ordenação hierárquica: Grupo → Marca → Categoria → Nome');
       
       const hierarchicallySortedProducts = normalizedProducts.sort((a, b) => {
         // 1. Primeiro por Grupo
@@ -144,21 +164,32 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         return a.name.localeCompare(b.name);
       });
       
-      console.log('✅ Produtos ordenados hierarquicamente:', {
+      console.log('✅ [ANDROID] Produtos ordenados hierarquicamente:', {
         total: hierarchicallySortedProducts.length,
         firstProduct: {
           name: hierarchicallySortedProducts[0]?.name,
+          unit: hierarchicallySortedProducts[0]?.unit,
           group: hierarchicallySortedProducts[0]?.group_name,
           brand: hierarchicallySortedProducts[0]?.brand_name,
           category: hierarchicallySortedProducts[0]?.category_name
         },
         lastProduct: {
           name: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.name,
+          unit: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.unit,
           group: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.group_name,
           brand: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.brand_name,
           category: hierarchicallySortedProducts[hierarchicallySortedProducts.length - 1]?.category_name
         }
       });
+      
+      // ✅ DEBUG: Contar produtos por tipo de unidade
+      const unitStats = hierarchicallySortedProducts.reduce((stats, product) => {
+        const unit = product.unit || 'UNDEFINED';
+        stats[unit] = (stats[unit] || 0) + 1;
+        return stats;
+      }, {} as Record<string, number>);
+      
+      console.log('📊 [ANDROID] Estatísticas de unidades dos produtos:', unitStats);
       
       // Agrupar produtos por categoria (mantendo para compatibilidade com componentes existentes)
       const groupedByCategory: Record<string, ProductsByCategory> = hierarchicallySortedProducts.reduce((acc, product) => {
@@ -180,33 +211,32 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       // Converter para array e manter ordem hierárquica
       const categoriesArray = Object.values(groupedByCategory);
 
-      console.log('📂 Produtos agrupados por categoria (mantendo ordem hierárquica):', categoriesArray);
+      console.log('📂 [ANDROID] Produtos agrupados por categoria (mantendo ordem hierárquica):', categoriesArray);
       
       setProductsByCategory(categoriesArray);
       
       // ✅ MODIFICADO: Usar produtos já ordenados hierarquicamente
       setProducts(hierarchicallySortedProducts);
       
-      // Log detalhado dos produtos para debug de desconto máximo
+      // ✅ DEBUG: Log detalhado dos produtos para debug de unidades
       hierarchicallySortedProducts.forEach((product, index) => {
-        if (product.max_discount_percent && product.max_discount_percent > 0) {
-          console.log(`📦 Produto ${index + 1} COM DESCONTO MÁXIMO:`, {
+        if (index < 10 && product.unit !== 'UN') { // Log primeiros 10 produtos com unidades especiais
+          console.log(`📦 [ANDROID] Produto ${index + 1} COM UNIDADE ESPECIAL:`, {
             id: product.id,
             name: product.name,
-            group: product.group_name,
-            brand: product.brand_name,
-            category: product.category_name,
             code: product.code,
-            sale_price: product.sale_price,
-            max_discount_percent: product.max_discount_percent,
-            stock: product.stock,
-            unit: product.unit
+            unit: product.unit,
+            has_subunit: product.has_subunit,
+            subunit: product.subunit,
+            subunit_ratio: product.subunit_ratio,
+            category: product.category_name,
+            max_discount_percent: product.max_discount_percent
           });
         }
       });
       
     } catch (error) {
-      console.error('❌ Erro ao carregar produtos:', error);
+      console.error('❌ [ANDROID] Erro ao carregar produtos:', error);
       toast.error('Erro ao carregar produtos');
     }
   };
