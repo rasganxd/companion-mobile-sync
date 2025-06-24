@@ -1056,6 +1056,49 @@ class SQLiteDatabaseService {
       console.error('❌ Error resetting negated clients status:', error);
     }
   }
+
+  // Add the missing saveOrders method
+  async saveOrders(ordersArray: any[]): Promise<void> {
+    console.log('💾 Saving orders to SQLite database...', ordersArray.length);
+    
+    if (!this.isInitialized || !this.db) {
+      await this.initDatabase();
+    }
+
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    try {
+      for (const order of ordersArray) {
+        console.log('💾 Saving order:', order.id, order.customer_name);
+        
+        const stmt = await this.db.prepare(`
+          INSERT OR REPLACE INTO orders (
+            id, customer_id, customer_name, date, total, status, sync_status, items
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        await stmt.execute([
+          order.id,
+          order.customer_id,
+          order.customer_name,
+          order.date,
+          order.total || 0,
+          order.status || 'pending',
+          order.sync_status || 'synced',
+          JSON.stringify(order.items || [])
+        ]);
+        
+        await stmt.finalize();
+      }
+      
+      console.log('✅ Successfully saved', ordersArray.length, 'orders to SQLite database');
+    } catch (error) {
+      console.error('❌ Error saving orders to SQLite:', error);
+      throw error;
+    }
+  }
 }
 
 export default SQLiteDatabaseService;

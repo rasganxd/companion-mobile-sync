@@ -1,4 +1,3 @@
-
 import { openDB } from 'idb';
 import { SalesAppDBSchema, DatabaseInstance } from './types';
 
@@ -17,61 +16,7 @@ export class DatabaseInitializer {
           console.log(`🔧 Upgrading database from version ${oldVersion} to ${targetVersion}`);
           
           try {
-            // Create clients table
-            if (!db.objectStoreNames.contains('clients')) {
-              console.log('📋 Creating clients table');
-              db.createObjectStore('clients', { keyPath: 'id' });
-            }
-            
-            // Create visit_routes table
-            if (!db.objectStoreNames.contains('visit_routes')) {
-              console.log('📋 Creating visit_routes table');
-              db.createObjectStore('visit_routes', { keyPath: 'id' });
-            }
-            
-            // Create orders table with customer_id index
-            if (!db.objectStoreNames.contains('orders')) {
-              console.log('📋 Creating orders table');
-              const orderStore = db.createObjectStore('orders', { keyPath: 'id' });
-              orderStore.createIndex('customer_id', 'customer_id');
-            }
-            
-            // Create products table
-            if (!db.objectStoreNames.contains('products')) {
-              console.log('📋 Creating products table');
-              db.createObjectStore('products', { keyPath: 'id' });
-            }
-            
-            // Create payment_tables table
-            if (!db.objectStoreNames.contains('payment_tables')) {
-              console.log('📋 Creating payment_tables table');
-              db.createObjectStore('payment_tables', { keyPath: 'id' });
-            }
-            
-            // ✅ NOVO: Create payment_methods table
-            if (!db.objectStoreNames.contains('payment_methods')) {
-              console.log('📋 Creating payment_methods table');
-              db.createObjectStore('payment_methods', { keyPath: 'id' });
-            }
-            
-            // ✅ NOVO: Create units table
-            if (!db.objectStoreNames.contains('units')) {
-              console.log('📋 Creating units table');
-              db.createObjectStore('units', { keyPath: 'id' });
-            }
-            
-            // ✅ NOVO: Create order_items table
-            if (!db.objectStoreNames.contains('order_items')) {
-              console.log('📋 Creating order_items table');
-              const orderItemsStore = db.createObjectStore('order_items', { keyPath: 'id' });
-              orderItemsStore.createIndex('order_id', 'order_id');
-            }
-            
-            // Create sync_log table
-            if (!db.objectStoreNames.contains('sync_log')) {
-              console.log('📋 Creating sync_log table');
-              db.createObjectStore('sync_log', { keyPath: 'id' });
-            }
+            this.initializeDatabase(db, oldVersion, targetVersion);
             
             console.log('✅ Database schema upgrade completed successfully');
           } catch (upgradeError) {
@@ -114,6 +59,60 @@ export class DatabaseInitializer {
       
       throw error;
     }
+  }
+
+  static initializeDatabase(db: any, oldVersion: number, newVersion: number, transaction?: any): void {
+    console.log(`Initializing database from version ${oldVersion} to ${newVersion}...`);
+    
+    // Create clients table
+    if (!db.objectStoreNames.contains('clients')) {
+      const clientStore = db.createObjectStore('clients', { keyPath: 'id' });
+      clientStore.createIndex('name', 'name', { unique: false });
+      clientStore.createIndex('code', 'code', { unique: false });
+      console.log('Created clients table');
+    }
+
+    // Create products table
+    if (!db.objectStoreNames.contains('products')) {
+      const productStore = db.createObjectStore('products', { keyPath: 'id' });
+      productStore.createIndex('name', 'name', { unique: false });
+      productStore.createIndex('code', 'code', { unique: false });
+      console.log('Created products table');
+    }
+
+    // Create orders table
+    if (!db.objectStoreNames.contains('orders')) {
+      const orderStore = db.createObjectStore('orders', { keyPath: 'id' });
+      orderStore.createIndex('customer_id', 'customer_id', { unique: false });
+      orderStore.createIndex('date', 'date', { unique: false });
+      orderStore.createIndex('status', 'status', { unique: false });
+      orderStore.createIndex('sync_status', 'sync_status', { unique: false });
+      console.log('Created orders table');
+    }
+
+    // Create visit_routes table
+    if (!db.objectStoreNames.contains('visit_routes')) {
+      const routeStore = db.createObjectStore('visit_routes', { keyPath: 'id' });
+      routeStore.createIndex('name', 'name', { unique: false });
+      console.log('Created visit_routes table');
+    }
+
+    // Create payment_tables table
+    if (!db.objectStoreNames.contains('payment_tables')) {
+      const paymentStore = db.createObjectStore('payment_tables', { keyPath: 'id' });
+      paymentStore.createIndex('name', 'name', { unique: false });
+      console.log('Created payment_tables table');
+    }
+
+    // Create sync_log table
+    if (!db.objectStoreNames.contains('sync_log')) {
+      const syncLogStore = db.createObjectStore('sync_log', { keyPath: 'id', autoIncrement: true });
+      syncLogStore.createIndex('type', 'type', { unique: false });
+      syncLogStore.createIndex('timestamp', 'timestamp', { unique: false });
+      console.log('Created sync_log table');
+    }
+
+    console.log('Database initialization completed');
   }
 
   static async clearDatabase(): Promise<void> {

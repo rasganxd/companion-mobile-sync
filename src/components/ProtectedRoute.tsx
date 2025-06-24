@@ -1,13 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth as useAuthContext } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { salesRep, isLoading, needsInitialSync } = useAuth();
+  const { salesRep, isLoading, needsInitialSync } = useAuthContext();
   const location = useLocation();
   const [authCheckComplete, setAuthCheckComplete] = useState(false);
   const [hasStoredAuth, setHasStoredAuth] = useState(false);
