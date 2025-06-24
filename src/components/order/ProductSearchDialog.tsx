@@ -1,16 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Package, Search, Tag } from 'lucide-react';
-
 interface Product {
   id: string;
   name: string;
@@ -26,7 +18,6 @@ interface Product {
   subunit_ratio?: number;
   category_name?: string;
 }
-
 interface ProductSearchDialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,7 +26,6 @@ interface ProductSearchDialogProps {
   products: Product[];
   onSelectProduct: (product: Product) => void;
 }
-
 const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
   isOpen,
   onClose,
@@ -65,13 +55,11 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
     setLocalSearchTerm('');
     onClose();
   };
-
   const getDisplayPrice = (product: Product) => {
     // Use sale_price if available, otherwise use price
     const basePrice = product.sale_price || product.price || 0;
     return basePrice;
   };
-
   const getUnitInfo = (product: Product) => {
     if (product.has_subunit && product.subunit && product.subunit_ratio && product.subunit_ratio > 1) {
       const subunitPrice = getDisplayPrice(product) / product.subunit_ratio;
@@ -89,35 +77,23 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
     acc[categoryName].push(product);
     return acc;
   }, {} as Record<string, Product[]>);
-
   const categoryEntries = Object.entries(productsByCategory).sort(([a], [b]) => a.localeCompare(b));
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+  return <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Selecionar Produto</DialogTitle>
-          <DialogDescription>
-            Busque e selecione o produto desejado (por nome, código ou categoria)
-          </DialogDescription>
+          
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            <Input 
-              placeholder="Buscar por nome, código ou categoria..." 
-              value={localSearchTerm} 
-              onChange={(e) => handleSearchChange(e.target.value)} 
-              className="pl-10"
-            />
+            <Input placeholder="Buscar por nome, código ou categoria..." value={localSearchTerm} onChange={e => handleSearchChange(e.target.value)} className="pl-10" />
           </div>
           
           <ScrollArea className="h-96">
-            {products.length > 0 ? (
-              <div className="space-y-3">
-                {categoryEntries.map(([categoryName, categoryProducts]) => (
-                  <div key={categoryName} className="space-y-2">
+            {products.length > 0 ? <div className="space-y-3">
+                {categoryEntries.map(([categoryName, categoryProducts]) => <div key={categoryName} className="space-y-2">
                     {/* Cabeçalho da Categoria */}
                     <div className="flex items-center gap-2 px-2 py-1 bg-gray-100 rounded-md">
                       <Tag size={14} className="text-gray-500" />
@@ -126,16 +102,11 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
                     </div>
                     
                     {/* Produtos da Categoria */}
-                    {categoryProducts.map(product => (
-                      <div 
-                        key={product.id} 
-                        className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ml-4" 
-                        onClick={() => onSelectProduct(product)}
-                      >
+                    {categoryProducts.map(product => <div key={product.id} onClick={() => onSelectProduct(product)} className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors ml-4 py-[6px] px-[6px]">
                         <div className="flex items-start gap-3">
                           <Package size={20} className="text-blue-600 mt-0.5" />
                           <div className="flex-1">
-                            <div className="font-medium text-gray-900">{product.name}</div>
+                            <div className="text-sm text-gray-900">{product.name}</div>
                             <div className="text-sm text-gray-600">
                               Código: {product.code} • Estoque: {product.stock}
                             </div>
@@ -147,25 +118,16 @@ const ProductSearchDialog: React.FC<ProductSearchDialogProps> = ({
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
+                      </div>)}
+                  </div>)}
+              </div> : <div className="text-center py-8 text-gray-500">
                 <Package size={32} className="mx-auto mb-2 text-gray-300" />
                 <p>Nenhum produto encontrado</p>
-                {localSearchTerm && (
-                  <p className="text-sm">Tente buscar por outro termo</p>
-                )}
-              </div>
-            )}
+                {localSearchTerm && <p className="text-sm">Tente buscar por outro termo</p>}
+              </div>}
           </ScrollArea>
         </div>
       </DialogContent>
-    </Dialog>
-  );
+    </Dialog>;
 };
-
 export default ProductSearchDialog;
