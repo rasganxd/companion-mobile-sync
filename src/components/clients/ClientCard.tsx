@@ -61,9 +61,7 @@ const ClientCard: React.FC<ClientCardProps> = ({
   const statusInfo = getStatusInfo(client);
   return <div className="bg-white rounded-lg shadow p-4 py-[12px] px-[12px]">
       <div className="flex items-start gap-3">
-        <div className="bg-blue-100 p-2 rounded-full flex-shrink-0">
-          <User className="h-5 w-5 text-app-blue" />
-        </div>
+        
         
         <div className="flex-1 min-w-0">
           {/* Header with name and status */}
@@ -93,35 +91,20 @@ const ClientCard: React.FC<ClientCardProps> = ({
 
           {/* Contact and address */}
           <div className="space-y-1 mb-3">
-            {client.phone && <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Phone className="h-3 w-3" />
-                <span className="truncate text-sm">{client.phone}</span>
-              </div>}
+            {client.phone}
             
-            {(client.address || client.neighborhood || client.city) && <div className="flex items-start gap-2 text-sm text-gray-600">
-                <MapPin className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  {client.address && <p className="truncate text-sm">{client.address}</p>}
-                  {(client.neighborhood || client.city) && <p className="truncate text-sm">
-                      {client.neighborhood}
-                      {client.neighborhood && client.city && ', '}
-                      {client.city}
-                    </p>}
-                </div>
-              </div>}
+            {client.address || client.neighborhood || client.city}
           </div>
 
           {/* Action buttons */}
           <div className="flex gap-2">
             {client.status === 'positivado' ? <>
-                <AppButton variant="blue" onClick={() => onViewOrder && onViewOrder(client)} className="flex-1 text-sm py-[6px] text-center flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700">
+                <AppButton variant="blue" onClick={() => onViewOrder && onViewOrder(client)} className="flex-1 py-[6px] text-center flex items-center justify-center gap-1 bg-sky-700 hover:bg-sky-600 text-xs">
                   <Eye size={14} />
                   Ver Pedido
                 </AppButton>
-                <AppButton variant="blue" onClick={() => onSelect(client)} className="flex-1 text-sm py-[6px] text-center">
-                  Mais Atividades
-                </AppButton>
-              </> : <AppButton variant="blue" onClick={() => onSelect(client)} className="flex-1 text-sm py-[6px] text-center">
+                <AppButton variant="blue" onClick={() => onSelect(client)} className="flex-1 py-[6px] text-center text-xs">Iniciar Atividades</AppButton>
+              </> : <AppButton variant="blue" onClick={() => onSelect(client)} className="flex-1 py-[6px] text-center text-xs">
                 Iniciar Atividades
               </AppButton>}
           </div>
