@@ -1,9 +1,8 @@
 
 import React from 'react';
-import { ChevronLeft, ChevronRight, List, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, List, User, Eye } from 'lucide-react';
 import AppButton from '@/components/AppButton';
 import ClientPageCard from './ClientPageCard';
-import ClientPageNavigation from './ClientPageNavigation';
 
 interface Client {
   id: string;
@@ -31,6 +30,7 @@ interface ClientPaginatedViewProps {
   onPageChange: (page: number) => void;
   onClientSelect: (client: Client) => void;
   onToggleView: () => void;
+  onViewOrder?: (client: Client) => void;
 }
 
 const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
@@ -38,7 +38,8 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
   currentPage,
   onPageChange,
   onClientSelect,
-  onToggleView
+  onToggleView,
+  onViewOrder
 }) => {
   if (clients.length === 0) {
     return (
@@ -59,70 +60,69 @@ const ClientPaginatedView: React.FC<ClientPaginatedViewProps> = ({
 
   const currentClient = clients[currentPage];
 
-  // Encontrar próximo cliente pendente
-  const findNextPendingClient = () => {
-    for (let i = currentPage + 1; i < clients.length; i++) {
-      if (clients[i].status === 'pendente') {
-        return i;
-      }
-    }
-    return null;
-  };
-
-  // Navegação inteligente
   const handlePrevious = () => {
-    // Navegação anterior normal (permite ver visitados)
     if (currentPage > 0) {
       onPageChange(currentPage - 1);
     }
   };
 
   const handleNext = () => {
-    // Smart navigation: pular para próximo pendente
-    const nextPendingIndex = findNextPendingClient();
-    
-    if (nextPendingIndex !== null) {
-      onPageChange(nextPendingIndex);
-    } else if (currentPage < clients.length - 1) {
-      // Se não há mais pendentes, ir para o próximo normalmente
+    if (currentPage < clients.length - 1) {
       onPageChange(currentPage + 1);
     }
   };
 
-  // Verificar se existe próximo pendente
-  const hasNextPending = findNextPendingClient() !== null;
-  const hasNext = hasNextPending || currentPage < clients.length - 1;
+  if (!currentClient) {
+    return (
+      <div className="text-center text-gray-500 py-8">
+        <div className="text-lg">Nenhum cliente disponível</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Header com alternância de visualização */}
-      <div className="flex justify-between items-center">
-        <h3 className="font-medium text-sm">
-          Cliente {currentPage + 1} de {clients.length}
-          {currentClient.status !== 'pendente' && (
-            <span className="ml-2 text-xs text-gray-500">
-              ({currentClient.status === 'positivado' ? 'Positivado' : 'Negativado'})
-            </span>
-          )}
-        </h3>
-        <AppButton variant="gray" onClick={onToggleView} className="flex items-center gap-2 py-0">
+      {/* Controles de navegação */}
+      <div className="flex justify-between items-center bg-white rounded-lg shadow p-3">
+        <AppButton
+          variant="gray"
+          onClick={onToggleView}
+          className="flex items-center gap-2 px-[5px] py-[5px]"
+        >
           <List size={16} />
           <span className="text-sm">Ver Lista</span>
         </AppButton>
+
+        <div className="flex items-center gap-3">
+          <AppButton
+            variant="gray"
+            onClick={handlePrevious}
+            disabled={currentPage === 0}
+            className="p-2"
+          >
+            <ChevronLeft size={16} />
+          </AppButton>
+          
+          <span className="text-sm font-medium text-gray-600">
+            {currentPage + 1} de {clients.length}
+          </span>
+          
+          <AppButton
+            variant="gray"
+            onClick={handleNext}
+            disabled={currentPage === clients.length - 1}
+            className="p-2"
+          >
+            <ChevronRight size={16} />
+          </AppButton>
+        </div>
       </div>
 
-      {/* Card do Cliente */}
-      <ClientPageCard client={currentClient} onSelect={onClientSelect} />
-
-      {/* Navegação */}
-      <ClientPageNavigation 
-        currentPage={currentPage} 
-        totalPages={clients.length} 
-        onPrevious={handlePrevious} 
-        onNext={handleNext}
-        clientName={currentClient.company_name || currentClient.name}
-        hasNext={hasNext}
-        hasPrevious={currentPage > 0}
+      {/* Card do cliente atual */}
+      <ClientPageCard
+        client={currentClient}
+        onSelect={onClientSelect}
+        onViewOrder={onViewOrder}
       />
     </div>
   );

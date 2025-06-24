@@ -134,9 +134,9 @@ const ClientCard: React.FC<ClientCardProps> = ({
             {client.status === 'positivado' ? (
               <>
                 <AppButton 
-                  variant="green" 
+                  variant="blue" 
                   onClick={() => onViewOrder && onViewOrder(client)} 
-                  className="flex-1 text-sm py-[6px] text-center flex items-center justify-center gap-1"
+                  className="flex-1 text-sm py-[6px] text-center flex items-center justify-center gap-1 bg-green-600 hover:bg-green-700"
                 >
                   <Eye size={14} />
                   Ver Pedido

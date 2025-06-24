@@ -13,6 +13,7 @@ interface DatabaseAdapter {
   updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void>;
   logSync(type: string, status: string, details?: string): Promise<void>;
   saveOrder(order: any): Promise<void>;
+  updateOrder(orderId: string, order: any): Promise<void>; // ✅ NOVO: Método para atualizar pedido
   updateClientStatus(clientId: string, status: string): Promise<void>;
   getClientById(clientId: string): Promise<any | null>;
   closeDatabase(): Promise<void>;
