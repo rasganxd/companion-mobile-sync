@@ -30,26 +30,24 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
   onSelect
 }) => {
   const getStatusInfo = (client: Client) => {
-    const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
-    const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
     switch (client.status) {
       case 'positivado':
         return {
           color: 'tab-success-bg tab-success-text tab-success-border',
-          text: `Positivado${localInfo}${transmittedInfo}`,
+          text: 'Positivado',
           bgColor: 'tab-success-light'
         };
       case 'negativado':
         return {
           color: 'tab-error-bg tab-error-text tab-error-border',
-          text: `Negativado${localInfo}${transmittedInfo}`,
+          text: 'Negativado',
           bgColor: 'tab-error-light'
         };
       case 'pendente':
       default:
         return {
           color: client.hasLocalOrders || client.hasTransmittedOrders ? 'bg-blue-100 text-blue-800 border-blue-200' : 'tab-pending-bg tab-pending-text tab-pending-border',
-          text: `Pendente${localInfo}${transmittedInfo}`,
+          text: 'Pendente',
           bgColor: 'tab-pending-light'
         };
     }

@@ -120,24 +120,22 @@ const ClientFullScreenView = () => {
   };
   
   const getStatusInfo = (client: Client) => {
-    const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
-    const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
     switch (client.status) {
       case 'positivado':
         return {
           color: 'bg-green-100 text-green-800 border-green-200',
-          text: `Positivado${localInfo}${transmittedInfo}`
+          text: 'Positivado'
         };
       case 'negativado':
         return {
           color: 'bg-red-100 text-red-800 border-red-200',
-          text: `Negativado${localInfo}${transmittedInfo}`
+          text: 'Negativado'
         };
       case 'pendente':
       default:
         return {
           color: client.hasLocalOrders || client.hasTransmittedOrders ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-gray-100 text-gray-800 border-gray-200',
-          text: `Pendente${localInfo}${transmittedInfo}`
+          text: 'Pendente'
         };
     }
   };

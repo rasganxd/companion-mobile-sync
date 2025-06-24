@@ -31,24 +31,22 @@ const ClientCard: React.FC<ClientCardProps> = ({
   onViewDetails
 }) => {
   const getStatusInfo = (client: Client) => {
-    const localInfo = client.hasLocalOrders ? ` (${client.localOrdersCount} local)` : '';
-    const transmittedInfo = client.hasTransmittedOrders ? ` (${client.transmittedOrdersCount} transmitido)` : '';
     switch (client.status) {
       case 'positivado':
         return {
           color: 'bg-green-100 text-green-800',
-          text: `Positivado${localInfo}${transmittedInfo}`
+          text: 'Positivado'
         };
       case 'negativado':
         return {
           color: 'bg-red-100 text-red-800',
-          text: `Negativado${localInfo}${transmittedInfo}`
+          text: 'Negativado'
         };
       case 'pendente':
       default:
         return {
           color: client.hasLocalOrders || client.hasTransmittedOrders ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800',
-          text: `Pendente${localInfo}${transmittedInfo}`
+          text: 'Pendente'
         };
     }
   };
