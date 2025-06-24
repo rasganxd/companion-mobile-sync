@@ -37,7 +37,7 @@ serve(async (req) => {
       );
     }
 
-    const { type, sales_rep_id, sales_rep_code } = requestBody;
+    const { type, sales_rep_id, sales_rep_code, limit } = requestBody;
     
     console.log('📱 Mobile data sync request - Type:', type, 'Sales Rep ID:', sales_rep_id, 'Sales Rep Code:', sales_rep_code);
 
@@ -268,6 +268,112 @@ serve(async (req) => {
       console.log(`✅ Returning ${paymentTables.length} REAL payment tables from database`);
       return new Response(
         JSON.stringify({ payment_tables: paymentTables }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ✅ NOVO: Suporte para histórico de pedidos
+    if (type === 'orders_history') {
+      console.log('📥 Fetching REAL orders history for sales rep:', realSalesRepId);
+      
+      const orderLimit = limit || 100; // Limitar para não sobrecarregar
+      console.log('📊 Orders limit:', orderLimit);
+      
+      // Buscar pedidos com seus itens
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          code,
+          customer_id,
+          customer_name,
+          date,
+          total,
+          status,
+          sync_status,
+          notes,
+          payment_method,
+          payment_table,
+          created_at,
+          updated_at
+        `)
+        .eq('sales_rep_id', realSalesRepId)
+        .order('date', { ascending: false })
+        .limit(orderLimit);
+
+      if (error) {
+        console.error('❌ Error fetching orders from DB:', error);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao buscar histórico de pedidos do banco de dados: ' + error.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`✅ Successfully fetched ${orders?.length || 0} orders from database`);
+
+      if (!orders || orders.length === 0) {
+        console.log('ℹ️ No orders found in database for this sales rep');
+        return new Response(
+          JSON.stringify({ orders: [], message: 'Nenhum pedido encontrado para este vendedor' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Buscar itens de todos os pedidos
+      const orderIds = orders.map(order => order.id);
+      console.log('📥 Fetching order items for', orderIds.length, 'orders');
+      
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select(`
+          id,
+          order_id,
+          product_id,
+          product_name,
+          product_code,
+          quantity,
+          unit,
+          unit_price,
+          price,
+          total,
+          discount
+        `)
+        .in('order_id', orderIds);
+
+      if (itemsError) {
+        console.error('❌ Error fetching order items from DB:', itemsError);
+        // Continue sem os itens se houver erro
+      }
+
+      console.log(`✅ Successfully fetched ${orderItems?.length || 0} order items from database`);
+
+      // Agrupar itens por pedido
+      const itemsByOrder = {};
+      if (orderItems) {
+        orderItems.forEach(item => {
+          if (!itemsByOrder[item.order_id]) {
+            itemsByOrder[item.order_id] = [];
+          }
+          itemsByOrder[item.order_id].push(item);
+        });
+      }
+
+      // Transformar pedidos para incluir itens
+      const transformedOrders = orders.map(order => ({
+        ...order,
+        items: itemsByOrder[order.id] || []
+      }));
+
+      console.log(`✅ Returning ${transformedOrders.length} REAL orders with items from database`);
+      console.log('📊 Sample order:', transformedOrders[0] ? {
+        id: transformedOrders[0].id,
+        customer_name: transformedOrders[0].customer_name,
+        total: transformedOrders[0].total,
+        items_count: transformedOrders[0].items.length
+      } : 'No orders');
+      
+      return new Response(
+        JSON.stringify({ orders: transformedOrders }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
