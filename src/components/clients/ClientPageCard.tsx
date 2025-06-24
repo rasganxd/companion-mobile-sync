@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, Building, Phone, MapPin, Hash, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -68,83 +69,90 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
   const statusInfo = getStatusInfo(client);
 
   return (
-    <Card className={`${statusInfo.bgColor} border-2`}>
-      <CardContent className="p-4">
-        {/* Header com código e status - mais compacto */}
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-2">
-            {client.code && (
-              <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border">
-                <Hash className="h-3 w-3 text-gray-600" />
-                <span className="font-bold text-sm">{client.code}</span>
-              </div>
+    <Card className={`${statusInfo.bgColor} border-2 min-h-[400px]`}>
+      <CardContent className="p-4 flex flex-col justify-between h-full">
+        {/* Seção superior */}
+        <div className="flex-1">
+          {/* Header com código e status - mais compacto */}
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-2">
+              {client.code && (
+                <div className="flex items-center gap-1 bg-white px-2 py-1 rounded border">
+                  <Hash className="h-3 w-3 text-gray-600" />
+                  <span className="font-bold text-sm">{client.code}</span>
+                </div>
+              )}
+            </div>
+            <div className={`px-3 py-1 rounded border text-xs font-medium ${statusInfo.color}`}>
+              {statusInfo.text}
+            </div>
+          </div>
+
+          {/* Nome da empresa/cliente - mais compacto */}
+          <div className="text-center mb-4">
+            <h2 className="text-xs text-gray-600">
+              {client.company_name || client.name}
+            </h2>
+            {client.company_name && client.name && (
+              <p className="font-bold text-gray-900 mb-1 text-sm">
+                Razão Social: {client.name}
+              </p>
             )}
           </div>
-          <div className={`px-3 py-1 rounded border text-xs font-medium ${statusInfo.color}`}>
-            {statusInfo.text}
-          </div>
-        </div>
 
-        {/* Nome da empresa/cliente - mais compacto */}
-        <div className="text-center mb-4">
-          <h2 className="text-xs text-gray-600">
-            {client.company_name || client.name}
-          </h2>
-          {client.company_name && client.name && (
-            <p className="font-bold text-gray-900 mb-1 text-sm">
-              Razão Social: {client.name}
-            </p>
+          {/* Seção reservada para valor do pedido - sempre presente */}
+          <div className="text-center mb-4 h-16 flex items-center justify-center">
+            {client.status === 'positivado' && client.orderTotal && client.orderTotal > 0 ? (
+              <div>
+                <div className="text-xl font-bold text-green-600">
+                  {formatCurrency(client.orderTotal)}
+                </div>
+                <div className="text-xs text-gray-600">Valor total dos pedidos</div>
+              </div>
+            ) : (
+              <div className="h-full"></div>
+            )}
+          </div>
+
+          {/* Informações de contato e endereço - unificadas em uma única div */}
+          {(client.address || client.neighborhood || client.city || client.phone) && (
+            <div className="p-2 bg-white rounded border mb-4 space-y-3">
+              {/* Endereço */}
+              {(client.address || client.neighborhood || client.city) && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-gray-500">Endereço</p>
+                    <div className="text-sm font-medium">
+                      {client.address && <p className="text-xs">{client.address}</p>}
+                      {(client.neighborhood || client.city) && (
+                        <p className="text-xs">
+                          {client.neighborhood}
+                          {client.neighborhood && client.city && ', '}
+                          {client.city}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Telefone */}
+              {client.phone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-gray-600" />
+                  <div>
+                    <p className="text-xs text-gray-500">Telefone</p>
+                    <p className="font-medium text-xs">{client.phone}</p>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
-        {/* Valor do pedido se positivado - mais compacto */}
-        {client.status === 'positivado' && client.orderTotal && client.orderTotal > 0 && (
-          <div className="text-center mb-4">
-            <div className="text-xl font-bold text-green-600">
-              {formatCurrency(client.orderTotal)}
-            </div>
-            <div className="text-xs text-gray-600">Valor total dos pedidos</div>
-          </div>
-        )}
-
-        {/* Informações de contato e endereço - unificadas em uma única div */}
-        {(client.address || client.neighborhood || client.city || client.phone) && (
-          <div className="p-2 bg-white rounded border mb-4 space-y-3">
-            {/* Endereço */}
-            {(client.address || client.neighborhood || client.city) && (
-              <div className="flex items-start gap-2">
-                <MapPin className="h-4 w-4 text-gray-600 mt-0.5" />
-                <div>
-                  <p className="text-xs text-gray-500">Endereço</p>
-                  <div className="text-sm font-medium">
-                    {client.address && <p className="text-xs">{client.address}</p>}
-                    {(client.neighborhood || client.city) && (
-                      <p className="text-xs">
-                        {client.neighborhood}
-                        {client.neighborhood && client.city && ', '}
-                        {client.city}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Telefone */}
-            {client.phone && (
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4 text-gray-600" />
-                <div>
-                  <p className="text-xs text-gray-500">Telefone</p>
-                  <p className="font-medium text-xs">{client.phone}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Botões de ação - adaptados para o modo paginated */}
-        <div className="space-y-2">
+        {/* Seção de botões - altura fixa no final */}
+        <div className="space-y-2 h-20 flex flex-col justify-end">
           {client.status === 'positivado' ? (
             <>
               {onViewOrder && (
