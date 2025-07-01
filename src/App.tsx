@@ -14,6 +14,7 @@ import Reports from '@/pages/Reports';
 import SyncSettings from '@/pages/SyncSettings';
 import TransmitOrders from '@/pages/TransmitOrders';
 import NewOrder from '@/pages/NewOrder';
+import OrderReview from '@/pages/OrderReview';
 import NegativeSale from '@/pages/NegativeSale';
 import MessagePage from '@/pages/MessagePage';
 import LastPurchases from '@/pages/LastPurchases';
@@ -89,6 +90,12 @@ function App() {
                 <Route path="/new-order" element={
                   <ProtectedRoute>
                     <NewOrder />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/order-review" element={
+                  <ProtectedRoute>
+                    <OrderReview />
                   </ProtectedRoute>
                 } />
                 

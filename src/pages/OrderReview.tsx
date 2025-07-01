@@ -51,7 +51,7 @@ const OrderReview = () => {
             <AppButton 
               variant="blue" 
               className="mt-4"
-              onClick={() => navigate('/place-order')}
+              onClick={() => navigate('/new-order')}
             >
               Voltar para Pedidos
             </AppButton>
@@ -96,7 +96,7 @@ const OrderReview = () => {
   };
 
   const handleAddMoreItems = () => {
-    navigate('/place-order', {
+    navigate('/new-order', {
       state: {
         clientId,
         clientName,
@@ -142,7 +142,7 @@ const OrderReview = () => {
       toast.success("Pedido finalizado com sucesso!");
       
       // Navegar de volta para a lista de clientes
-      navigate('/clientes-lista');
+      navigate('/clients-list');
     } catch (error) {
       console.error("Error saving order:", error);
       toast.error("Erro ao finalizar pedido");
@@ -152,7 +152,7 @@ const OrderReview = () => {
   };
 
   const handleGoBack = () => {
-    navigate('/place-order', {
+    navigate('/new-order', {
       state: {
         clientId,
         clientName,
@@ -306,7 +306,7 @@ const OrderReview = () => {
             disabled={orderItems.length === 0 || isSubmitting}
           >
             <ShoppingCart size={14} className="mr-1" />
-            {isSubmitting ? 'Salvando...' : 'Finalizar'}
+            {isSubmitting ? 'Salvando...' : 'Gravar'}
           </AppButton>
         </div>
       </div>
