@@ -35,7 +35,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   onFinishOrder,
   selectedClient,
   isSubmitting,
-  finishButtonText = 'Finalizar' // ✅ ALTERADO: Mudança do texto padrão para "Finalizar"
+  finishButtonText = 'Finalizar'
 }) => {
   const hasItems = orderItems.length > 0;
   const canFinish = hasItems && selectedClient.id;

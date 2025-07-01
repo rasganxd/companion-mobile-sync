@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -9,8 +10,6 @@ import NewOrderHeader from '@/components/order/NewOrderHeader';
 import NewOrderClientInfo from '@/components/order/NewOrderClientInfo';
 import NewOrderProductNavigation from '@/components/order/NewOrderProductNavigation';
 import NewOrderProductDetails from '@/components/order/NewOrderProductDetails';
-import NewOrderItemsList from '@/components/order/NewOrderItemsList';
-import NewOrderTotals from '@/components/order/NewOrderTotals';
 import ClientSelectionModal from '@/components/order/ClientSelectionModal';
 import ProductSearchDialog from '@/components/order/ProductSearchDialog';
 import OrderChoiceModal from '@/components/order/OrderChoiceModal';
@@ -21,7 +20,8 @@ import { toast } from 'sonner';
 const PlaceOrder = () => {
   const {
     goBack,
-    navigateToClientActivities
+    navigateToClientActivities,
+    navigateTo
   } = useAppNavigation();
   const location = useLocation();
 
@@ -213,13 +213,36 @@ const PlaceOrder = () => {
   const currentProduct = selectedProduct || products[currentProductIndex];
   const categoryInfo = getCurrentCategoryInfo();
 
+  // ✅ NOVO: Função para ir para revisão do pedido
   const handleFinishOrder = () => {
-    finishOrder(selectedClient, selectedPaymentTable?.id);
+    if (!selectedClient) {
+      toast.error('Selecione um cliente');
+      return;
+    }
+
+    if (!selectedPaymentTable?.id) {
+      toast.error('Selecione uma forma de pagamento');
+      return;
+    }
+
+    if (orderItems.length === 0) {
+      toast.error('Adicione pelo menos um produto ao pedido');
+      return;
+    }
+
+    // Navegar para a tela de revisão com todos os dados necessários
+    navigateTo('/order-review', {
+      orderItems,
+      client: selectedClient,
+      paymentMethod: selectedPaymentTable.name,
+      clientId: selectedClient.id,
+      clientName: selectedClient.name,
+      day
+    });
   };
 
-  // ✅ Determinar título e texto do botão baseado no modo
+  // ✅ Determinar título baseado no modo
   const headerTitle = editMode ? 'Editar Pedido' : 'Novo Pedido';
-  const finishButtonText = editMode ? 'Salvar Alterações' : 'Finalizar Pedido';
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -273,16 +296,26 @@ const PlaceOrder = () => {
           />
         </div>
 
-        <NewOrderItemsList
-          orderItems={orderItems}
-          onRemoveItem={removeOrderItem}
-        />
+        {/* ✅ REMOVIDO: Lista de itens e totais - agora ficam "invisíveis" até a revisão */}
+        {/* {orderItems.length > 0 && (
+          <>
+            <NewOrderItemsList
+              orderItems={orderItems}
+              onRemoveItem={removeOrderItem}
+            />
+            <NewOrderTotals
+              total={calculateTotal()}
+            />
+          </>
+        )} */}
 
-        {/* Totais */}
+        {/* ✅ NOVO: Indicador sutil de quantos itens foram adicionados */}
         {orderItems.length > 0 && (
-          <NewOrderTotals
-            total={calculateTotal()}
-          />
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+            <div className="text-sm text-green-700 text-center">
+              {orderItems.length} produto(s) adicionado(s) ao pedido
+            </div>
+          </div>
         )}
       </div>
 
@@ -295,7 +328,7 @@ const PlaceOrder = () => {
         onFinishOrder={handleFinishOrder}
         selectedClient={selectedClient || { id: '' }}
         isSubmitting={isSubmitting}
-        finishButtonText={finishButtonText}
+        finishButtonText="Finalizar"
       />
 
       {/* Modals */}
