@@ -30,11 +30,14 @@ const PlaceOrder = () => {
     clientName,
     clientId,
     day,
-    editMode
+    editMode,
+    existingOrderItems,
+    paymentMethod
   } = location.state || {};
 
   // ✅ CORREÇÃO: Estado para controle de carregamento do pedido
   const [orderLoaded, setOrderLoaded] = React.useState(false);
+  const [existingItemsLoaded, setExistingItemsLoaded] = React.useState(false);
 
   // ✅ MELHORADA: Função de voltar mais inteligente
   const handleGoBack = () => {
@@ -75,7 +78,8 @@ const PlaceOrder = () => {
     calculateTotal,
     saveAsDraft,
     finishOrder,
-    loadExistingOrder
+    loadExistingOrder,
+    setOrderItems
   } = useOrderManagement();
 
   const {
@@ -128,10 +132,21 @@ const PlaceOrder = () => {
 
   const [showProductSearch, setShowProductSearch] = React.useState(false);
 
+  // ✅ NOVO: Carregar itens existentes vindos da navegação (Mais Itens)
+  React.useEffect(() => {
+    if (existingOrderItems && existingOrderItems.length > 0 && !existingItemsLoaded) {
+      console.log('📋 NewOrder: Loading existing order items from navigation:', existingOrderItems.length, 'items');
+      setOrderItems(existingOrderItems);
+      setExistingItemsLoaded(true);
+      toast.success(`${existingOrderItems.length} item(s) carregado(s) do pedido anterior`);
+    }
+  }, [existingOrderItems, existingItemsLoaded, setOrderItems]);
+
   // ✅ CORREÇÃO: Carregar pedido existente apenas uma vez com controle adequado
   React.useEffect(() => {
     // Só carregar se estamos em modo de edição, temos cliente selecionado e ainda não carregamos
-    if (editMode && clientId && selectedClient && !orderLoaded) {
+    // E não temos itens existentes vindos da navegação
+    if (editMode && clientId && selectedClient && !orderLoaded && !existingOrderItems) {
       console.log('📋 NewOrder: Edit mode detected, loading existing order for client:', clientId);
       
       const loadOrder = async () => {
@@ -149,7 +164,7 @@ const PlaceOrder = () => {
 
       loadOrder();
     }
-  }, [editMode, clientId, selectedClient, orderLoaded, loadExistingOrder]);
+  }, [editMode, clientId, selectedClient, orderLoaded, loadExistingOrder, existingOrderItems]);
 
   // ✅ CORREÇÃO: Reset orderLoaded quando mudamos de cliente
   React.useEffect(() => {
