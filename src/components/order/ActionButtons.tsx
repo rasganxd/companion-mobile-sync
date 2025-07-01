@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, DollarSign, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import OrderOptionsMenu from './OrderOptionsMenu';
 
 interface OrderItem {
@@ -18,7 +18,6 @@ interface ActionButtonsProps {
   orderItems: OrderItem[];
   onClearCart: () => void;
   onGoBack: () => void;
-  onSaveAsDraft: () => void;
   onFinishOrder: () => void;
   selectedClient: {
     id: string;
@@ -31,7 +30,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   orderItems,
   onClearCart,
   onGoBack,
-  onSaveAsDraft,
   onFinishOrder,
   selectedClient,
   isSubmitting,
@@ -42,17 +40,8 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
 
   return (
     <div className="bg-white border-t border-gray-200 p-4 flex-shrink-0">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <OrderOptionsMenu onClearCart={onClearCart} hasItems={hasItems} />
-        
-        <Button
-          onClick={onSaveAsDraft}
-          disabled={!hasItems}
-          className="flex items-center justify-center gap-2 text-white bg-emerald-600 hover:bg-emerald-500 text-sm"
-        >
-          <DollarSign size={16} />
-          Gravar
-        </Button>
         
         <Button
           onClick={onFinishOrder}

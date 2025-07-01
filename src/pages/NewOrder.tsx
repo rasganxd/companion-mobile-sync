@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppNavigation } from '@/hooks/useAppNavigation';
@@ -76,7 +75,6 @@ const PlaceOrder = () => {
     removeOrderItem,
     clearCart,
     calculateTotal,
-    saveAsDraft,
     finishOrder,
     loadExistingOrder,
     setOrderItems
@@ -339,7 +337,6 @@ const PlaceOrder = () => {
         orderItems={orderItems}
         onClearCart={clearCart}
         onGoBack={handleGoBack}
-        onSaveAsDraft={() => saveAsDraft(selectedClient)}
         onFinishOrder={handleFinishOrder}
         selectedClient={selectedClient || { id: '' }}
         isSubmitting={isSubmitting}
