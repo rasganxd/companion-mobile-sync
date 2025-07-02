@@ -116,26 +116,100 @@ class WebDatabaseService {
   }
 
   async saveOrder(order: any): Promise<void> {
+    console.log('💾 WebDatabaseService.saveOrder() - Starting to save order:', {
+      orderId: order.id,
+      customerId: order.customer_id,
+      customerName: order.customer_name || order.customer?.name,
+      total: order.total,
+      status: order.status
+    });
+    
     await this.ensureDatabaseInitialized();
     await this.db!.put('orders', order);
     
+    console.log('✅ WebDatabaseService.saveOrder() - Order saved successfully, now updating client status');
+    
     // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é salvo
     if (order.customer_id) {
+      console.log('🔄 WebDatabaseService.saveOrder() - Calling updateClientStatus for customer:', order.customer_id);
       await this.updateClientStatus(order.customer_id, 'positivado');
+    } else {
+      console.warn('⚠️ WebDatabaseService.saveOrder() - No customer_id found in order, cannot update client status');
     }
   }
 
   async updateOrder(orderId: string, order: any): Promise<void> {
+    console.log('💾 WebDatabaseService.updateOrder() - Starting to update order:', {
+      orderId,
+      customerId: order.customer_id,
+      customerName: order.customer_name || order.customer?.name,
+      total: order.total,
+      status: order.status
+    });
+    
     await this.ensureDatabaseInitialized();
     await this.db!.put('orders', { ...order, id: orderId });
+    
+    console.log('✅ WebDatabaseService.updateOrder() - Order updated successfully, now updating client status');
+    
+    // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é atualizado
+    if (order.customer_id) {
+      console.log('🔄 WebDatabaseService.updateOrder() - Calling updateClientStatus for customer:', order.customer_id);
+      await this.updateClientStatus(order.customer_id, 'positivado');
+    } else {
+      console.warn('⚠️ WebDatabaseService.updateOrder() - No customer_id found in order, cannot update client status');
+    }
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
-    await this.ensureDatabaseInitialized();
-    const client = await this.getClientById(clientId);
-    if (client) {
-      client.status = status;
-      await this.db!.put('clients', client);
+    console.log('🔄 WebDatabaseService.updateClientStatus() - STARTING:', {
+      clientId,
+      status,
+      timestamp: new Date().toISOString()
+    });
+    
+    try {
+      await this.ensureDatabaseInitialized();
+      
+      console.log('🔍 WebDatabaseService.updateClientStatus() - Getting client by ID:', clientId);
+      const client = await this.getClientById(clientId);
+      
+      if (client) {
+        console.log('✅ WebDatabaseService.updateClientStatus() - Client found:', {
+          clientId: client.id,
+          clientName: client.name,
+          currentStatus: client.status,
+          newStatus: status
+        });
+        
+        client.status = status;
+        client.updated_at = new Date().toISOString();
+        
+        console.log('💾 WebDatabaseService.updateClientStatus() - Saving updated client...');
+        await this.db!.put('clients', client);
+        
+        console.log('✅ WebDatabaseService.updateClientStatus() - SUCCESS! Client status updated:', {
+          clientId: client.id,
+          clientName: client.name,
+          newStatus: status,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.error('❌ WebDatabaseService.updateClientStatus() - CLIENT NOT FOUND:', {
+          clientId,
+          status,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('❌ WebDatabaseService.updateClientStatus() - ERROR:', {
+        clientId,
+        status,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
   }
 

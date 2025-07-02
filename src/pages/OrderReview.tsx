@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -112,6 +113,13 @@ const OrderReview = () => {
       return;
     }
 
+    console.log('🛒 OrderReview.handleFinishOrder() - STARTING order finalization:', {
+      clientId: client.id,
+      clientName: client.company_name || client.name,
+      itemsCount: orderItems.length,
+      total: calculateTotal()
+    });
+
     setIsSubmitting(true);
     
     try {
@@ -136,17 +144,28 @@ const OrderReview = () => {
         }))
       };
 
+      console.log('💾 OrderReview.handleFinishOrder() - Calling db.saveOrder with data:', {
+        orderId: orderData.id,
+        customerId: orderData.customer_id,
+        customerName: orderData.customer_name,
+        total: orderData.total,
+        itemsCount: orderData.items.length
+      });
+
       await db.saveOrder(orderData);
       
-      // ✅ NOVO: Positivar o cliente após salvar o pedido
-      await db.updateClientStatus(client.id, 'positivado');
+      // ✅ REMOVIDO: Chamada manual dupla para updateClientStatus
+      // await db.updateClientStatus(client.id, 'positivado');
+      // A positivação agora acontece automaticamente dentro do saveOrder
+      
+      console.log('✅ OrderReview.handleFinishOrder() - Order saved successfully! Client should be positivated automatically.');
       
       toast.success("Pedido finalizado com sucesso!");
       
       // Navegar de volta para a lista de clientes
       navigate('/clients-list');
     } catch (error) {
-      console.error("Error saving order:", error);
+      console.error("❌ OrderReview.handleFinishOrder() - Error saving order:", error);
       toast.error("Erro ao finalizar pedido");
     } finally {
       setIsSubmitting(false);

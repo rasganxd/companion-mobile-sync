@@ -610,16 +610,22 @@ class SQLiteDatabaseService {
   }
 
   async saveOrder(order: any): Promise<void> {
+    console.log('💾 SQLiteDatabaseService.saveOrder() - Starting to save order:', {
+      orderId: order.id,
+      customerId: order.customer_id,
+      customerName: order.customer_name || order.customer?.name,
+      total: order.total,
+      status: order.status
+    });
+    
     await this.ensureDatabaseInitialized();
     
-    const query = `
-      INSERT OR REPLACE INTO orders (
-        id, customer_id, customer_name, total, status, payment_method, 
-        date, sync_status, source_project
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
+    const sql = `INSERT OR REPLACE INTO orders (
+      id, customer_id, customer_name, total, status, payment_method,
+      date, sync_status, source_project, items
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
     
-    const values = [
+    await this.db!.run(sql, [
       order.id,
       order.customer_id,
       order.customer_name,
@@ -628,37 +634,18 @@ class SQLiteDatabaseService {
       order.payment_method,
       order.date,
       order.sync_status,
-      order.source_project
-    ];
+      order.source_project,
+      JSON.stringify(order.items)
+    ]);
     
-    await this.db!.run(query, values);
-    
-    // Save order items
-    if (order.items) {
-      for (const item of order.items) {
-        const itemQuery = `
-          INSERT OR REPLACE INTO order_items (
-            id, order_id, product_name, product_code, quantity, price, total
-          ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
-        
-        const itemValues = [
-          `${order.id}_${item.product_code || Date.now()}`,
-          order.id,
-          item.product_name,
-          item.product_code,
-          item.quantity,
-          item.price,
-          item.total
-        ];
-        
-        await this.db!.run(itemQuery, itemValues);
-      }
-    }
+    console.log('✅ SQLiteDatabaseService.saveOrder() - Order saved successfully, now updating client status');
     
     // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é salvo
     if (order.customer_id) {
+      console.log('🔄 SQLiteDatabaseService.saveOrder() - Calling updateClientStatus for customer:', order.customer_id);
       await this.updateClientStatus(order.customer_id, 'positivado');
+    } else {
+      console.warn('⚠️ SQLiteDatabaseService.saveOrder() - No customer_id found in order, cannot update client status');
     }
   }
 
@@ -735,54 +722,93 @@ class SQLiteDatabaseService {
   }
 
   async updateClientStatus(clientId: string, status: string): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
+    console.log('🔄 SQLiteDatabaseService.updateClientStatus() - STARTING:', {
+      clientId,
+      status,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
-      console.log(`📱 Updating client ${clientId} status to ${status}`);
+      await this.ensureDatabaseInitialized();
       
-      await this.db!.run(
-        'UPDATE customers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [status, clientId]
-      );
+      console.log('🔍 SQLiteDatabaseService.updateClientStatus() - Getting client by ID:', clientId);
+      const client = await this.getClientById(clientId);
       
-      console.log(`✅ Client status updated for ${clientId}`);
+      if (client) {
+        console.log('✅ SQLiteDatabaseService.updateClientStatus() - Client found:', {
+          clientId: client.id,
+          clientName: client.name,
+          currentStatus: client.status,
+          newStatus: status
+        });
+        
+        const sql = `UPDATE clients SET status = ?, updated_at = ? WHERE id = ?`;
+        const updatedAt = new Date().toISOString();
+        
+        console.log('💾 SQLiteDatabaseService.updateClientStatus() - Executing SQL update...');
+        await this.db!.run(sql, [status, updatedAt, clientId]);
+        
+        console.log('✅ SQLiteDatabaseService.updateClientStatus() - SUCCESS! Client status updated:', {
+          clientId,
+          clientName: client.name,
+          newStatus: status,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        console.error('❌ SQLiteDatabaseService.updateClientStatus() - CLIENT NOT FOUND:', {
+          clientId,
+          status,
+          timestamp: new Date().toISOString()
+        });
+      }
     } catch (error) {
-      console.error(`❌ Error updating client status for ${clientId}:`, error);
+      console.error('❌ SQLiteDatabaseService.updateClientStatus() - ERROR:', {
+        clientId,
+        status,
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
     }
   }
 
   async updateOrder(orderId: string, order: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('📱 Updating order in SQLite database:', orderId, order);
-      
-      // Ensure the order has the correct ID
-      order.id = orderId;
-      order.updated_at = new Date().toISOString();
-      
-      // ✅ CORREÇÃO: Usar UPDATE com todos os campos da estrutura completa
-      await this.db!.run(
-        `UPDATE orders SET 
-          customer_id = ?, customer_name = ?, sales_rep_id = ?, code = ?, date = ?, due_date = ?, 
-          status = ?, total = ?, discount = ?, sync_status = ?, source_project = ?, payment_method = ?, 
-          payment_table_id = ?, payments = ?, delivery_address = ?, delivery_city = ?, delivery_state = ?, 
-          delivery_zip = ?, visit_notes = ?, reason = ?, notes = ?, items = ?, updated_at = ?
-         WHERE id = ?`,
-        [
-          order.customer_id, order.customer_name, order.sales_rep_id, order.code,
-          order.date, order.due_date, order.status, order.total, order.discount || 0,
-          order.sync_status, order.source_project, order.payment_method, order.payment_table_id,
-          order.payments ? JSON.stringify(order.payments) : null,
-          order.delivery_address, order.delivery_city, order.delivery_state, order.delivery_zip,
-          order.visit_notes, order.reason, order.notes, JSON.stringify(order.items),
-          order.updated_at, orderId
-        ]
-      );
-      console.log('✅ Order updated in SQLite database');
-    } catch (error) {
-      console.error('❌ Error updating order in SQLite:', error);
-      throw error;
+    console.log('💾 SQLiteDatabaseService.updateOrder() - Starting to update order:', {
+      orderId,
+      customerId: order.customer_id,
+      customerName: order.customer_name || order.customer?.name,
+      total: order.total,
+      status: order.status
+    });
+    
+    await this.ensureDatabaseInitialized();
+    
+    const sql = `UPDATE orders SET 
+      customer_id = ?, customer_name = ?, total = ?, status = ?,
+      payment_method = ?, date = ?, sync_status = ?, items = ?
+    WHERE id = ?`;
+    
+    await this.db!.run(sql, [
+      order.customer_id,
+      order.customer_name,
+      order.total,
+      order.status,
+      order.payment_method,
+      order.date,
+      order.sync_status,
+      JSON.stringify(order.items),
+      orderId
+    ]);
+    
+    console.log('✅ SQLiteDatabaseService.updateOrder() - Order updated successfully, now updating client status');
+    
+    // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é atualizado
+    if (order.customer_id) {
+      console.log('🔄 SQLiteDatabaseService.updateOrder() - Calling updateClientStatus for customer:', order.customer_id);
+      await this.updateClientStatus(order.customer_id, 'positivado');
+    } else {
+      console.warn('⚠️ SQLiteDatabaseService.updateOrder() - No customer_id found in order, cannot update client status');
     }
   }
 
