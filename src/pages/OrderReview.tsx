@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -138,6 +137,9 @@ const OrderReview = () => {
       };
 
       await db.saveOrder(orderData);
+      
+      // ✅ NOVO: Positivar o cliente após salvar o pedido
+      await db.updateClientStatus(client.id, 'positivado');
       
       toast.success("Pedido finalizado com sucesso!");
       

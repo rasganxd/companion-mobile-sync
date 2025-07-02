@@ -610,31 +610,55 @@ class SQLiteDatabaseService {
   }
 
   async saveOrder(order: any): Promise<void> {
-    if (!this.db) await this.initDatabase();
-
-    try {
-      console.log('📱 Saving order to SQLite database with complete structure');
-      
-      // ✅ CORREÇÃO: Incluir todos os campos da estrutura completa
-      await this.db!.run(
-        `INSERT INTO orders (
-          id, customer_id, customer_name, sales_rep_id, code, date, due_date, status, total, discount,
-          sync_status, source_project, payment_method, payment_table_id, payments,
-          delivery_address, delivery_city, delivery_state, delivery_zip, visit_notes,
-          reason, notes, items
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          order.id, order.customer_id, order.customer_name, order.sales_rep_id, order.code,
-          order.date, order.due_date, order.status, order.total, order.discount || 0,
-          order.sync_status, order.source_project, order.payment_method, order.payment_table_id,
-          order.payments ? JSON.stringify(order.payments) : null,
-          order.delivery_address, order.delivery_city, order.delivery_state, order.delivery_zip,
-          order.visit_notes, order.reason, order.notes, JSON.stringify(order.items)
-        ]
-      );
-      console.log('✅ Order saved with complete structure');
-    } catch (error) {
-      console.error('❌ Error saving order:', error);
+    await this.ensureDatabaseInitialized();
+    
+    const query = `
+      INSERT OR REPLACE INTO orders (
+        id, customer_id, customer_name, total, status, payment_method, 
+        date, sync_status, source_project
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const values = [
+      order.id,
+      order.customer_id,
+      order.customer_name,
+      order.total,
+      order.status,
+      order.payment_method,
+      order.date,
+      order.sync_status,
+      order.source_project
+    ];
+    
+    await this.db!.run(query, values);
+    
+    // Save order items
+    if (order.items) {
+      for (const item of order.items) {
+        const itemQuery = `
+          INSERT OR REPLACE INTO order_items (
+            id, order_id, product_name, product_code, quantity, price, total
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+        
+        const itemValues = [
+          `${order.id}_${item.product_code || Date.now()}`,
+          order.id,
+          item.product_name,
+          item.product_code,
+          item.quantity,
+          item.price,
+          item.total
+        ];
+        
+        await this.db!.run(itemQuery, itemValues);
+      }
+    }
+    
+    // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é salvo
+    if (order.customer_id) {
+      await this.updateClientStatus(order.customer_id, 'positivado');
     }
   }
 
@@ -1094,6 +1118,12 @@ class SQLiteDatabaseService {
     } catch (error) {
       console.error('❌ Error saving orders to SQLite:', error);
       throw error;
+    }
+  }
+
+  private async ensureDatabaseInitialized(): Promise<void> {
+    if (!this.db) {
+      await this.initDatabase();
     }
   }
 }

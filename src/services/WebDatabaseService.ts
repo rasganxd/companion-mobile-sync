@@ -118,6 +118,11 @@ class WebDatabaseService {
   async saveOrder(order: any): Promise<void> {
     await this.ensureDatabaseInitialized();
     await this.db!.put('orders', order);
+    
+    // ✅ NOVO: Automaticamente positivar o cliente quando um pedido é salvo
+    if (order.customer_id) {
+      await this.updateClientStatus(order.customer_id, 'positivado');
+    }
   }
 
   async updateOrder(orderId: string, order: any): Promise<void> {
