@@ -136,7 +136,6 @@ const PlaceOrder = () => {
       console.log('📋 NewOrder: Loading existing order items from navigation:', existingOrderItems.length, 'items');
       setOrderItems(existingOrderItems);
       setExistingItemsLoaded(true);
-      toast.success(`${existingOrderItems.length} item(s) carregado(s) do pedido anterior`);
     }
   }, [existingOrderItems, existingItemsLoaded, setOrderItems]);
 

@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -43,12 +42,12 @@ export const useOrderManagement = () => {
 
   const addOrderItem = (item: OrderItem) => {
     setOrderItems(prev => [...prev, item]);
-    toast.success('Produto adicionado ao pedido');
+    // ✅ REMOVIDO: toast.success('Produto adicionado ao pedido');
   };
 
   const removeOrderItem = (itemId: number) => {
     setOrderItems(prev => prev.filter(item => item.id !== itemId));
-    toast.success('Item removido do pedido');
+    // ✅ REMOVIDO: toast.success('Item removido do pedido');
   };
 
   const clearCart = () => {

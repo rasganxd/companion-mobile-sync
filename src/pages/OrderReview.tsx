@@ -66,7 +66,7 @@ const OrderReview = () => {
 
   const handleRemoveItem = (id: number) => {
     setOrderItems(orderItems.filter(item => item.id !== id));
-    toast.info("Item removido do pedido");
+    // ✅ REMOVIDO: toast.info("Item removido do pedido");
   };
 
   const handleEditItem = (item: OrderItem) => {
