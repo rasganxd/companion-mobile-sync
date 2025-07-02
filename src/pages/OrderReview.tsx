@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -190,7 +191,10 @@ const OrderReview = () => {
       
       toast.success("Pedido finalizado com sucesso!");
       
-      navigate('/clients-list');
+      // 🔧 FIX: Retornar para o dia correto que foi selecionado
+      navigate('/clients-list', {
+        state: { day: day }
+      });
     } catch (error) {
       console.error("❌ OrderReview.handleFinishOrder() - Error saving order:", error);
       toast.error("Erro ao finalizar pedido");
