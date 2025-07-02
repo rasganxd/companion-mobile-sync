@@ -309,24 +309,11 @@ const PlaceOrder = () => {
           />
         </div>
 
-        {/* ✅ REMOVIDO: Lista de itens e totais - agora ficam "invisíveis" até a revisão */}
-        {/* {orderItems.length > 0 && (
-          <>
-            <NewOrderItemsList
-              orderItems={orderItems}
-              onRemoveItem={removeOrderItem}
-            />
-            <NewOrderTotals
-              total={calculateTotal()}
-            />
-          </>
-        )} */}
-
-        {/* ✅ NOVO: Indicador sutil de quantos itens foram adicionados */}
+        {/* ✅ NOVO: Indicador sutil de total acumulado do pedido */}
         {orderItems.length > 0 && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
             <div className="text-sm text-green-700 text-center">
-              {orderItems.length} produto(s) adicionado(s) ao pedido
+              Total: R$ {calculateTotal().replace('.', ',')}
             </div>
           </div>
         )}
