@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -9,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from "sonner";
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
+import { useAuth } from '@/contexts/AuthContext';
+import { v4 as uuidv4 } from 'uuid';
 
 interface OrderItem {
   id: number;
@@ -30,6 +31,7 @@ interface Client {
 const OrderReview = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { salesRep } = useAuth();
   const { orderItems: initialOrderItems, client, paymentMethod, clientId, clientName, day } = location.state || {};
   
   const [orderItems, setOrderItems] = useState<OrderItem[]>(initialOrderItems || []);
@@ -117,7 +119,9 @@ const OrderReview = () => {
       clientId: client.id,
       clientName: client.company_name || client.name,
       itemsCount: orderItems.length,
-      total: calculateTotal()
+      total: calculateTotal(),
+      salesRepId: salesRep?.id,
+      paymentMethod
     });
 
     setIsSubmitting(true);
@@ -125,44 +129,67 @@ const OrderReview = () => {
     try {
       const db = getDatabaseAdapter();
       
+      let paymentTableId = null;
+      if (paymentMethod && paymentMethod !== 'Dinheiro') {
+        try {
+          const paymentTables = await db.getPaymentTables();
+          const matchingTable = paymentTables.find(table => 
+            table.name === paymentMethod || 
+            table.name.toLowerCase() === paymentMethod.toLowerCase()
+          );
+          if (matchingTable) {
+            paymentTableId = matchingTable.id;
+            console.log('💳 OrderReview.handleFinishOrder() - Found payment table:', {
+              paymentMethod,
+              paymentTableId
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ OrderReview.handleFinishOrder() - Could not fetch payment tables:', error);
+        }
+      }
+      
       const orderData = {
-        id: `local_${Date.now()}`,
+        id: uuidv4(),
         customer_id: client.id,
         customer_name: client.company_name || client.name,
+        sales_rep_id: salesRep?.id,
+        sales_rep_name: salesRep?.name,
         total: parseFloat(calculateTotal()),
         status: 'pending',
         payment_method: paymentMethod,
+        payment_table_id: paymentTableId,
         date: new Date().toISOString(),
         sync_status: 'pending_sync',
         source_project: 'mobile',
         items: orderItems.map(item => ({
+          id: uuidv4(),
           product_name: item.productName,
           product_code: parseInt(item.code) || null,
           quantity: item.quantity,
           price: item.price,
-          total: item.price * item.quantity
+          total: item.price * item.quantity,
+          unit: item.unit
         }))
       };
 
-      console.log('💾 OrderReview.handleFinishOrder() - Calling db.saveOrder with data:', {
+      console.log('💾 OrderReview.handleFinishOrder() - Calling db.saveOrder with corrected data:', {
         orderId: orderData.id,
         customerId: orderData.customer_id,
         customerName: orderData.customer_name,
+        salesRepId: orderData.sales_rep_id,
+        salesRepName: orderData.sales_rep_name,
+        paymentTableId: orderData.payment_table_id,
         total: orderData.total,
         itemsCount: orderData.items.length
       });
 
       await db.saveOrder(orderData);
       
-      // ✅ REMOVIDO: Chamada manual dupla para updateClientStatus
-      // await db.updateClientStatus(client.id, 'positivado');
-      // A positivação agora acontece automaticamente dentro do saveOrder
-      
       console.log('✅ OrderReview.handleFinishOrder() - Order saved successfully! Client should be positivated automatically.');
       
       toast.success("Pedido finalizado com sucesso!");
       
-      // Navegar de volta para a lista de clientes
       navigate('/clients-list');
     } catch (error) {
       console.error("❌ OrderReview.handleFinishOrder() - Error saving order:", error);
