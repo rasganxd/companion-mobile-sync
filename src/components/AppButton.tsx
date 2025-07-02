@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 interface AppButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
-  variant?: 'gray' | 'purple' | 'blue' | 'orange';
+  variant?: 'gray' | 'purple' | 'blue' | 'orange' | 'green';
   fullWidth?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
@@ -28,6 +28,7 @@ const AppButton = ({
         variant === 'purple' && "bg-app-purple text-white hover:bg-purple-700 border border-purple-600",
         variant === 'blue' && "bg-app-blue text-white hover:bg-app-blue-dark border border-app-blue-dark",
         variant === 'orange' && "bg-app-orange text-white hover:bg-orange-600 border border-orange-600",
+        variant === 'green' && "bg-green-600 text-white hover:bg-green-700 border border-green-600",
         fullWidth && "w-full",
         className
       )}

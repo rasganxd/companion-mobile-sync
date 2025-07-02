@@ -279,33 +279,33 @@ const OrderReview = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="p-3 bg-white border-t shadow-lg">
-        <div className="grid grid-cols-3 gap-2">
+      <div className="p-4 bg-white border-t shadow-lg">
+        <div className="grid grid-cols-3 gap-3">
           <AppButton 
             variant="gray" 
-            className="flex items-center justify-center h-8 text-xs"
+            className="flex items-center justify-center text-sm"
             onClick={handleGoBack}
           >
-            <ArrowLeft size={14} className="mr-1" />
+            <ArrowLeft size={16} className="mr-1" />
             Voltar
           </AppButton>
           
           <AppButton 
             variant="blue" 
-            className="flex items-center justify-center h-8 text-xs"
+            className="flex items-center justify-center text-sm"
             onClick={handleAddMoreItems}
           >
-            <Plus size={14} className="mr-1" />
-            Mais Itens
+            <Plus size={16} className="mr-1" />
+            Incluir
           </AppButton>
           
           <AppButton 
-            variant="blue" 
-            className="flex items-center justify-center h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+            variant="green" 
+            className="flex items-center justify-center text-sm"
             onClick={handleFinishOrder}
             disabled={orderItems.length === 0 || isSubmitting}
           >
-            <ShoppingCart size={14} className="mr-1" />
+            <ShoppingCart size={16} className="mr-1" />
             {isSubmitting ? 'Salvando...' : 'Gravar'}
           </AppButton>
         </div>
