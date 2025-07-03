@@ -45,18 +45,88 @@ export const useDataSync = () => {
     }
   }, []);
 
+  // ✅ CORRIGIR: Implementar limpeza REAL das tabelas locais
   const clearLocalData = useCallback(async () => {
     try {
-      console.log('🗑️ Limpando dados locais para forçar sincronização completa');
+      console.log('🗑️ Iniciando limpeza COMPLETA dos dados locais...');
       const db = getDatabaseAdapter();
+      
+      // Garantir que o banco está inicializado
+      await db.initDatabase();
+      
+      // ✅ NOVO: Contar registros antes da limpeza
+      const clientsBefore = await db.getCustomers();
+      const productsBefore = await db.getProducts();
+      const paymentTablesBefore = await db.getPaymentTables();
+      const ordersBefore = await db.getAllOrders();
+      
+      console.log('📊 Dados antes da limpeza:', {
+        clients: clientsBefore.length,
+        products: productsBefore.length,
+        paymentTables: paymentTablesBefore.length,
+        orders: ordersBefore.length
+      });
+      
+      // ✅ NOVO: Limpar TODAS as tabelas principais
+      if (db.clearMockData) {
+        console.log('🧹 Limpando dados mock...');
+        await db.clearMockData();
+      }
+      
+      // ✅ NOVO: Limpar tabelas específicas se existirem métodos
+      if (db.deleteAllOrders) {
+        console.log('🗑️ Limpando todos os pedidos locais...');
+        await db.deleteAllOrders();
+      }
+      
+      // ✅ NOVO: Para SQLite, limpar tabelas diretamente
+      if (typeof (db as any).db?.run === 'function') {
+        console.log('🗑️ Limpando tabelas SQLite diretamente...');
+        const sqliteDb = (db as any).db;
+        
+        // Limpar tabelas principais preservando estrutura
+        await sqliteDb.run('DELETE FROM customers');
+        await sqliteDb.run('DELETE FROM products');
+        await sqliteDb.run('DELETE FROM payment_tables');
+        await sqliteDb.run('DELETE FROM orders');
+        
+        console.log('✅ Tabelas SQLite limpas com sucesso');
+      }
       
       // Limpar metadata de sincronização
       localStorage.removeItem('last_sync_date');
       localStorage.removeItem('sales_rep_id');
       
-      console.log('✅ Dados locais limpos com sucesso');
+      // ✅ NOVO: Validar limpeza
+      const clientsAfter = await db.getCustomers();
+      const productsAfter = await db.getProducts();
+      const paymentTablesAfter = await db.getPaymentTables();
+      const ordersAfter = await db.getAllOrders();
+      
+      console.log('📊 Dados após limpeza:', {
+        clients: clientsAfter.length,
+        products: productsAfter.length,
+        paymentTables: paymentTablesAfter.length,
+        orders: ordersAfter.length
+      });
+      
+      // ✅ NOVO: Verificar se limpeza foi bem-sucedida
+      const totalRemaining = clientsAfter.length + productsAfter.length + paymentTablesAfter.length + ordersAfter.length;
+      if (totalRemaining > 0) {
+        console.warn('⚠️ Alguns dados ainda permanecem após limpeza:', {
+          clients: clientsAfter.length,
+          products: productsAfter.length,
+          paymentTables: paymentTablesAfter.length,
+          orders: ordersAfter.length
+        });
+      } else {
+        console.log('✅ Limpeza completa: todos os dados foram removidos');
+      }
+      
+      console.log('✅ Dados locais completamente limpos');
     } catch (error) {
       console.error('❌ Erro ao limpar dados locais:', error);
+      throw new Error('Falha ao limpar dados locais: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
     }
   }, []);
 
@@ -89,7 +159,7 @@ export const useDataSync = () => {
     return clients.length > 0 || products.length > 0;
   };
 
-  // 🔄 NOVA LÓGICA: Detectar se está online e ajustar comportamento
+  // ✅ NOVA LÓGICA: Detectar se está online e ajustar comportamento
   const detectConnectivity = async (): Promise<boolean> => {
     console.log('🔍 Detecting connectivity status...');
     
@@ -156,47 +226,58 @@ export const useDataSync = () => {
         }
       }
 
-      if (forceClear) {
+      // ✅ MODIFICADO: Sempre limpar dados antes de sincronizar para evitar duplicações
+      if (forceClear || isOnline) {
+        console.log('🧹 Limpando dados locais antes da sincronização...');
         await clearLocalData();
       }
 
       let syncedClients = 0;
       let syncedProducts = 0;
       let syncedPaymentTables = 0;
-      let syncedOrders = 0; // ✅ NOVO: Contador para pedidos
+      let syncedOrders = 0;
       let clientsData: any[] = [];
       let productsData: any[] = [];
       let paymentTablesData: any[] = [];
-      let ordersData: any[] = []; // ✅ NOVO: Array para pedidos
+      let ordersData: any[] = [];
 
       // 🔄 NOVA LÓGICA: Se online, buscar dados do Supabase; se offline, usar dados locais
       if (isOnline) {
         console.log('🌐 ONLINE MODE: Fetching fresh data from Supabase...');
         
         // Etapa 1: Buscar clientes REAIS do Supabase
-        updateProgress('Carregando clientes do Supabase...', 0, 5); // Aumentar para 5 etapas
+        updateProgress('Carregando clientes do Supabase...', 0, 5);
         try {
           console.log('📥 Buscando clientes REAIS do Supabase');
           clientsData = await supabaseService.getClientsForSalesRep(salesRepId, sessionToken);
           console.log(`📥 Recebidos ${clientsData.length} clientes do Supabase`);
           
           if (clientsData.length > 0) {
+            console.log('💾 Salvando clientes no banco local...');
             await db.saveClients(clientsData);
             syncedClients = clientsData.length;
             console.log(`✅ Salvos ${syncedClients} clientes REAIS no SQLite`);
+            
+            // ✅ NOVO: Validar se dados foram salvos corretamente
+            const savedClients = await db.getCustomers();
+            const salesRepClients = savedClients.filter(c => c.sales_rep_id === salesRepId);
+            console.log(`🔍 Validação pós-salvamento: ${savedClients.length} total, ${salesRepClients.length} do vendedor`);
+            
+            if (salesRepClients.length !== clientsData.length) {
+              console.warn('⚠️ Discrepância detectada:', {
+                recebidos: clientsData.length,
+                salvos: salesRepClients.length,
+                diferenca: clientsData.length - salesRepClients.length
+              });
+            }
           } else {
             console.log('ℹ️ Nenhum cliente encontrado no Supabase');
           }
         } catch (error) {
           console.error('❌ Falha ao sincronizar clientes:', error);
-          // Tentar usar dados locais como fallback
-          try {
-            clientsData = await db.getCustomers();
-            syncedClients = clientsData.filter(c => c.sales_rep_id === salesRepId && c.active).length;
-            console.log(`🔄 Usando ${syncedClients} clientes do cache local`);
-          } catch (fallbackError) {
-            console.error('❌ Falha no fallback de clientes:', fallbackError);
-          }
+          // Não usar fallback para evitar dados antigos
+          clientsData = [];
+          syncedClients = 0;
         }
 
         // Etapa 2: Buscar produtos REAIS do Supabase
@@ -215,14 +296,8 @@ export const useDataSync = () => {
           }
         } catch (error) {
           console.error('❌ Falha ao sincronizar produtos:', error);
-          // Tentar usar dados locais como fallback
-          try {
-            productsData = await db.getProducts();
-            syncedProducts = productsData.filter(p => p.active).length;
-            console.log(`🔄 Usando ${syncedProducts} produtos do cache local`);
-          } catch (fallbackError) {
-            console.error('❌ Falha no fallback de produtos:', fallbackError);
-          }
+          productsData = [];
+          syncedProducts = 0;
         }
 
         // Etapa 3: Buscar tabelas de pagamento REAIS do Supabase
@@ -241,14 +316,8 @@ export const useDataSync = () => {
           }
         } catch (error) {
           console.warn('⚠️ Falha ao sincronizar tabelas de pagamento:', error);
-          // Tentar usar dados locais como fallback
-          try {
-            paymentTablesData = await db.getPaymentTables();
-            syncedPaymentTables = paymentTablesData.filter(pt => pt.active).length;
-            console.log(`🔄 Usando ${syncedPaymentTables} tabelas de pagamento do cache local`);
-          } catch (fallbackError) {
-            console.error('❌ Falha no fallback de tabelas de pagamento:', fallbackError);
-          }
+          paymentTablesData = [];
+          syncedPaymentTables = 0;
         }
 
         // ✅ NOVA ETAPA 4: Buscar histórico de pedidos REAIS do Supabase
@@ -267,54 +336,16 @@ export const useDataSync = () => {
           }
         } catch (error) {
           console.warn('⚠️ Falha ao sincronizar histórico de pedidos:', error);
-          // Tentar usar dados locais como fallback
-          try {
-            ordersData = await db.getAllOrders();
-            syncedOrders = ordersData.length;
-            console.log(`🔄 Usando ${syncedOrders} pedidos do cache local`);
-          } catch (fallbackError) {
-            console.error('❌ Falha no fallback de pedidos:', fallbackError);
-          }
+          ordersData = [];
+          syncedOrders = 0;
         }
         
       } else {
-        console.log('📱 OFFLINE MODE: Using previously synced local data...');
-        
-        // Usar dados já sincronizados anteriormente
-        updateProgress('Carregando dados locais...', 0, 5);
-        
-        try {
-          clientsData = await db.getCustomers();
-          syncedClients = clientsData.filter(c => c.sales_rep_id === salesRepId && c.active).length;
-          console.log(`📱 Carregados ${syncedClients} clientes do cache local`);
-        } catch (error) {
-          console.error('❌ Erro ao carregar clientes locais:', error);
-        }
-        
-        try {
-          productsData = await db.getProducts();
-          syncedProducts = productsData.filter(p => p.active).length;
-          console.log(`📱 Carregados ${syncedProducts} produtos do cache local`);
-        } catch (error) {
-          console.error('❌ Erro ao carregar produtos locais:', error);
-        }
-        
-        try {
-          paymentTablesData = await db.getPaymentTables();
-          syncedPaymentTables = paymentTablesData.filter(pt => pt.active).length;
-          console.log(`📱 Carregadas ${syncedPaymentTables} tabelas de pagamento do cache local`);
-        } catch (error) {
-          console.error('❌ Erro ao carregar tabelas de pagamento locais:', error);
-        }
-
-        // ✅ NOVO: Carregar pedidos locais também
-        try {
-          ordersData = await db.getAllOrders();
-          syncedOrders = ordersData.length;
-          console.log(`📱 Carregados ${syncedOrders} pedidos do cache local`);
-        } catch (error) {
-          console.error('❌ Erro ao carregar pedidos locais:', error);
-        }
+        console.log('📱 OFFLINE MODE: Cannot sync without connection');
+        return {
+          success: false,
+          error: 'Sem conexão com a internet. Não é possível sincronizar dados.'
+        };
       }
 
       // Validar dados sincronizados
@@ -332,7 +363,7 @@ export const useDataSync = () => {
         clients: syncedClients,
         products: syncedProducts,
         paymentTables: syncedPaymentTables,
-        orders: syncedOrders, // ✅ NOVO: Incluir no resumo
+        orders: syncedOrders,
         total: syncedClients + syncedProducts + syncedOrders,
         dataValid: isDataValid
       });
@@ -342,13 +373,11 @@ export const useDataSync = () => {
       if (totalSynced === 0) {
         return {
           success: false,
-          error: isOnline 
-            ? 'Nenhum dado encontrado no Supabase. Verifique se há clientes e produtos cadastrados para este vendedor.'
-            : 'Nenhum dado encontrado localmente. Execute uma sincronização quando houver conexão com a internet.'
+          error: 'Nenhum dado encontrado no Supabase. Verifique se há clientes e produtos cadastrados para este vendedor.'
         };
       }
 
-      console.log('✅ Sincronização concluída - Dados REAIS carregados');
+      console.log('✅ Sincronização concluída - Dados REAIS carregados sem duplicações');
       
       return {
         success: true,
@@ -400,6 +429,6 @@ export const useDataSync = () => {
     forceResync,
     loadLastSyncDate,
     clearLocalData,
-    canSync: true // Sempre pode tentar sincronizar (online ou offline)
+    canSync: true
   };
 };

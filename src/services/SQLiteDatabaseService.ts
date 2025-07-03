@@ -495,9 +495,42 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
   
     try {
-      console.log(`📱 [ANDROID] Saving ${clientsArray.length} clients to SQLite database...`);
+      console.log(`📱 [ANDROID] Salvando ${clientsArray.length} clientes no SQLite database...`);
+      
+      // ✅ NOVO: Verificar se há clientes existentes antes de salvar
+      const existingClients = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const existingCount = existingClients.values?.[0]?.count || 0;
+      
+      console.log(`📊 [ANDROID] Clientes existentes antes da inserção: ${existingCount}`);
+      
+      // ✅ NOVO: Validar dados recebidos
+      const validClients = clientsArray.filter(client => {
+        if (!client.id || !client.name) {
+          console.warn('⚠️ [ANDROID] Cliente inválido encontrado:', client);
+          return false;
+        }
+        return true;
+      });
+      
+      console.log(`📊 [ANDROID] Clientes válidos para inserção: ${validClients.length}/${clientsArray.length}`);
+      
+      // ✅ NOVO: Detectar e remover duplicatas por ID
+      const uniqueClients = validClients.reduce((acc, client) => {
+        const existingIndex = acc.findIndex(c => c.id === client.id);
+        if (existingIndex >= 0) {
+          console.warn('⚠️ [ANDROID] Cliente duplicado detectado:', client.id, client.name);
+          // Manter o mais recente (substituir)
+          acc[existingIndex] = client;
+        } else {
+          acc.push(client);
+        }
+        return acc;
+      }, [] as any[]);
+      
+      console.log(`📊 [ANDROID] Clientes únicos após deduplicação: ${uniqueClients.length}`);
   
-      for (const client of clientsArray) {
+      // Salvar cada cliente único
+      for (const client of uniqueClients) {
         let visitDaysString = null;
         if (client.visit_days) {
           if (Array.isArray(client.visit_days)) {
@@ -512,8 +545,9 @@ class SQLiteDatabaseService {
           }
         }
         
-        console.log(`📱 [ANDROID] Saving client ${client.name} with all fields`);
+        console.log(`📱 [ANDROID] Salvando cliente: ${client.name} (ID: ${client.id})`);
 
+        // ✅ CORRIGIDO: Usar INSERT OR REPLACE para garantir que duplicatas sejam substituídas
         await this.db!.run(
           `INSERT OR REPLACE INTO customers (
             id, name, company_name, code, active, phone, email, document, address, city, state,
@@ -530,10 +564,23 @@ class SQLiteDatabaseService {
           ]
         );
       }
+      
+      // ✅ NOVO: Verificar contagem final
+      const finalClients = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const finalCount = finalClients.values?.[0]?.count || 0;
+      
+      console.log(`📊 [ANDROID] Resultado final da inserção:`, {
+        clientesRecebidos: clientsArray.length,
+        clientesValidos: validClients.length,
+        clientesUnicos: uniqueClients.length,
+        existentesAntes: existingCount,
+        totalFinal: finalCount,
+        novosSalvos: finalCount - existingCount
+      });
   
-      console.log('✅ [ANDROID] All clients saved with complete structure');
+      console.log('✅ [ANDROID] Clientes salvos com estrutura completa e validação de duplicatas');
     } catch (error) {
-      console.error('❌ [ANDROID] Error saving clients:', error);
+      console.error('❌ [ANDROID] Erro ao salvar clientes:', error);
       throw error;
     }
   }
@@ -1067,15 +1114,40 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log('📱 Clearing mock data from SQLite...');
+      console.log('📱 [ANDROID] Limpando dados duplicados/mock do SQLite...');
       
-      await this.db!.run('DELETE FROM customers WHERE name LIKE ?', ['%Mock%']);
-      await this.db!.run('DELETE FROM products WHERE name LIKE ?', ['%Mock%']);
-      await this.db!.run('DELETE FROM orders WHERE customer_name LIKE ?', ['%Mock%']);
+      // Contar registros antes da limpeza
+      const clientsBefore = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const productsBefore = await this.db!.query('SELECT COUNT(*) as count FROM products');
+      const ordersBefore = await this.db!.query('SELECT COUNT(*) as count FROM orders');
       
-      console.log('✅ Mock data cleared from SQLite');
+      console.log('📊 [ANDROID] Registros antes da limpeza:', {
+        clients: clientsBefore.values?.[0]?.count || 0,
+        products: productsBefore.values?.[0]?.count || 0,
+        orders: ordersBefore.values?.[0]?.count || 0
+      });
+      
+      // Limpar todas as tabelas
+      await this.db!.run('DELETE FROM customers');
+      await this.db!.run('DELETE FROM products');
+      await this.db!.run('DELETE FROM payment_tables');
+      await this.db!.run('DELETE FROM orders');
+      
+      // Contar registros após limpeza
+      const clientsAfter = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const productsAfter = await this.db!.query('SELECT COUNT(*) as count FROM products');
+      const ordersAfter = await this.db!.query('SELECT COUNT(*) as count FROM orders');
+      
+      console.log('📊 [ANDROID] Registros após limpeza:', {
+        clients: clientsAfter.values?.[0]?.count || 0,
+        products: productsAfter.values?.[0]?.count || 0,
+        orders: ordersAfter.values?.[0]?.count || 0
+      });
+      
+      console.log('✅ [ANDROID] Dados duplicados/mock limpos do SQLite');
     } catch (error) {
-      console.error('❌ Error clearing mock data:', error);
+      console.error('❌ [ANDROID] Erro ao limpar dados:', error);
+      throw error;
     }
   }
 
