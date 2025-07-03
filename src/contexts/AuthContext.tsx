@@ -183,51 +183,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔐 AuthContext: loginWithCredentials() started for code:', code);
       
-      // Para desenvolvimento, aceitar login local com código "1"
-      if (code === '1' && password === 'senha123') {
-        console.log('🔐 AuthContext: Using local development login');
-        const salesRepData: SalesRep = {
-          id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
-          name: 'Candatti',
-          code: '1',
-          email: 'candatti@empresa.com',
-          sessionToken: 'local_dev_token_' + Date.now()
-        };
-        
-        console.log('🔐 AuthContext: Local login successful, calling login()');
-        login(salesRepData);
-        
-        // Realizar sincronização inicial com melhor tratamento de erros
-        console.log('🔐 AuthContext: Starting initial sync...');
-        toast.success('Login realizado! Carregando dados do banco...');
-        
-        try {
-          const syncResult = await performFullSync(salesRepData.id, salesRepData.sessionToken!);
-          if (syncResult.success) {
-            setNeedsInitialSync(false);
-            console.log('🔐 AuthContext: Sync completed successfully');
-            const { clients = 0, products = 0, paymentTables = 0 } = syncResult.syncedData || {};
-            
-            if (clients > 0 || products > 0) {
-              toast.success(`Dados carregados! ${clients} clientes, ${products} produtos, ${paymentTables} tabelas de pagamento`);
-            } else {
-              toast.warning('Login realizado, mas nenhum dado foi encontrado no banco para este vendedor.');
-              console.log('🔐 AuthContext: No data found for this sales rep');
-            }
-          } else {
-            console.error('🔐 AuthContext: Sync failed:', syncResult.error);
-            toast.error('Erro na sincronização: ' + (syncResult.error || 'Erro desconhecido'));
-            setNeedsInitialSync(true);
-          }
-        } catch (syncError) {
-          console.error('🔐 AuthContext: Sync error:', syncError);
-          toast.error('Erro durante a sincronização. Verifique a conexão e tente novamente.');
-          setNeedsInitialSync(true);
-        }
-        
-        return true;
-      }
-
       if (!connected) {
         // Try offline login with stored credentials
         const storedRep = localStorage.getItem('salesRep');
@@ -249,7 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
       
-      // Authenticate with Supabase
+      // Authenticate with Supabase only
       const authResult = await supabaseService.authenticateSalesRep(code, password);
       console.log('🔐 Resultado da autenticação recebido:', authResult);
       

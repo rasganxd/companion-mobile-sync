@@ -3,10 +3,10 @@ class SupabaseService {
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
 
   async authenticateSalesRep(code: string, password: string) {
-    console.log('🔐 Authenticating sales rep with improved headers:', code);
+    console.log('🔐 Authenticating sales rep via Supabase only:', code);
     
     try {
-      // Tentar API online primeiro com headers corretos
+      // Autenticação apenas via API online
       const response = await fetch(`${this.baseUrl}/mobile-auth`, {
         method: 'POST',
         headers: {
@@ -22,90 +22,25 @@ class SupabaseService {
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Online authentication successful');
+        console.log('✅ Supabase authentication successful');
         return result;
       }
       
       const errorData = await response.json().catch(() => ({ error: 'Erro de comunicação com o servidor' }));
-      console.error('❌ Online auth failed, trying local fallback:', errorData);
+      console.error('❌ Supabase auth failed:', errorData);
       
-      // Fallback para autenticação local
-      return await this.authenticateLocal(code, password);
-      
-    } catch (error) {
-      console.error('❌ Network error, trying local fallback:', error);
-      // Fallback para autenticação local
-      return await this.authenticateLocal(code, password);
-    }
-  }
-
-  private async authenticateLocal(code: string, password: string) {
-    console.log('🔄 Attempting local authentication for code:', code);
-    
-    try {
-      // Buscar dados locais de vendedores com dados reais
-      const salesReps = this.getLocalSalesReps();
-      const salesRep = salesReps.find(rep => rep.code === code);
-      
-      if (!salesRep || !salesRep.active) {
-        console.log('❌ Local auth: Sales rep not found or inactive');
-        return { 
-          success: false, 
-          error: 'Vendedor não encontrado ou inativo' 
-        };
-      }
-      
-      if (salesRep.password !== password) {
-        console.log('❌ Local auth: Invalid password');
-        return { 
-          success: false, 
-          error: 'Código ou senha incorretos' 
-        };
-      }
-      
-      console.log('✅ Local authentication successful');
-      
-      // Remover senha dos dados retornados
-      const { password: _, ...salesRepData } = salesRep;
-      
-      return { 
-        success: true, 
-        salesRep: salesRepData,
-        sessionToken: `local_${salesRep.id}_${Date.now()}`
-      };
-      
-    } catch (error) {
-      console.error('❌ Local authentication error:', error);
       return { 
         success: false, 
-        error: 'Erro na autenticação local' 
+        error: errorData.error || 'Credenciais inválidas'
+      };
+      
+    } catch (error) {
+      console.error('❌ Network error during authentication:', error);
+      return { 
+        success: false, 
+        error: 'Erro de conexão. Verifique sua internet e tente novamente.'
       };
     }
-  }
-
-  private getLocalSalesReps() {
-    // Dados de exemplo para teste local com dados reais
-    const localData = localStorage.getItem('local_sales_reps');
-    if (localData) {
-      try {
-        return JSON.parse(localData);
-      } catch (error) {
-        console.error('Error parsing local sales reps data:', error);
-      }
-    }
-
-    // Dados reais do vendedor Candatti para fallback
-    return [
-      {
-        id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48',
-        code: '1',
-        name: 'Candatti',
-        email: 'candatti@empresa.com',
-        phone: '(11) 99999-9999',
-        password: 'senha123',
-        active: true
-      }
-    ];
   }
 
   private async retryWithBackoff(attemptFn: () => Promise<Response>, maxAttempts: number = 3): Promise<Response> {

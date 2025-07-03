@@ -26,36 +26,15 @@ export class LocalSalesRepsManager {
       const data = localStorage.getItem(this.STORAGE_KEY);
       if (data) {
         const savedReps = JSON.parse(data);
-        // Always ensure Candatti is in the list with real ID
-        const hasRealData = savedReps.some((rep: LocalSalesRep) => 
-          rep.code === '1' && rep.id === 'e3eff363-2d17-4f73-9918-f53c6bc0bc48'
-        );
-        if (hasRealData) {
-          return savedReps;
-        }
+        return savedReps;
       }
     } catch (error) {
       console.error('❌ Error loading local sales reps:', error);
     }
 
-    // Return real sales rep data for Candatti with correct sales_rep_id from database
-    const realSalesRepsData = [
-      {
-        id: 'e3eff363-2d17-4f73-9918-f53c6bc0bc48', // Real ID from database
-        code: '1',
-        name: 'Candatti',
-        email: 'candatti@empresa.com',
-        phone: '(11) 99999-9999',
-        password: 'senha123',
-        active: true
-      }
-    ];
-
-    // Save for future use
-    this.saveLocalSalesReps(realSalesRepsData);
-    console.log('✅ Initialized with real Candatti data from database');
-    
-    return realSalesRepsData;
+    // Retornar array vazio se não houver dados salvos
+    console.log('📭 No local sales reps data found, returning empty array');
+    return [];
   }
 
   static addOrUpdateSalesRep(salesRep: LocalSalesRep): void {
@@ -87,16 +66,19 @@ export class LocalSalesRepsManager {
     return salesReps.find(rep => rep.code === code && rep.active) || null;
   }
 
-  // Novo método para garantir dados reais sempre disponíveis
-  static ensureRealDataAvailable(): void {
-    const existingReps = this.getLocalSalesReps();
-    const candattiExists = existingReps.some(rep => 
-      rep.code === '1' && rep.id === 'e3eff363-2d17-4f73-9918-f53c6bc0bc48'
-    );
+  // Método para salvar dados vindos do Supabase
+  static saveFromSupabase(salesRepsData: any[]): void {
+    const formattedReps: LocalSalesRep[] = salesRepsData.map(rep => ({
+      id: rep.id,
+      code: rep.code.toString(),
+      name: rep.name,
+      email: rep.email,
+      phone: rep.phone,
+      password: '', // Não armazenar senha localmente
+      active: rep.active
+    }));
     
-    if (!candattiExists) {
-      console.log('🔄 Ensuring Candatti real data is available...');
-      this.getLocalSalesReps(); // This will initialize with real data
-    }
+    this.saveLocalSalesReps(formattedReps);
+    console.log('✅ Sales reps data saved from Supabase');
   }
 }
