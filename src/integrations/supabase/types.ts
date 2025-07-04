@@ -65,6 +65,7 @@ export type Database = {
           visit_days: string[] | null
           visit_frequency: string | null
           visit_sequence: number | null
+          visit_sequences: Json | null
           zip_code: string | null
         }
         Insert: {
@@ -92,6 +93,7 @@ export type Database = {
           visit_days?: string[] | null
           visit_frequency?: string | null
           visit_sequence?: number | null
+          visit_sequences?: Json | null
           zip_code?: string | null
         }
         Update: {
@@ -119,6 +121,7 @@ export type Database = {
           visit_days?: string[] | null
           visit_frequency?: string | null
           visit_sequence?: number | null
+          visit_sequences?: Json | null
           zip_code?: string | null
         }
         Relationships: [

@@ -1,3 +1,4 @@
+
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -188,7 +189,7 @@ class SupabaseService {
   }
 
   async getProducts(sessionToken: string) {
-    console.log('📥 Fetching products from Supabase with hierarchical data');
+    console.log('🚀 [PRODUCTS SYNC LOG] SupabaseService.getProducts() - Starting products fetch');
     console.log('🔑 Using session token type:', sessionToken.startsWith('local_') ? 'LOCAL' : 'SUPABASE');
     
     // Extrair código do vendedor do localStorage
@@ -199,7 +200,7 @@ class SupabaseService {
       try {
         const parsedData = JSON.parse(salesRepData);
         salesRepCode = parsedData.code;
-        console.log('📋 Sales rep code extracted for products:', salesRepCode);
+        console.log('📋 [PRODUCTS SYNC LOG] Sales rep code extracted for products:', salesRepCode);
       } catch (error) {
         console.error('❌ Error parsing salesRep data:', error);
       }
@@ -213,14 +214,14 @@ class SupabaseService {
     
     // 🔄 NOVA LÓGICA: Sempre tentar buscar dados reais primeiro
     try {
-      console.log('🌐 Attempting to fetch REAL products with hierarchical data from Supabase...');
+      console.log('🌐 [PRODUCTS SYNC LOG] Attempting to fetch REAL products with hierarchical data from Supabase...');
       
       const requestBody = { 
         type: 'products',
         sales_rep_code: salesRepCode,
         include_hierarchy: true // ✅ NOVO: Solicitar dados hierárquicos
       };
-      console.log('📤 Sending request body:', requestBody);
+      console.log('📤 [PRODUCTS SYNC LOG] Sending request body:', requestBody);
 
       const response = await this.retryWithBackoff(() => 
         fetch(`${this.baseUrl}/mobile-data-sync`, {
@@ -234,23 +235,36 @@ class SupabaseService {
         })
       );
 
-      console.log('📡 Products sync response status:', response.status);
+      console.log('📡 [PRODUCTS SYNC LOG] Products sync response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
         const products = data.products || [];
-        console.log(`✅ Successfully fetched ${products.length} REAL products with hierarchy from Supabase`);
+        console.log(`✅ [PRODUCTS SYNC LOG] SupabaseService - Successfully received ${products.length} products from Edge Function`);
         
         // ✅ NOVO: Log para verificar se os dados hierárquicos estão chegando
         if (products.length > 0) {
-          console.log('🔍 Sample product with hierarchy:', {
+          console.log('🔍 [PRODUCTS SYNC LOG] Sample product structure received from Edge Function:', {
             name: products[0].name,
+            code: products[0].code,
+            code_type: typeof products[0].code,
+            sale_price: products[0].sale_price,
+            sale_price_type: typeof products[0].sale_price,
+            unit: products[0].unit,
+            max_discount_percent: products[0].max_discount_percent,
             group_name: products[0].group_name,
             brand_name: products[0].brand_name,
             category_name: products[0].category_name
           });
+          
+          // Log dos primeiros 5 produtos para análise
+          console.log('📋 [PRODUCTS SYNC LOG] First 5 products data types:');
+          products.slice(0, 5).forEach((product, idx) => {
+            console.log(`  ${idx + 1}. ${product.name}: code=${product.code}(${typeof product.code}), sale_price=${product.sale_price}(${typeof product.sale_price})`);
+          });
         }
         
+        console.log(`🎯 [PRODUCTS SYNC LOG] SupabaseService - Returning ${products.length} products to useDataSync`);
         return products;
       }
 
@@ -267,7 +281,7 @@ class SupabaseService {
       throw new Error(errorData.error || 'Erro ao buscar produtos do Supabase');
       
     } catch (error) {
-      console.error('❌ Failed to fetch products from Supabase:', error);
+      console.error('❌ [PRODUCTS SYNC LOG] Failed to fetch products from Supabase:', error);
       
       // 🔄 NOVA LÓGICA: Em caso de erro, verificar se há dados locais salvos
       console.log('🔍 Checking for previously synced local products...');
@@ -278,11 +292,11 @@ class SupabaseService {
         const localProducts = await db.getProducts();
         
         if (localProducts && localProducts.length > 0) {
-          console.log(`✅ Found ${localProducts.length} previously synced products in local database`);
+          console.log(`✅ [PRODUCTS SYNC LOG] Found ${localProducts.length} previously synced products in local database`);
           return localProducts.filter(product => product.active);
         }
         
-        console.log('📭 No previously synced products found in local database');
+        console.log('📭 [PRODUCTS SYNC LOG] No previously synced products found in local database');
         
       } catch (dbError) {
         console.error('❌ Error accessing local database:', dbError);

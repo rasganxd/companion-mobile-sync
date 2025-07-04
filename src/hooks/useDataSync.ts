@@ -283,19 +283,55 @@ export const useDataSync = () => {
         // Etapa 2: Buscar produtos REAIS do Supabase
         updateProgress('Carregando produtos do Supabase...', 1, 5);
         try {
-          console.log('📥 Buscando produtos REAIS do Supabase');
+          console.log('🚀 [PRODUCTS SYNC LOG] useDataSync - Starting products sync from SupabaseService');
           productsData = await supabaseService.getProducts(sessionToken);
-          console.log(`📥 Recebidos ${productsData.length} produtos do Supabase`);
+          console.log(`📥 [PRODUCTS SYNC LOG] useDataSync - Received ${productsData.length} products from SupabaseService`);
           
           if (productsData.length > 0) {
+            console.log('🔍 [PRODUCTS SYNC LOG] useDataSync - Sample product structure before saving:');
+            const sampleProduct = productsData[0];
+            console.log({
+              name: sampleProduct.name,
+              code: sampleProduct.code,
+              code_type: typeof sampleProduct.code,
+              sale_price: sampleProduct.sale_price,
+              sale_price_type: typeof sampleProduct.sale_price,
+              active: sampleProduct.active,
+              unit: sampleProduct.unit,
+              max_discount_percent: sampleProduct.max_discount_percent
+            });
+            
+            console.log('💾 [PRODUCTS SYNC LOG] useDataSync - Calling db.saveProducts()...');
             await db.saveProducts(productsData);
             syncedProducts = productsData.length;
-            console.log(`✅ Salvos ${syncedProducts} produtos REAIS no SQLite`);
+            console.log(`✅ [PRODUCTS SYNC LOG] useDataSync - db.saveProducts() completed, should have saved ${syncedProducts} products`);
+            
+            // ✅ NOVO: Validar se dados foram salvos corretamente
+            console.log('🔍 [PRODUCTS SYNC LOG] useDataSync - Validating saved products...');
+            const savedProducts = await db.getProducts();
+            console.log(`📊 [PRODUCTS SYNC LOG] useDataSync - Validation: ${savedProducts.length} products found in database after save`);
+            
+            if (savedProducts.length !== productsData.length) {
+              console.warn('⚠️ [PRODUCTS SYNC LOG] useDataSync - Discrepancy detected:', {
+                recebidos: productsData.length,
+                salvos: savedProducts.length,
+                diferenca: productsData.length - savedProducts.length
+              });
+              
+              // Log dos primeiros produtos salvos para debug
+              console.log('🔍 [PRODUCTS SYNC LOG] Sample of first 3 saved products:');
+              savedProducts.slice(0, 3).forEach((product, idx) => {
+                console.log(`  ${idx + 1}. ${product.name}: code=${product.code}(${typeof product.code}), sale_price=${product.sale_price}(${typeof product.sale_price})`);
+              });
+            } else {
+              console.log('✅ [PRODUCTS SYNC LOG] useDataSync - Perfect match: all products saved successfully');
+            }
           } else {
-            console.log('ℹ️ Nenhum produto encontrado no Supabase');
+            console.log('ℹ️ [PRODUCTS SYNC LOG] useDataSync - No products received from SupabaseService');
           }
         } catch (error) {
-          console.error('❌ Falha ao sincronizar produtos:', error);
+          console.error('❌ [PRODUCTS SYNC LOG] useDataSync - Failed to sync products:', error);
+          // Não usar fallback para evitar dados antigos
           productsData = [];
           syncedProducts = 0;
         }

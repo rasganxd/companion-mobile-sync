@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -92,25 +91,45 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
 
   const loadProducts = async () => {
     try {
+      console.log('🚀 [PRODUCT SELECTION LOG] Starting loadProducts()');
       const db = getDatabaseAdapter();
       const productsData = await db.getProducts();
-      console.log('📦 [ANDROID] Produtos carregados do banco local:', productsData);
+      console.log('📦 [PRODUCT SELECTION LOG] Raw products from database:', productsData.length);
+      
+      // ✅ NOVO: Log estatísticas detalhadas dos produtos carregados
+      console.log('📊 [PRODUCT SELECTION LOG] Products loaded from SQLite:');
+      console.log(`  - Total products: ${productsData.length}`);
+      
+      // Sample dos primeiros produtos
+      if (productsData.length > 0) {
+        console.log('🔍 [PRODUCT SELECTION LOG] First 3 products from SQLite:');
+        productsData.slice(0, 3).forEach((product, idx) => {
+          console.log(`  ${idx + 1}. ${product.name}: code=${product.code}(${typeof product.code}), sale_price=${product.sale_price}(${typeof product.sale_price}), unit=${product.unit}`);
+        });
+      }
       
       // Validar que apenas produtos reais são carregados
       const validProducts = productsData.filter(product => {
         const isValid = product.id && 
                        product.name && 
-                       typeof product.sale_price === 'number' &&
-                       typeof product.code === 'number';
+                       (typeof product.sale_price === 'number' || (typeof product.sale_price === 'string' && !isNaN(parseFloat(product.sale_price)))) &&
+                       (typeof product.code === 'number' || (typeof product.code === 'string' && !isNaN(parseInt(product.code))));
         
         if (!isValid) {
-          console.warn('⚠️ Produto inválido filtrado:', product);
+          console.warn('⚠️ [PRODUCT SELECTION LOG] Invalid product filtered:', {
+            name: product.name,
+            id: product.id,
+            sale_price: product.sale_price,
+            sale_price_type: typeof product.sale_price,
+            code: product.code,
+            code_type: typeof product.code
+          });
         }
         
         return isValid;
       });
       
-      console.log(`✅ [ANDROID] ${validProducts.length} produtos válidos carregados (filtrados de ${productsData.length} total)`);
+      console.log(`✅ [PRODUCT SELECTION LOG] ${validProducts.length} valid products after filtering (from ${productsData.length} total)`);
       
       // ✅ CORREÇÃO: Normalizar produtos garantindo que unidades sejam preservadas
       const normalizedProducts = validProducts.map(product => {
@@ -131,7 +150,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         
         // ✅ DEBUG: Log produtos com unidades diferentes de 'UN'
         if (product.unit && product.unit !== 'UN') {
-          console.log(`📦 [ANDROID] Produto com unidade especial:`, {
+          console.log(`📦 [PRODUCT SELECTION LOG] Product with special unit:`, {
             name: product.name,
             code: product.code,
             unit: product.unit,
@@ -145,7 +164,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       });
       
       // ✅ NOVO: Implementar ordenação hierárquica (Grupo → Marca → Categoria → Nome)
-      console.log('🔄 [ANDROID] Aplicando ordenação hierárquica: Grupo → Marca → Categoria → Nome');
+      console.log('🔄 [PRODUCT SELECTION LOG] Applying hierarchical order: Grupo → Marca → Categoria → Nome');
       
       const hierarchicallySortedProducts = normalizedProducts.sort((a, b) => {
         // 1. Primeiro por Grupo
@@ -164,7 +183,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         return a.name.localeCompare(b.name);
       });
       
-      console.log('✅ [ANDROID] Produtos ordenados hierarquicamente:', {
+      console.log('✅ [PRODUCT SELECTION LOG] Products sorted hierarchically:', {
         total: hierarchicallySortedProducts.length,
         firstProduct: {
           name: hierarchicallySortedProducts[0]?.name,
@@ -189,7 +208,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
         return stats;
       }, {} as Record<string, number>);
       
-      console.log('📊 [ANDROID] Estatísticas de unidades dos produtos:', unitStats);
+      console.log('📊 [PRODUCT SELECTION LOG] Unit statistics of products:', unitStats);
       
       // Agrupar produtos por categoria (mantendo para compatibilidade com componentes existentes)
       const groupedByCategory: Record<string, ProductsByCategory> = hierarchicallySortedProducts.reduce((acc, product) => {
@@ -211,17 +230,19 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       // Converter para array e manter ordem hierárquica
       const categoriesArray = Object.values(groupedByCategory);
 
-      console.log('📂 [ANDROID] Produtos agrupados por categoria (mantendo ordem hierárquica):', categoriesArray);
+      console.log('📂 [PRODUCT SELECTION LOG] Products grouped by category (maintaining hierarchical order):', categoriesArray);
       
       setProductsByCategory(categoriesArray);
       
       // ✅ MODIFICADO: Usar produtos já ordenados hierarquicamente
       setProducts(hierarchicallySortedProducts);
       
+      console.log(`🎯 [PRODUCT SELECTION LOG] Final products loaded: ${hierarchicallySortedProducts.length}`);
+      
       // ✅ DEBUG: Log detalhado dos produtos para debug de unidades
       hierarchicallySortedProducts.forEach((product, index) => {
         if (index < 10 && product.unit !== 'UN') { // Log primeiros 10 produtos com unidades especiais
-          console.log(`📦 [ANDROID] Produto ${index + 1} COM UNIDADE ESPECIAL:`, {
+          console.log(`📦 [PRODUCT SELECTION LOG] Product ${index + 1} WITH SPECIAL UNIT:`, {
             id: product.id,
             name: product.name,
             code: product.code,
@@ -236,7 +257,7 @@ export const useProductSelection = (onAddItem: (item: OrderItem) => void) => {
       });
       
     } catch (error) {
-      console.error('❌ [ANDROID] Erro ao carregar produtos:', error);
+      console.error('❌ [PRODUCT SELECTION LOG] Error loading products:', error);
       toast.error('Erro ao carregar produtos');
     }
   };

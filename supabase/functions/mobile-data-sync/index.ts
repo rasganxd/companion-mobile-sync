@@ -145,7 +145,7 @@ serve(async (req) => {
     }
 
     if (type === 'products') {
-      console.log('📥 Fetching REAL products with units and pricing restrictions from database');
+      console.log('🚀 [PRODUCTS SYNC LOG] Starting products fetch from Supabase database');
       
       const { data: products, error } = await supabase
         .from('products')
@@ -167,27 +167,35 @@ serve(async (req) => {
         `)
         .eq('active', true);
 
+      console.log('🔍 [PRODUCTS SYNC LOG] Edge Function - Raw Supabase query result:');
+      console.log(`  - Error: ${error ? JSON.stringify(error) : 'None'}`);
+      console.log(`  - Products count: ${products?.length || 0}`);
+      
       if (error) {
-        console.error('❌ Error fetching products from DB:', error);
+        console.error('❌ [PRODUCTS SYNC LOG] Error fetching products from DB:', error);
         return new Response(
           JSON.stringify({ error: 'Erro ao buscar produtos do banco de dados: ' + error.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      console.log(`✅ Successfully fetched ${products?.length || 0} products from database`);
-      console.log('📊 Real products data sample:', products?.slice(0, 2));
-
       if (!products || products.length === 0) {
-        console.log('ℹ️ No products found in database');
+        console.log('📭 [PRODUCTS SYNC LOG] No products found in database');
         return new Response(
           JSON.stringify({ products: [], message: 'Nenhum produto encontrado no banco de dados' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      console.log(`🎯 [PRODUCTS SYNC LOG] Edge Function - Got ${products.length} products from Supabase`);
+      console.log('📋 [PRODUCTS SYNC LOG] Sample of first 3 products from Supabase:');
+      products.slice(0, 3).forEach((product, idx) => {
+        console.log(`  ${idx + 1}. ID: ${product.id}, Name: ${product.name}, Code: ${product.code}, Sale Price: ${product.sale_price}, Type: ${typeof product.sale_price}`);
+      });
+
       // Transform products to include proper unit information and pricing restrictions
-      const transformedProducts = products.map(product => {
+      console.log('🔄 [PRODUCTS SYNC LOG] Starting product transformation...');
+      const transformedProducts = products.map((product, index) => {
         const hasSubunit = product.sub_unit_id && product.sub_unit;
         let subunitRatio = 1;
         
@@ -196,12 +204,7 @@ serve(async (req) => {
           subunitRatio = product.main_unit.package_quantity / product.sub_unit.package_quantity;
         }
         
-        console.log(`🔍 Product ${product.name} pricing data:`, {
-          max_discount_percent: product.max_discount_percent,
-          sale_price: product.sale_price
-        });
-        
-        return {
+        const transformed = {
           id: product.id,
           code: product.code,
           name: product.name,
@@ -220,18 +223,45 @@ serve(async (req) => {
           main_unit_id: product.main_unit_id,
           sub_unit_id: product.sub_unit_id
         };
+
+        // Log alguns produtos transformados para debug
+        if (index < 3) {
+          console.log(`📝 [PRODUCTS SYNC LOG] Transformed product ${index + 1}:`, {
+            id: transformed.id,
+            name: transformed.name,
+            code: transformed.code,
+            sale_price: transformed.sale_price,
+            sale_price_type: typeof transformed.sale_price,
+            code_type: typeof transformed.code,
+            unit: transformed.unit,
+            max_discount_percent: transformed.max_discount_percent
+          });
+        }
+
+        return transformed;
       });
 
-      console.log(`✅ Returning ${transformedProducts.length} REAL products with unit and pricing information`);
+      console.log(`✅ [PRODUCTS SYNC LOG] Edge Function - Transformation completed: ${transformedProducts.length} products`);
       
       // Log produtos com restrições de preço para debug
       const productsWithRestrictions = transformedProducts.filter(p => 
         (p.max_discount_percent && p.max_discount_percent > 0)
       );
-      console.log(`📊 Products with pricing restrictions: ${productsWithRestrictions.length}`);
-      productsWithRestrictions.forEach(p => {
-        console.log(`  - ${p.name}: max_discount=${p.max_discount_percent}%`);
-      });
+      console.log(`🎯 [PRODUCTS SYNC LOG] Products with pricing restrictions: ${productsWithRestrictions.length}`);
+      
+      // Log sample de produtos com diferentes tipos de dados
+      const productDataTypes = transformedProducts.slice(0, 5).map(p => ({
+        name: p.name,
+        code: p.code,
+        code_type: typeof p.code,
+        sale_price: p.sale_price,
+        sale_price_type: typeof p.sale_price,
+        active: p.active,
+        active_type: typeof p.active
+      }));
+      console.log('🔍 [PRODUCTS SYNC LOG] Data types sample:', productDataTypes);
+      
+      console.log(`🚀 [PRODUCTS SYNC LOG] Edge Function - Returning ${transformedProducts.length} transformed products to client`);
       
       return new Response(
         JSON.stringify({ products: transformedProducts }),
