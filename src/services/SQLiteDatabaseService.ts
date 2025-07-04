@@ -589,28 +589,119 @@ class SQLiteDatabaseService {
     if (!this.db) await this.initDatabase();
 
     try {
-      console.log(`📱 Saving ${productsArray.length} products to SQLite database...`);
+      console.log(`📱 [PRODUCTS SAVE LOG] Starting to save ${productsArray.length} products to SQLite database...`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      let lastError: Error | null = null;
 
-      for (const product of productsArray) {
-        await this.db!.run(
-          `INSERT OR REPLACE INTO products (
-            id, name, code, sale_price, cost_price, stock, active, unit, has_subunit, subunit,
-            subunit_ratio, max_discount_percent, category_id, category_name, group_name, brand_name,
-            main_unit_id, sub_unit_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            product.id, product.name, product.code, product.sale_price, product.cost_price,
-            product.stock, product.active, product.unit, product.has_subunit, product.subunit,
-            product.subunit_ratio, product.max_discount_percent, product.category_id,
-            product.category_name, product.group_name, product.brand_name,
-            product.main_unit_id, product.sub_unit_id
-          ]
-        );
+      for (let i = 0; i < productsArray.length; i++) {
+        const product = productsArray[i];
+        
+        try {
+          // ✅ CORREÇÃO CRÍTICA: Tratar tipos adequadamente
+          const processedProduct = {
+            id: product.id || '',
+            name: product.name || '',
+            code: product.code || 0,
+            sale_price: typeof product.sale_price === 'number' ? product.sale_price : parseFloat(product.sale_price) || 0,
+            cost_price: typeof product.cost_price === 'number' ? product.cost_price : parseFloat(product.cost_price) || 0,
+            stock: typeof product.stock === 'number' ? product.stock : parseFloat(product.stock) || 0,
+            active: product.active === true || product.active === 1 ? 1 : 0,
+            unit: typeof product.unit === 'string' ? product.unit : 'UN',
+            // ✅ CORREÇÃO CRÍTICA: has_subunit deve ser boolean/number, não objeto
+            has_subunit: product.has_subunit === true || product.has_subunit === 1 ? 1 : 0,
+            // ✅ CORREÇÃO CRÍTICA: subunit deve ser string simples, não objeto
+            subunit: typeof product.subunit === 'string' ? product.subunit : null,
+            subunit_ratio: typeof product.subunit_ratio === 'number' ? product.subunit_ratio : parseFloat(product.subunit_ratio) || 1,
+            max_discount_percent: product.max_discount_percent !== null && product.max_discount_percent !== undefined ? 
+              (typeof product.max_discount_percent === 'number' ? product.max_discount_percent : parseFloat(product.max_discount_percent)) : null,
+            category_id: product.category_id || null,
+            category_name: product.category_name || null,
+            group_name: product.group_name || null,
+            brand_name: product.brand_name || null,
+            main_unit_id: product.main_unit_id || null,
+            sub_unit_id: product.sub_unit_id || null
+          };
+
+          // ✅ VALIDAÇÃO: Log do produto sendo processado
+          if (i < 10 || i % 50 === 0) { // Log os primeiros 10 e depois a cada 50
+            console.log(`📝 [PRODUCTS SAVE LOG] Processing product ${i + 1}/${productsArray.length}: ${processedProduct.name} (code: ${processedProduct.code})`);
+            console.log(`  - has_subunit: ${processedProduct.has_subunit} (type: ${typeof processedProduct.has_subunit})`);
+            console.log(`  - subunit: ${processedProduct.subunit} (type: ${typeof processedProduct.subunit})`);
+            console.log(`  - unit: ${processedProduct.unit}`);
+          }
+
+          await this.db!.run(
+            `INSERT OR REPLACE INTO products (
+              id, name, code, sale_price, cost_price, stock, active, unit, has_subunit, subunit,
+              subunit_ratio, max_discount_percent, category_id, category_name, group_name, brand_name,
+              main_unit_id, sub_unit_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              processedProduct.id,
+              processedProduct.name,
+              processedProduct.code,
+              processedProduct.sale_price,
+              processedProduct.cost_price,
+              processedProduct.stock,
+              processedProduct.active,
+              processedProduct.unit,
+              processedProduct.has_subunit,
+              processedProduct.subunit,
+              processedProduct.subunit_ratio,
+              processedProduct.max_discount_percent,
+              processedProduct.category_id,
+              processedProduct.category_name,
+              processedProduct.group_name,
+              processedProduct.brand_name,
+              processedProduct.main_unit_id,
+              processedProduct.sub_unit_id
+            ]
+          );
+
+          successCount++;
+          
+        } catch (error) {
+          errorCount++;
+          lastError = error as Error;
+          console.error(`❌ [PRODUCTS SAVE LOG] Error saving product ${i + 1} (${product.name}):`, error);
+          console.error(`❌ [PRODUCTS SAVE LOG] Problematic product data:`, {
+            id: product.id,
+            name: product.name,
+            code: product.code,
+            has_subunit: product.has_subunit,
+            has_subunit_type: typeof product.has_subunit,
+            subunit: product.subunit,
+            subunit_type: typeof product.subunit,
+            unit: product.unit,
+            main_unit_id: product.main_unit_id,
+            sub_unit_id: product.sub_unit_id
+          });
+          
+          // Continue com o próximo produto ao invés de parar tudo
+          continue;
+        }
       }
 
-      console.log('✅ All products saved with complete structure');
+      console.log(`📊 [PRODUCTS SAVE LOG] Save operation completed:`, {
+        total: productsArray.length,
+        success: successCount,
+        errors: errorCount,
+        successRate: `${((successCount / productsArray.length) * 100).toFixed(1)}%`
+      });
+
+      if (errorCount > 0 && lastError) {
+        console.warn(`⚠️ [PRODUCTS SAVE LOG] ${errorCount} products failed to save. Last error: ${lastError.message}`);
+      }
+
+      if (successCount === 0) {
+        throw new Error(`Failed to save any products. Last error: ${lastError?.message || 'Unknown error'}`);
+      }
+
+      console.log(`✅ [PRODUCTS SAVE LOG] Successfully saved ${successCount}/${productsArray.length} products with improved type handling`);
     } catch (error) {
-      console.error('❌ Error saving products:', error);
+      console.error('❌ [PRODUCTS SAVE LOG] Critical error in saveProducts:', error);
       throw error;
     }
   }
