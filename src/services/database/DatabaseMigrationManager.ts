@@ -1,4 +1,5 @@
 
+
 import { SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 interface MigrationResult {
@@ -70,12 +71,12 @@ export class DatabaseMigrationManager {
   private static async migrateToVersion1(db: SQLiteDBConnection): Promise<void> {
     console.log('📱 [MIGRATION] Migrating to version 1 - Adding basic fields');
     
-    // Adicionar campos básicos que podem estar faltando
+    // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
     const migrations = [
-      'ALTER TABLE customers ADD COLUMN email TEXT',
-      'ALTER TABLE customers ADD COLUMN document TEXT',
-      'ALTER TABLE customers ADD COLUMN zip_code TEXT',
-      'ALTER TABLE customers ADD COLUMN neighborhood TEXT',
+      'ALTER TABLE clients ADD COLUMN email TEXT',
+      'ALTER TABLE clients ADD COLUMN document TEXT',
+      'ALTER TABLE clients ADD COLUMN zip_code TEXT',
+      'ALTER TABLE clients ADD COLUMN neighborhood TEXT',
       'ALTER TABLE orders ADD COLUMN code INTEGER',
       'ALTER TABLE orders ADD COLUMN due_date DATETIME'
     ];
@@ -93,12 +94,13 @@ export class DatabaseMigrationManager {
   private static async migrateToVersion2(db: SQLiteDBConnection): Promise<void> {
     console.log('📱 [MIGRATION] Migrating to version 2 - Adding extended fields');
     
+    // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
     const migrations = [
-      'ALTER TABLE customers ADD COLUMN credit_limit NUMERIC',
-      'ALTER TABLE customers ADD COLUMN visit_frequency TEXT',
-      'ALTER TABLE customers ADD COLUMN payment_terms TEXT',
-      'ALTER TABLE customers ADD COLUMN region TEXT',
-      'ALTER TABLE customers ADD COLUMN category TEXT',
+      'ALTER TABLE clients ADD COLUMN credit_limit NUMERIC',
+      'ALTER TABLE clients ADD COLUMN visit_frequency TEXT',
+      'ALTER TABLE clients ADD COLUMN payment_terms TEXT',
+      'ALTER TABLE clients ADD COLUMN region TEXT',
+      'ALTER TABLE clients ADD COLUMN category TEXT',
       'ALTER TABLE orders ADD COLUMN discount REAL DEFAULT 0',
       'ALTER TABLE orders ADD COLUMN payments TEXT',
       'ALTER TABLE orders ADD COLUMN delivery_address TEXT',
@@ -160,9 +162,9 @@ export class DatabaseMigrationManager {
       )
     `);
 
-    // Criar índices para performance
+    // ✅ CORRIGIDO: Usar 'clients' como nome da tabela nos índices
     const indexes = [
-      'CREATE INDEX IF NOT EXISTS idx_customers_sales_rep_id ON customers(sales_rep_id)',
+      'CREATE INDEX IF NOT EXISTS idx_clients_sales_rep_id ON clients(sales_rep_id)',
       'CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id)',
       'CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id)',
       'CREATE INDEX IF NOT EXISTS idx_products_code ON products(code)'
@@ -177,3 +179,4 @@ export class DatabaseMigrationManager {
     }
   }
 }
+

@@ -1,3 +1,4 @@
+
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
@@ -171,9 +172,9 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Creating SQLite tables...');
 
-      // ✅ NOVA ESTRUTURA: Tabela customers COMPLETA
+      // ✅ CORRIGIDO: Usar 'clients' como nome da tabela para consistência
       await this.db.execute(`
-        CREATE TABLE IF NOT EXISTS customers (
+        CREATE TABLE IF NOT EXISTS clients (
           id TEXT PRIMARY KEY,
           name TEXT NOT NULL,
           company_name TEXT,
@@ -315,7 +316,7 @@ class SQLiteDatabaseService {
 
     try {
       console.log('📱 [ANDROID] Getting clients from SQLite database...');
-      const result = await this.db!.query('SELECT * FROM customers');
+      const result = await this.db!.query('SELECT * FROM clients');
       
       logAndroidDebug('getClients result', result);
       
@@ -498,7 +499,7 @@ class SQLiteDatabaseService {
       console.log(`📱 [ANDROID] Salvando ${clientsArray.length} clientes no SQLite database...`);
       
       // ✅ NOVO: Verificar se há clientes existentes antes de salvar
-      const existingClients = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const existingClients = await this.db!.query('SELECT COUNT(*) as count FROM clients');
       const existingCount = existingClients.values?.[0]?.count || 0;
       
       console.log(`📊 [ANDROID] Clientes existentes antes da inserção: ${existingCount}`);
@@ -549,7 +550,7 @@ class SQLiteDatabaseService {
 
         // ✅ CORRIGIDO: Usar INSERT OR REPLACE para garantir que duplicatas sejam substituídas
         await this.db!.run(
-          `INSERT OR REPLACE INTO customers (
+          `INSERT OR REPLACE INTO clients (
             id, name, company_name, code, active, phone, email, document, address, city, state,
             zip_code, neighborhood, visit_days, visit_sequence, visit_frequency, sales_rep_id, 
             delivery_route_id, credit_limit, payment_terms, region, category, notes, status
@@ -566,7 +567,7 @@ class SQLiteDatabaseService {
       }
       
       // ✅ NOVO: Verificar contagem final
-      const finalClients = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const finalClients = await this.db!.query('SELECT COUNT(*) as count FROM clients');
       const finalCount = finalClients.values?.[0]?.count || 0;
       
       console.log(`📊 [ANDROID] Resultado final da inserção:`, {
@@ -828,10 +829,10 @@ class SQLiteDatabaseService {
           'UPDATE orders SET sync_status = ? WHERE id = ?',
           [status, id]
         );
-      } else if (table === 'customers') {
-        // Para customers, podemos atualizar um campo de status se necessário
+      } else if (table === 'clients') {
+        // Para clients, podemos atualizar um campo de status se necessário
         await this.db!.run(
-          'UPDATE customers SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+          'UPDATE clients SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
           [id]
         );
       }
@@ -880,6 +881,7 @@ class SQLiteDatabaseService {
           newStatus: status
         });
         
+        // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
         const sql = `UPDATE clients SET status = ?, updated_at = ? WHERE id = ?`;
         const updatedAt = new Date().toISOString();
         
@@ -956,7 +958,8 @@ class SQLiteDatabaseService {
     try {
       console.log(`📱 Getting client by ID: ${clientId}`);
       
-      const result = await this.db!.query('SELECT * FROM customers WHERE id = ?', [clientId]);
+      // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
+      const result = await this.db!.query('SELECT * FROM clients WHERE id = ?', [clientId]);
       const clients = ensureTypedArray(result.values || result, (item: any) => !!item?.id);
       
       if (clients.length === 0) return null;
@@ -1208,7 +1211,7 @@ class SQLiteDatabaseService {
       console.log('📱 [ANDROID] Limpando dados duplicados/mock do SQLite...');
       
       // Contar registros antes da limpeza
-      const clientsBefore = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const clientsBefore = await this.db!.query('SELECT COUNT(*) as count FROM clients');
       const productsBefore = await this.db!.query('SELECT COUNT(*) as count FROM products');
       const ordersBefore = await this.db!.query('SELECT COUNT(*) as count FROM orders');
       
@@ -1218,14 +1221,14 @@ class SQLiteDatabaseService {
         orders: ordersBefore.values?.[0]?.count || 0
       });
       
-      // Limpar todas as tabelas
-      await this.db!.run('DELETE FROM customers');
+      // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
+      await this.db!.run('DELETE FROM clients');
       await this.db!.run('DELETE FROM products');
       await this.db!.run('DELETE FROM payment_tables');
       await this.db!.run('DELETE FROM orders');
       
       // Contar registros após limpeza
-      const clientsAfter = await this.db!.query('SELECT COUNT(*) as count FROM customers');
+      const clientsAfter = await this.db!.query('SELECT COUNT(*) as count FROM clients');
       const productsAfter = await this.db!.query('SELECT COUNT(*) as count FROM products');
       const ordersAfter = await this.db!.query('SELECT COUNT(*) as count FROM orders');
       
@@ -1259,8 +1262,9 @@ class SQLiteDatabaseService {
     try {
       console.log('📱 Resetting all negated clients status...');
       
+      // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
       await this.db!.run(
-        'UPDATE customers SET status = ? WHERE status = ?',
+        'UPDATE clients SET status = ? WHERE status = ?',
         ['pendente', 'negado']
       );
       
