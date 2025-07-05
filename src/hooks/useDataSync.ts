@@ -45,7 +45,7 @@ export const useDataSync = () => {
     }
   }, []);
 
-  // ✅ CORRIGIR: Implementar limpeza REAL das tabelas locais
+  // ✅ CORRIGIDO: Implementar limpeza REAL das tabelas locais com referências corretas
   const clearLocalData = useCallback(async () => {
     try {
       console.log('🗑️ Iniciando limpeza COMPLETA dos dados locais...');
@@ -79,13 +79,13 @@ export const useDataSync = () => {
         await db.deleteAllOrders();
       }
       
-      // ✅ NOVO: Para SQLite, limpar tabelas diretamente
+      // ✅ CORRIGIDO: Para SQLite, limpar tabelas diretamente usando 'clients' ao invés de 'customers'
       if (typeof (db as any).db?.run === 'function') {
         console.log('🗑️ Limpando tabelas SQLite diretamente...');
         const sqliteDb = (db as any).db;
         
-        // Limpar tabelas principais preservando estrutura
-        await sqliteDb.run('DELETE FROM customers');
+        // ✅ CORREÇÃO CRÍTICA: Usar 'clients' ao invés de 'customers'
+        await sqliteDb.run('DELETE FROM clients');
         await sqliteDb.run('DELETE FROM products');
         await sqliteDb.run('DELETE FROM payment_tables');
         await sqliteDb.run('DELETE FROM orders');

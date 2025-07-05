@@ -1,4 +1,3 @@
-
 import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { Capacitor } from '@capacitor/core';
 import { ensureTypedArray, safeJsonParse, validateOrderData, logAndroidDebug, safeCast } from '@/utils/androidDataValidator';
@@ -1221,7 +1220,7 @@ class SQLiteDatabaseService {
         orders: ordersBefore.values?.[0]?.count || 0
       });
       
-      // ✅ CORRIGIDO: Usar 'clients' como nome da tabela
+      // ✅ CORREÇÃO CRÍTICA: Usar 'clients' consistentemente
       await this.db!.run('DELETE FROM clients');
       await this.db!.run('DELETE FROM products');
       await this.db!.run('DELETE FROM payment_tables');
