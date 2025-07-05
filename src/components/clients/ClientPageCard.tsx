@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User, Building, Phone, MapPin, Hash, ArrowRight, FileText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -89,7 +90,7 @@ const ClientPageCard: React.FC<ClientPageCardProps> = ({
               {client.company_name || client.name}
             </h2>
             {client.company_name && client.name && <p className="font-bold text-gray-900 mb-1 text-sm">
-                Nome Fantasia: {client.name}
+                {client.name}
               </p>}
           </div>
 
