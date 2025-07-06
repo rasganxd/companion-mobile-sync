@@ -24,16 +24,88 @@ export class MockDataDetector {
     '7ae3c3f1-21f4-414d-ab6c-66de674e57df' // SKOL PROFISSA 300ML que aparece mas não existe no Supabase
   ];
 
+  // ✅ NOVA FUNÇÃO: Detectar clientes órfãos (sem sales_rep_id válido)
+  static isOrphanClient(client: any, validSalesRepIds: string[]): boolean {
+    if (!client?.sales_rep_id) {
+      console.log('🚫 [ORPHAN DETECTOR] Cliente sem sales_rep_id:', client?.name);
+      return true;
+    }
+    
+    if (!validSalesRepIds.includes(client.sales_rep_id)) {
+      console.log('🚫 [ORPHAN DETECTOR] Cliente com sales_rep_id inválido:', {
+        clientName: client.name,
+        salesRepId: client.sales_rep_id,
+        validIds: validSalesRepIds
+      });
+      return true;
+    }
+    
+    return false;
+  }
+
+  // ✅ NOVA FUNÇÃO: Detectar dados duplicados
+  static findDuplicateClients(clients: any[]): { duplicates: any[], unique: any[] } {
+    const seen = new Set();
+    const duplicates: any[] = [];
+    const unique: any[] = [];
+    
+    clients.forEach(client => {
+      if (seen.has(client.id)) {
+        duplicates.push(client);
+        console.log('🔍 [DUPLICATE DETECTOR] Cliente duplicado encontrado:', client.name, client.id);
+      } else {
+        seen.add(client.id);
+        unique.push(client);
+      }
+    });
+    
+    return { duplicates, unique };
+  }
+
+  // ✅ FUNÇÃO MELHORADA: Validar estrutura de dados do cliente
+  static isValidClientStructure(client: any): boolean {
+    if (!client) {
+      console.log('❌ [CLIENT VALIDATOR] Cliente é null/undefined');
+      return false;
+    }
+
+    const validationChecks = {
+      hasId: !!client.id,
+      hasName: !!client.name,
+      hasValidSalesRepId: !!client.sales_rep_id,
+      idIsUuid: typeof client.id === 'string' && client.id.length === 36,
+      salesRepIdIsUuid: typeof client.sales_rep_id === 'string' && client.sales_rep_id.length === 36,
+    };
+
+    const isValid = Object.values(validationChecks).every(check => check);
+    
+    if (!isValid) {
+      console.log('⚠️ [CLIENT VALIDATOR] Cliente com estrutura inválida:', {
+        clientName: client.name || 'SEM NOME',
+        clientId: client.id || 'SEM ID',
+        checks: validationChecks
+      });
+    }
+
+    return isValid;
+  }
+
   static isMockClient(client: any): boolean {
     if (!client) return false;
     
     const clientName = client.name?.toLowerCase() || '';
     const companyName = client.company_name?.toLowerCase() || '';
     
-    return this.clientMockPatterns.some(pattern => 
+    const isMockByName = this.clientMockPatterns.some(pattern => 
       clientName.includes(pattern.toLowerCase()) || 
       companyName.includes(pattern.toLowerCase())
     );
+
+    if (isMockByName) {
+      console.log('🚫 [MOCK DETECTOR] Cliente mock detectado:', client.name);
+    }
+    
+    return isMockByName;
   }
 
   static isMockProduct(product: any): boolean {
@@ -41,7 +113,7 @@ export class MockDataDetector {
     
     // Verificar ID específico de produto mock conhecido
     if (this.knownMockProductIds.includes(product.id)) {
-      console.log('🚫 [MOCK DETECTOR LOG] Produto mock detectado por ID:', product.id, product.name);
+      console.log('🚫 [MOCK DETECTOR] Produto mock detectado por ID:', product.id, product.name);
       return true;
     }
     
@@ -56,7 +128,7 @@ export class MockDataDetector {
     const hasInconsistentStructure = product.cost && product.sale_price && !product.cost_price;
     
     if (isMockByName || hasInconsistentStructure) {
-      console.log('🚫 [MOCK DETECTOR LOG] Produto mock detectado:', {
+      console.log('🚫 [MOCK DETECTOR] Produto mock detectado:', {
         id: product.id,
         name: product.name,
         reason: isMockByName ? 'nome' : 'estrutura inconsistente'
@@ -70,13 +142,13 @@ export class MockDataDetector {
   // Nova função para validar se o produto deve existir baseado na estrutura de dados
   static isValidRealProduct(product: any): boolean {
     if (!product) {
-      console.log('❌ [MOCK DETECTOR LOG] Product validation failed: product is null/undefined');
+      console.log('❌ [PRODUCT VALIDATOR] Product is null/undefined');
       return false;
     }
     
     // Verificar se é mock primeiro
     if (this.isMockProduct(product)) {
-      console.log('🚫 [MOCK DETECTOR LOG] Product rejected: detected as mock product');
+      console.log('🚫 [PRODUCT VALIDATOR] Product rejected: detected as mock product');
       return false;
     }
     
@@ -118,33 +190,83 @@ export class MockDataDetector {
     validationLog.overall_valid = hasValidStructure;
     
     if (!hasValidStructure) {
-      console.log('⚠️ [MOCK DETECTOR LOG] Product validation failed:', validationLog);
+      console.log('⚠️ [PRODUCT VALIDATOR] Product validation failed:', validationLog);
       return false;
     }
     
     // Log apenas produtos válidos ocasionalmente para não poluir
     if (Math.random() < 0.1) { // 10% chance de logar produtos válidos
-      console.log('✅ [MOCK DETECTOR LOG] Product validation passed:', validationLog);
+      console.log('✅ [PRODUCT VALIDATOR] Product validation passed:', validationLog);
     }
     
     return true;
   }
 
+  // ✅ NOVA FUNÇÃO: Análise completa de integridade de dados
+  static analyzeDataIntegrity(clients: any[], products: any[], validSalesRepIds: string[] = []) {
+    console.log('🔍 [INTEGRITY ANALYZER] Iniciando análise completa...');
+    
+    // Análise de clientes
+    const clientAnalysis = {
+      total: clients.length,
+      mock: 0,
+      orphan: 0,
+      duplicates: 0,
+      invalidStructure: 0,
+      valid: 0
+    };
+
+    const { duplicates: duplicateClients, unique: uniqueClients } = this.findDuplicateClients(clients);
+    clientAnalysis.duplicates = duplicateClients.length;
+
+    uniqueClients.forEach(client => {
+      if (this.isMockClient(client)) {
+        clientAnalysis.mock++;
+      } else if (!this.isValidClientStructure(client)) {
+        clientAnalysis.invalidStructure++;
+      } else if (validSalesRepIds.length > 0 && this.isOrphanClient(client, validSalesRepIds)) {
+        clientAnalysis.orphan++;
+      } else {
+        clientAnalysis.valid++;
+      }
+    });
+
+    // Análise de produtos
+    const productAnalysis = this.getValidationStats(products);
+
+    const totalIssues = clientAnalysis.mock + clientAnalysis.orphan + clientAnalysis.duplicates + 
+                       clientAnalysis.invalidStructure + productAnalysis.mock + productAnalysis.invalidStructure;
+
+    console.log('📊 [INTEGRITY ANALYZER] Análise completa:', {
+      clientes: clientAnalysis,
+      produtos: productAnalysis,
+      totalProblemas: totalIssues,
+      necessitaLimpeza: totalIssues > 0
+    });
+
+    return {
+      clients: clientAnalysis,
+      products: productAnalysis,
+      totalIssues,
+      needsCleanup: totalIssues > 0
+    };
+  }
+
   // Função para obter lista de IDs de produtos que devem ser removidos
   static getProductIdsToRemove(products: any[]): string[] {
-    console.log(`🔍 [MOCK DETECTOR LOG] Analyzing ${products.length} products for removal`);
+    console.log(`🔍 [MOCK DETECTOR] Analyzing ${products.length} products for removal`);
     
     const productsToRemove = products
       .filter(product => this.isMockProduct(product) || !this.isValidRealProduct(product))
       .map(product => product.id)
       .filter(id => id); // Remover IDs undefined/null
     
-    console.log(`🗑️ [MOCK DETECTOR LOG] ${productsToRemove.length} products marked for removal out of ${products.length}`);
+    console.log(`🗑️ [MOCK DETECTOR] ${productsToRemove.length} products marked for removal out of ${products.length}`);
     
     return productsToRemove;
   }
 
-  // ✅ NOVA FUNÇÃO: Estatísticas detalhadas de validação
+  // ✅ FUNÇÃO MELHORADA: Estatísticas detalhadas de validação
   static getValidationStats(products: any[]): any {
     let validCount = 0;
     let mockCount = 0;
@@ -194,7 +316,7 @@ export class MockDataDetector {
       invalidCode: invalidCodeCount
     };
     
-    console.log('📊 [MOCK DETECTOR LOG] Validation Statistics:', stats);
+    console.log('📊 [MOCK DETECTOR] Validation Statistics:', stats);
     return stats;
   }
 }

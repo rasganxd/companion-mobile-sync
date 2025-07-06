@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Database, Clock, CheckCircle, RefreshCw, Wifi, WifiOff, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { useLocalSyncStatus } from '@/hooks/useLocalSyncStatus';
@@ -8,9 +9,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { DataCleanupDialog } from '@/components/DataCleanupDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+
 const SyncSettings = () => {
   const navigate = useNavigate();
   const {
@@ -33,9 +36,12 @@ const SyncSettings = () => {
     canSync
   } = useDataSync();
   const [isClearingData, setIsClearingData] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+
   React.useEffect(() => {
     loadLastSyncDate();
   }, [loadLastSyncDate]);
+
   const formatLastSync = () => {
     const dateToFormat = lastSyncDate || syncStatus.lastSync;
     if (!dateToFormat) {
@@ -49,6 +55,7 @@ const SyncSettings = () => {
       return 'Data inválida';
     }
   };
+
   const handleQuickSync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
@@ -78,6 +85,7 @@ const SyncSettings = () => {
       toast.error('Erro durante a sincronização. Tente novamente.');
     }
   };
+
   const handleFullResync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
       toast.error('Vendedor não identificado. Faça login novamente.');
@@ -110,6 +118,7 @@ const SyncSettings = () => {
       toast.error('Erro durante a ressincronização. Tente novamente.');
     }
   };
+
   const handleClearLocalData = async () => {
     if (!confirm('Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Continuar?')) {
       return;
@@ -131,10 +140,17 @@ const SyncSettings = () => {
       setIsClearingData(false);
     }
   };
+
+  const handleCleanupComplete = () => {
+    // Recarregar a página ou atualizar os dados locais
+    window.location.reload();
+  };
+
   const getProgressPercentage = () => {
     if (!syncProgress) return 0;
     return syncProgress.percentage || 0;
   };
+
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header title="Configurações de Sync" showBackButton={true} backgroundColor="blue" />
       
@@ -201,6 +217,16 @@ const SyncSettings = () => {
               Ressincronização Completa
             </Button>
 
+            <Button 
+              onClick={() => setShowCleanupDialog(true)} 
+              disabled={isSyncing || !canSync || !salesRep} 
+              className="w-full" 
+              variant="secondary"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Limpeza de Dados
+            </Button>
+
             <Button onClick={handleClearLocalData} disabled={isSyncing || isClearingData} className="w-full" variant="destructive">
               {isClearingData ? <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -212,6 +238,7 @@ const SyncSettings = () => {
           <div className="text-sm text-gray-600 mt-3">
             <p><strong>Sincronização Rápida:</strong> Atualiza dados sem limpar cache local</p>
             <p><strong>Ressincronização Completa:</strong> Remove todos os dados e recarrega do servidor</p>
+            <p><strong>Limpeza de Dados:</strong> Corrige inconsistências e remove duplicatas</p>
             <p><strong>Limpar Dados:</strong> Remove todos os dados locais (requer novo login)</p>
           </div>
         </div>
@@ -251,6 +278,13 @@ const SyncSettings = () => {
         {/* Info Card */}
         
       </div>
+
+      <DataCleanupDialog
+        isOpen={showCleanupDialog}
+        onClose={() => setShowCleanupDialog(false)}
+        onCleanupComplete={handleCleanupComplete}
+      />
     </div>;
 };
+
 export default SyncSettings;
