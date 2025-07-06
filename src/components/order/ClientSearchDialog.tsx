@@ -50,12 +50,6 @@ const ClientSearchDialog: React.FC<ClientSearchDialogProps> = ({
             <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
             <CommandGroup heading="Clientes">
               {filteredClients.map((client) => {
-                // Debug logs
-                console.log('🔍 ClientSearchDialog - client:', client);
-                console.log('🔍 ClientSearchDialog - company_name:', client.company_name);
-                console.log('🔍 ClientSearchDialog - name:', client.name);
-                
-                // Priorizar nome fantasia
                 const displayName = client.company_name || client.name;
                 const secondaryName = client.company_name ? client.name : null;
                 

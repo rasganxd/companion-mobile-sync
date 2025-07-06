@@ -8,8 +8,6 @@ export const ensureArray = <T = any>(data: any): T[] => {
     return data as T[];
   }
   
-  console.warn('🔧 [ANDROID] Data is not an array, converting:', typeof data, data);
-  
   if (data === null || data === undefined) {
     return [];
   }
@@ -29,18 +27,16 @@ export const safeJsonParse = (jsonString: string | null | undefined): any => {
   try {
     return JSON.parse(jsonString);
   } catch (error) {
-    console.error('🔧 [ANDROID] JSON parse error:', error, 'Data:', jsonString);
+    console.error('JSON parse error:', error);
     return null;
   }
 };
 
 export const validateOrderData = (order: any) => {
   if (!order) {
-    console.warn('🔧 [ANDROID] Order is null/undefined');
     return null;
   }
   
-  // Garantir que items seja sempre um array
   if (order.items) {
     if (typeof order.items === 'string') {
       order.items = safeJsonParse(order.items) || [];
@@ -54,19 +50,6 @@ export const validateOrderData = (order: any) => {
   return order;
 };
 
-export const logAndroidDebug = (context: string, data: any) => {
-  console.log(`🔧 [ANDROID DEBUG] ${context}:`, {
-    type: typeof data,
-    isArray: Array.isArray(data),
-    length: data?.length,
-    hasValues: !!data?.values,
-    valuesType: typeof data?.values,
-    isValuesArray: Array.isArray(data?.values),
-    data: data
-  });
-};
-
-// Helper function para cast seguro de objetos
 export const safeCast = <T>(data: any): T | null => {
   if (!data || typeof data !== 'object') {
     return null;
@@ -74,7 +57,6 @@ export const safeCast = <T>(data: any): T | null => {
   return data as T;
 };
 
-// Helper function para arrays de objetos específicos
 export const ensureTypedArray = <T>(data: any, validator?: (item: any) => boolean): T[] => {
   const array = ensureArray<T>(data);
   
