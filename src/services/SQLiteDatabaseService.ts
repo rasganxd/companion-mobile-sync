@@ -1,3 +1,4 @@
+
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { ensureArray, validateOrderData } from '@/utils/androidDataValidator';
 
@@ -49,7 +50,7 @@ export class SQLiteDatabaseService implements DatabaseAdapter {
   private isInitialized = false;
   private static instance: SQLiteDatabaseService;
 
-  constructor() {
+  private constructor() {
     // Don't call initDatabase in constructor to avoid async issues
   }
 
@@ -66,6 +67,7 @@ export class SQLiteDatabaseService implements DatabaseAdapter {
     }
 
     try {
+      // Call DatabaseInitializer with proper signature - it should handle its own initialization
       this.db = await DatabaseInitializer.initializeDatabase();
       this.isInitialized = true;
     } catch (error) {
