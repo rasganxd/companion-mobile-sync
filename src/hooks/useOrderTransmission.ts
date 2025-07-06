@@ -49,9 +49,9 @@ export const useOrderTransmission = () => {
 
     try {
       const db = getDatabaseAdapter();
-      const pendingOrders: Order[] = await db.getOrdersToSync(salesRep.id);
+      const ordersToTransmit: Order[] = await db.getOrdersToSync(salesRep.id);
 
-      if (!pendingOrders || pendingOrders.length === 0) {
+      if (!ordersToTransmit || ordersToTransmit.length === 0) {
         toast.info('Nenhum pedido pendente para transmissão.');
         return { success: true, transmitted: 0, failed: 0, errors: [] };
       }
@@ -60,7 +60,7 @@ export const useOrderTransmission = () => {
       let failedCount = 0;
       const failedOrders: { order: Order; error: string }[] = [];
 
-      for (const order of pendingOrders) {
+      for (const order of ordersToTransmit) {
         try {
           console.log(`Transmitting order ${order.id}:`, order.customer_name);
           
@@ -99,7 +99,7 @@ export const useOrderTransmission = () => {
         }
       }
 
-      const totalOrders = pendingOrders.length;
+      const totalOrders = ordersToTransmit.length;
       const success = failedOrders.length === 0;
 
       if (success) {
@@ -121,7 +121,7 @@ export const useOrderTransmission = () => {
     } catch (error) {
       console.error('Erro geral na transmissão de pedidos:', error);
       toast.error('Erro ao transmitir pedidos. Verifique sua conexão e tente novamente.');
-      return { success: false, transmitted: 0, failed: pendingOrders?.length || 0, errors: [] };
+      return { success: false, transmitted: 0, failed: 0, errors: [] };
     } finally {
       setIsTransmitting(false);
     }

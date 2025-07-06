@@ -1,3 +1,4 @@
+
 import { openDB, IDBPDatabase } from 'idb';
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import type { SalesAppDBSchema, ValidTableName, DatabaseInstance } from './database/types';
@@ -79,6 +80,24 @@ class WebDatabaseService {
       return index.getAll(clientId);
     }
     return this.db!.getAll('orders');
+  }
+
+  // Add missing methods for DatabaseAdapter interface
+  async getOrdersToSync(salesRepId: string): Promise<any[]> {
+    await this.ensureDatabaseInitialized();
+    const allOrders = await this.db!.getAll('orders');
+    return allOrders.filter(order => 
+      order.sales_rep_id === salesRepId && order.sync_status === 'pending_sync'
+    );
+  }
+
+  async updateOrderStatus(orderId: string, status: string): Promise<void> {
+    await this.ensureDatabaseInitialized();
+    const order = await this.db!.get('orders', orderId);
+    if (order) {
+      order.sync_status = status;
+      await this.db!.put('orders', order);
+    }
   }
 
   async getProducts(): Promise<any[]> {
