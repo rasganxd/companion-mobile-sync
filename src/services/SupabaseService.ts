@@ -514,7 +514,7 @@ class SupabaseService {
     }
   }
 
-  async transmitOrder(order: any): Promise<{ success: boolean; error?: string }> {
+  async transmitOrder(order: any, sessionToken?: string): Promise<{ success: boolean; error?: string }> {
     console.log(`📤 Transmitting single order ${order.id}:`, {
       customer_id: order.customer_id,
       customer_name: order.customer_name,
@@ -524,11 +524,15 @@ class SupabaseService {
     });
 
     try {
+      // Use sessionToken if provided, otherwise fallback to anonKey
+      const authToken = sessionToken || this.anonKey;
+      console.log('🔑 Using auth token type:', sessionToken ? 'SESSION_TOKEN' : 'ANON_KEY');
+
       const response = await fetch(`${this.baseUrl}/mobile-orders-import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.anonKey}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(order)
       });
@@ -558,7 +562,7 @@ class SupabaseService {
     const errors: string[] = [];
 
     for (const order of orders) {
-      const result = await this.transmitOrder(order);
+      const result = await this.transmitOrder(order, sessionToken);
       
       if (result.success) {
         successCount++;

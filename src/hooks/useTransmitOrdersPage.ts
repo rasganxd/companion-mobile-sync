@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -46,6 +45,11 @@ export const useTransmitOrdersPage = () => {
       return;
     }
 
+    if (!salesRep?.sessionToken) {
+      toast.error('Token de sessão não encontrado. Faça login novamente.');
+      return;
+    }
+
     if (pendingOrders.length === 0) {
       toast.info('Nenhum pedido pendente para transmissão');
       return;
@@ -68,7 +72,7 @@ export const useTransmitOrdersPage = () => {
             continue;
           }
 
-          const result = await supabaseService.transmitOrder(validatedOrder);
+          const result = await supabaseService.transmitOrder(validatedOrder, salesRep.sessionToken);
           
           if (result.success) {
             await db.updateOrderStatus(order.id, 'transmitted');
@@ -98,11 +102,16 @@ export const useTransmitOrdersPage = () => {
     } finally {
       setIsTransmitting(false);
     }
-  }, [connected, pendingOrders, loadOrders]);
+  }, [connected, pendingOrders, loadOrders, salesRep?.sessionToken]);
 
   const retryOrder = useCallback(async (orderId: string) => {
     if (!connected) {
       toast.error('Sem conexão com a internet');
+      return;
+    }
+
+    if (!salesRep?.sessionToken) {
+      toast.error('Token de sessão não encontrado. Faça login novamente.');
       return;
     }
 
@@ -119,7 +128,7 @@ export const useTransmitOrdersPage = () => {
         return;
       }
 
-      const result = await supabaseService.transmitOrder(validatedOrder);
+      const result = await supabaseService.transmitOrder(validatedOrder, salesRep.sessionToken);
       
       if (result.success) {
         await db.updateOrderStatus(orderId, 'transmitted');
@@ -134,11 +143,16 @@ export const useTransmitOrdersPage = () => {
     } finally {
       setIsTransmitting(false);
     }
-  }, [connected, errorOrders, loadOrders]);
+  }, [connected, errorOrders, loadOrders, salesRep?.sessionToken]);
 
   const retryAllErrorOrders = useCallback(async () => {
     if (!connected) {
       toast.error('Sem conexão com a internet');
+      return;
+    }
+
+    if (!salesRep?.sessionToken) {
+      toast.error('Token de sessão não encontrado. Faça login novamente.');
       return;
     }
 
@@ -163,7 +177,7 @@ export const useTransmitOrdersPage = () => {
             continue;
           }
 
-          const result = await supabaseService.transmitOrder(validatedOrder);
+          const result = await supabaseService.transmitOrder(validatedOrder, salesRep.sessionToken);
           
           if (result.success) {
             await db.updateOrderStatus(order.id, 'transmitted');
@@ -191,7 +205,7 @@ export const useTransmitOrdersPage = () => {
     } finally {
       setIsTransmitting(false);
     }
-  }, [connected, errorOrders, loadOrders]);
+  }, [connected, errorOrders, loadOrders, salesRep?.sessionToken]);
 
   const deleteTransmittedOrder = useCallback(async (orderId: string) => {
     try {

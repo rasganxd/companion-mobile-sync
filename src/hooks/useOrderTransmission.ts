@@ -44,6 +44,11 @@ export const useOrderTransmission = () => {
       return { success: false, transmitted: 0, failed: 0, errors: [] };
     }
 
+    if (!salesRep?.sessionToken) {
+      toast.error('Token de sessão não encontrado. Faça login novamente.');
+      return { success: false, transmitted: 0, failed: 0, errors: [] };
+    }
+
     setIsTransmitting(true);
     toast.info('Iniciando transmissão de pedidos...');
 
@@ -75,7 +80,8 @@ export const useOrderTransmission = () => {
             continue;
           }
 
-          const transmissionResult = await supabaseService.transmitOrder(validatedOrder);
+          // ✅ CORREÇÃO: Passar o sessionToken para o método transmitOrder
+          const transmissionResult = await supabaseService.transmitOrder(validatedOrder, salesRep.sessionToken);
 
           if (transmissionResult.success) {
             console.log(`Order ${order.id} transmitted successfully.`);
