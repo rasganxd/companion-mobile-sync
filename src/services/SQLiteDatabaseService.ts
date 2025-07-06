@@ -1,4 +1,5 @@
 
+
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { ensureArray, validateOrderData } from '@/utils/androidDataValidator';
 
@@ -67,8 +68,8 @@ export class SQLiteDatabaseService implements DatabaseAdapter {
     }
 
     try {
-      // Call DatabaseInitializer with proper signature - it should handle its own initialization
-      this.db = await DatabaseInitializer.initializeDatabase();
+      // Call DatabaseInitializer.initialize() which handles its own initialization
+      this.db = await DatabaseInitializer.initialize();
       this.isInitialized = true;
     } catch (error) {
       console.error('Error initializing database:', error);
