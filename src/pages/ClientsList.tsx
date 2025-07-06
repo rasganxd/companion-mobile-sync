@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -88,83 +87,97 @@ const ClientsList = () => {
           return;
         }
         
-        console.log(`📅 [ANDROID] Loading clients for: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
+        console.log(`📊 DIAGNÓSTICO CLIENTES - Dia: ${day} - Vendedor: ${salesRep.name} (${salesRep.id})`);
         
         const englishDay = Object.keys(dayMapping).find(key => dayMapping[key] === day);
         
         if (!englishDay) {
-          console.log(`❌ [ANDROID] No English day found for ${day}`);
+          console.log(`❌ Dia em inglês não encontrado para ${day}`);
           setClients([]);
           return;
         }
         
-        console.log(`🔍 [ANDROID] Fetching customers for ${day} (${englishDay}) from local database...`);
+        console.log(`🔍 Buscando clientes para ${day} (${englishDay}) no banco local...`);
         
-        // Buscar clientes do banco local
         const db = getDatabaseAdapter();
         const allCustomers = await db.getCustomers();
         
-        console.log(`📱 [ANDROID] Total customers from database: ${allCustomers.length}`);
-        console.log(`📱 [ANDROID] First 5 customers sample:`, allCustomers.slice(0, 5).map(c => ({
-          id: c.id,
-          name: c.name,
-          sales_rep_id: c.sales_rep_id,
-          visit_days: c.visit_days,
-          visit_days_type: typeof c.visit_days,
-          active: c.active
-        })));
+        console.log(`📈 DIAGNÓSTICO - Total de clientes no banco: ${allCustomers.length}`);
         
-        // 🔄 FILTRAGEM ROBUSTA: Melhorar a filtragem de clientes
-        const dayClients = allCustomers.filter(customer => {
-          // Verificações básicas
-          if (!customer.active) {
-            console.log(`📱 [ANDROID] Cliente ${customer.name} não está ativo`);
+        // Diagnóstico 1: Análise geral dos dados
+        const activeCustomers = allCustomers.filter(c => c.active);
+        const salesRepCustomers = allCustomers.filter(c => c.sales_rep_id === salesRep.id);
+        const activeSalesRepCustomers = activeCustomers.filter(c => c.sales_rep_id === salesRep.id);
+        
+        console.log(`📈 DIAGNÓSTICO - Clientes ativos: ${activeCustomers.length}`);
+        console.log(`📈 DIAGNÓSTICO - Clientes do vendedor: ${salesRepCustomers.length}`);
+        console.log(`📈 DIAGNÓSTICO - Clientes ativos do vendedor: ${activeSalesRepCustomers.length}`);
+        
+        // Diagnóstico 2: Verificar duplicatas
+        const customerIds = new Set();
+        const duplicateIds = new Set();
+        allCustomers.forEach(customer => {
+          if (customerIds.has(customer.id)) {
+            duplicateIds.add(customer.id);
+          } else {
+            customerIds.add(customer.id);
+          }
+        });
+        
+        if (duplicateIds.size > 0) {
+          console.warn(`⚠️ DIAGNÓSTICO - Encontradas ${duplicateIds.size} duplicatas de ID:`, Array.from(duplicateIds));
+        }
+        
+        // Diagnóstico 3: Análise dos visit_days
+        let clientsWithVisitDays = 0;
+        let clientsWithValidVisitDays = 0;
+        let clientsForSelectedDay = 0;
+        
+        const dayClients = activeSalesRepCustomers.filter(customer => {
+          // Contar clientes com visit_days
+          if (customer.visit_days) {
+            clientsWithVisitDays++;
+          } else {
             return false;
           }
           
-          if (customer.sales_rep_id !== salesRep.id) {
-            console.log(`📱 [ANDROID] Cliente ${customer.name} não pertence ao vendedor (${customer.sales_rep_id} vs ${salesRep.id})`);
-            return false;
-          }
-          
-          // Verificação robusta de visit_days
+          // Verificar formato dos visit_days
           let visitDays = customer.visit_days;
           
-          // Se visit_days não existe ou é nulo, pular
-          if (!visitDays) {
-            console.log(`📱 [ANDROID] Cliente ${customer.name} não tem visit_days definido`);
-            return false;
-          }
-          
-          // Se é string, tentar fazer parse
           if (typeof visitDays === 'string') {
             try {
               visitDays = JSON.parse(visitDays);
             } catch (e) {
-              console.log(`📱 [ANDROID] Cliente ${customer.name} visit_days não é JSON válido:`, visitDays);
+              console.warn(`⚠️ DIAGNÓSTICO - Cliente ${customer.name} visit_days não é JSON válido:`, visitDays);
               return false;
             }
           }
           
-          // Se não é array, pular
           if (!Array.isArray(visitDays)) {
-            console.log(`📱 [ANDROID] Cliente ${customer.name} visit_days não é array:`, visitDays);
+            console.warn(`⚠️ DIAGNÓSTICO - Cliente ${customer.name} visit_days não é array:`, visitDays);
             return false;
           }
           
-          // Verificar se o dia está incluído
+          clientsWithValidVisitDays++;
+          
+          // Verificar se inclui o dia selecionado
           const hasDay = visitDays.includes(englishDay);
-          console.log(`📱 [ANDROID] Cliente ${customer.name}: visit_days=${JSON.stringify(visitDays)}, englishDay=${englishDay}, hasDay=${hasDay}`);
+          if (hasDay) {
+            clientsForSelectedDay++;
+            console.log(`✅ DIAGNÓSTICO - Cliente ${customer.name} tem visita na ${day}:`, visitDays);
+          }
           
           return hasDay;
         });
         
-        console.log(`📱 [ANDROID] Filtered day clients: ${dayClients.length}`);
+        console.log(`📈 DIAGNÓSTICO - Clientes com visit_days: ${clientsWithVisitDays}`);
+        console.log(`📈 DIAGNÓSTICO - Clientes com visit_days válidos: ${clientsWithValidVisitDays}`);
+        console.log(`📈 DIAGNÓSTICO - Clientes filtrados para ${day}: ${clientsForSelectedDay}`);
+        console.log(`📈 DIAGNÓSTICO - Array final de clientes: ${dayClients.length}`);
         
         const today = new Date().toISOString().split('T')[0];
         const clientIds = dayClients.map(client => client.id);
         
-        // Buscar pedidos locais do dia
         const allLocalOrders = await db.getAllOrders();
         const localOrders = allLocalOrders.filter(order => 
           order.sales_rep_id === salesRep.id && 
@@ -173,8 +186,7 @@ const ClientsList = () => {
           new Date(order.date || order.order_date || order.created_at).toISOString().split('T')[0] === today
         );
         
-        console.log('👥 [ANDROID] Day clients for salesperson:', dayClients.length);
-        console.log('📱 [ANDROID] Local orders for today:', localOrders.length);
+        console.log(`📈 DIAGNÓSTICO - Pedidos locais do dia: ${localOrders.length}`);
         
         const clientsWithStatus = dayClients.map(client => {
           const clientLocalOrders = localOrders.filter(order => 
@@ -193,7 +205,6 @@ const ClientsList = () => {
           let hasTransmittedOrders = transmittedLocalOrders.length > 0;
           let transmittedOrdersCount = transmittedLocalOrders.length;
           
-          // Verificar primeiro se o cliente tem status 'negativado' no banco
           if (client.status === 'negativado') {
             status = 'negativado';
           } else if (clientLocalOrders.length > 0) {
@@ -231,18 +242,14 @@ const ClientsList = () => {
           };
         });
 
-        // Smart ordering: visitados primeiro (ocultos), depois pendentes por sequência
         const sortedClients = clientsWithStatus.sort((a, b) => {
-          // Primeiro critério: Status (visitados vão para o início, mas serão "ocultos")
           const aVisited = a.status === 'positivado' || a.status === 'negativado';
           const bVisited = b.status === 'positivado' || b.status === 'negativado';
           
-          if (aVisited && !bVisited) return -1; // a (visitado) vem antes
-          if (!aVisited && bVisited) return 1;  // b (visitado) vem antes
+          if (aVisited && !bVisited) return -1;
+          if (!aVisited && bVisited) return 1;
           
-          // Se ambos têm o mesmo status (ambos visitados ou ambos pendentes)
           if (aVisited && bVisited) {
-            // Para visitados, ordenar por visit_sequence
             if (a.visit_sequence != null && b.visit_sequence != null) {
               if (a.visit_sequence !== b.visit_sequence) {
                 return a.visit_sequence - b.visit_sequence;
@@ -253,7 +260,6 @@ const ClientsList = () => {
             return a.name.localeCompare(b.name);
           }
           
-          // Para pendentes, aplicar lógica original de ordenação
           if (a.visit_sequence == null && b.visit_sequence == null) {
             return a.name.localeCompare(b.name);
           }
@@ -267,17 +273,18 @@ const ClientsList = () => {
           return a.name.localeCompare(b.name);
         });
         
-        console.log(`✅ [ANDROID] Clients with smart ordering for ${day} (salesperson ${salesRep.name}):`, sortedClients.length);
-        console.log(`📱 [ANDROID] Final client list sample:`, sortedClients.slice(0, 3).map(c => ({
+        console.log(`🏁 DIAGNÓSTICO FINAL - Clientes exibidos para ${day}: ${sortedClients.length}`);
+        console.log(`📋 DIAGNÓSTICO - Primeiros 5 clientes:`, sortedClients.slice(0, 5).map(c => ({
           name: c.name,
           visit_sequence: c.visit_sequence,
-          status: c.status
+          status: c.status,
+          visit_days: c.visit_days
         })));
         
         setClients(sortedClients);
         
       } catch (error) {
-        console.error('❌ [ANDROID] Error loading clients:', error);
+        console.error('❌ Error loading clients:', error);
         toast.error('Erro ao carregar clientes');
         setClients([]);
       } finally {

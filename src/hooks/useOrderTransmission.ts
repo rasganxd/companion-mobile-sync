@@ -1,507 +1,131 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
-import { LocalOrder } from '@/types/order';
-import { logOrderAction } from '@/utils/orderAuditLogger';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { supabaseService } from '@/services/SupabaseService';
-import { ensureTypedArray, validateOrderData, logAndroidDebug } from '@/utils/androidDataValidator';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useAuth } from '@/contexts/AuthContext';
+import { validateOrderData } from '@/utils/androidDataValidator';
+
+interface Order {
+  id: string;
+  customer_id: string;
+  customer_name: string;
+  total: number;
+  items: any[];
+  status: string;
+  sync_status: string;
+  sales_rep_id: string;
+  created_at: string;
+  order_date: string;
+  date: string;
+}
+
+interface TransmissionResult {
+  success: boolean;
+  transmitted?: number;
+  failed?: number;
+  errors?: { order: Order; error: string }[];
+}
 
 export const useOrderTransmission = () => {
-  const { salesRep, isOnline } = useAuth();
-  const { connected } = useNetworkStatus();
-  const [pendingOrders, setPendingOrders] = useState<LocalOrder[]>([]);
-  const [transmittedOrders, setTransmittedOrders] = useState<LocalOrder[]>([]);
-  const [errorOrders, setErrorOrders] = useState<LocalOrder[]>([]);
   const [isTransmitting, setIsTransmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [transmissionError, setTransmissionError] = useState<string | null>(null);
+  const { connected } = useNetworkStatus();
+  const { salesRep } = useAuth();
 
-  const loadOrders = async () => {
-    try {
-      setIsLoading(true);
-      const db = getDatabaseAdapter();
-      
-      console.log('🔄 [ANDROID] Loading orders for transmission page...');
-      
-      // ✅ CORREÇÃO CRÍTICA: Garantir arrays válidos sempre com tipos corretos
-      const pendingResult = await db.getPendingOrders();
-      const pending = ensureTypedArray<LocalOrder>(pendingResult, (item: any) => !!item?.id);
-      
-      logAndroidDebug('loadOrders pending', pending);
-      
-      console.log(`📋 [ANDROID] Loaded ${pending.length} pending orders`);
-      setPendingOrders(pending);
-      
-      const transmittedResult = await db.getTransmittedOrders();
-      const transmitted = ensureTypedArray<LocalOrder>(transmittedResult, (item: any) => !!item?.id);
-      
-      logAndroidDebug('loadOrders transmitted', transmitted);
-      
-      console.log(`📤 [ANDROID] Loaded ${transmitted.length} transmitted orders`);
-      setTransmittedOrders(transmitted);
-      
-      const allOrdersResult = await db.getAllOrders();
-      const allOrders = ensureTypedArray<LocalOrder>(allOrdersResult, (item: any) => !!item?.id);
-      
-      logAndroidDebug('loadOrders allOrders', allOrders);
-      
-      // ✅ CORREÇÃO: Filtrar pedidos com erro de forma segura
-      const errorOrdersList = allOrders.filter((order: LocalOrder) => order && order.sync_status === 'error');
-      console.log(`❌ [ANDROID] Loaded ${errorOrdersList.length} error orders`);
-      setErrorOrders(errorOrdersList);
-      
-    } catch (error) {
-      console.error('❌ [ANDROID] Error loading orders:', error);
-      toast.error('Erro ao carregar pedidos');
-      
-      // ✅ CORREÇÃO: Definir arrays vazios em caso de erro
-      setPendingOrders([]);
-      setTransmittedOrders([]);
-      setErrorOrders([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const validateOrderData = (order: LocalOrder): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-    
-    // ✅ CORREÇÃO: Verificar se o pedido existe antes de validar
-    if (!order) {
-      errors.push('Pedido inválido ou corrompido');
-      return { isValid: false, errors };
-    }
-    
-    // Validar campos obrigatórios
-    if (!order.customer_id) {
-      errors.push('ID do cliente ausente');
-    }
-    
-    if (!order.customer_name) {
-      errors.push('Nome do cliente ausente');
-    }
-    
-    // ✅ CORREÇÃO: Permitir pedidos cancelados (negação) com total zero
-    if (order.status === 'cancelled') {
-      // Para pedidos cancelados, validar se há motivo de negação
-      if (!order.reason) {
-        errors.push('Motivo da negação ausente para pedido cancelado');
-      }
-      // Pedidos cancelados podem ter total 0 e sem itens - isso é válido
-      console.log('🔍 [ANDROID] Validating cancelled order (negativation):', {
-        orderId: order.id,
-        reason: order.reason,
-        total: order.total,
-        itemsCount: Array.isArray(order.items) ? order.items.length : 0
-      });
-    } else {
-      // Para pedidos normais, aplicar validações tradicionais
-      if (!order.total || order.total <= 0) {
-        errors.push('Total do pedido inválido');
-      }
-      
-      // ✅ CORREÇÃO: Validar items de forma segura
-      const orderItems = ensureTypedArray(order.items);
-      if (orderItems.length === 0) {
-        errors.push('Pedido sem itens');
-      }
-      
-      // Validar itens do pedido apenas para pedidos não cancelados
-      if (orderItems.length > 0) {
-        orderItems.forEach((item: any, index: number) => {
-          if (!item) {
-            errors.push(`Item ${index + 1}: Item inválido`);
-            return;
-          }
-          
-          if (!item.productId && !item.product_id) {
-            errors.push(`Item ${index + 1}: ID do produto ausente`);
-          }
-          
-          if (!item.productName && !item.product_name) {
-            errors.push(`Item ${index + 1}: Nome do produto ausente`);
-          }
-          
-          if (!item.quantity || item.quantity <= 0) {
-            errors.push(`Item ${index + 1}: Quantidade inválida`);
-          }
-          
-          if (!item.price && !item.unit_price) {
-            errors.push(`Item ${index + 1}: Preço ausente`);
-          }
-        });
-      }
-    }
-    
-    console.log('🔍 [ANDROID] Order validation result:', {
-      orderId: order.id,
-      status: order.status,
-      isValid: errors.length === 0,
-      errors: errors.length > 0 ? errors : 'none'
-    });
-    
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  };
-
-  const normalizeOrderData = (order: LocalOrder): any => {
-    console.log('🔧 [ANDROID] Normalizing order data:', order);
-    
-    // ✅ CORREÇÃO: Garantir que items seja array antes de normalizar
-    const orderItems = ensureTypedArray(order.items);
-    
-    // Normalizar itens do pedido
-    const normalizedItems = orderItems.map((item: any) => {
-      if (!item) {
-        console.warn('🔧 [ANDROID] Skipping invalid item:', item);
-        return null;
-      }
-      
-      const normalizedItem = {
-        product_id: item.productId || item.product_id,
-        product_name: item.productName || item.product_name,
-        product_code: item.code || item.product_code,
-        quantity: item.quantity,
-        price: item.price || item.unit_price,
-        unit_price: item.price || item.unit_price,
-        unit: item.unit,
-        total: (item.price || item.unit_price || 0) * item.quantity
-      };
-      
-      console.log('🔧 [ANDROID] Normalized item:', {
-        ...normalizedItem,
-        originalUnit: item.unit,
-        preservedUnit: normalizedItem.unit
-      });
-      
-      return normalizedItem;
-    }).filter(item => item !== null); // Remover itens inválidos
-    
-    const normalizedOrder = {
-      ...order,
-      items: normalizedItems,
-      payment_table_id: order.payment_table_id
-    };
-    
-    console.log('✅ [ANDROID] Normalized order with preserved units and payment table:', {
-      orderId: normalizedOrder.id,
-      customerName: normalizedOrder.customer_name,
-      status: normalizedOrder.status,
-      total: normalizedOrder.total,
-      reason: normalizedOrder.reason,
-      paymentTableId: normalizedOrder.payment_table_id,
-      itemsWithUnits: normalizedItems.map(item => ({
-        name: item.product_name,
-        unit: item.unit,
-        quantity: item.quantity
-      }))
-    });
-    
-    return normalizedOrder;
-  };
-
-  const validateSalesRep = () => {
-    if (!salesRep || !salesRep.id) {
-      const errorMsg = 'Vendedor não identificado. Faça login novamente.';
-      setTransmissionError(errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    if (!salesRep.sessionToken) {
-      const errorMsg = 'Token de sessão expirado. Faça login novamente.';
-      setTransmissionError(errorMsg);
-      throw new Error(errorMsg);
-    }
-    
-    // Verificar se o token não é muito antigo (para tokens mobile)
-    if (salesRep.sessionToken.startsWith('mobile_')) {
-      const tokenParts = salesRep.sessionToken.split('_');
-      if (tokenParts.length >= 3) {
-        const timestamp = parseInt(tokenParts[2]);
-        const tokenAge = Date.now() - timestamp;
-        const maxAge = 20 * 60 * 60 * 1000; // 20 horas (menos que o limite de 24h do servidor)
-        
-        if (tokenAge > maxAge) {
-          const errorMsg = 'Sessão expirada. Faça login novamente.';
-          setTransmissionError(errorMsg);
-          throw new Error(errorMsg);
-        }
-      }
-    }
-    
-    return true;
-  };
-
-  const transmitAllOrders = async () => {
-    // ✅ CORREÇÃO: Verificar se pendingOrders é array válido
-    const validPendingOrders = ensureTypedArray<LocalOrder>(pendingOrders, (item: any) => !!item?.id);
-    
-    if (validPendingOrders.length === 0) {
-      toast.warning('Não há pedidos pendentes para transmitir');
-      return;
+  const transmitOrders = useCallback(async (): Promise<TransmissionResult> => {
+    if (!connected) {
+      toast.error('Sem conexão com a internet. A transmissão será feita quando estiver online.');
+      return { success: false, transmitted: 0, failed: 0, errors: [] };
     }
 
-    if (!connected || !isOnline) {
-      toast.error('Sem conexão com a internet. Conecte-se para transmitir pedidos.');
-      return;
-    }
-
-    try {
-      validateSalesRep();
-      setTransmissionError(null);
-    } catch (error) {
-      console.error('❌ [ANDROID] Sales rep validation failed:', error);
-      return;
+    if (!salesRep?.id) {
+      toast.error('Vendedor não autenticado. Impossível transmitir pedidos.');
+      return { success: false, transmitted: 0, failed: 0, errors: [] };
     }
 
     setIsTransmitting(true);
+    toast.info('Iniciando transmissão de pedidos...');
 
     try {
       const db = getDatabaseAdapter();
+      const ordersToTransmit: Order[] = await db.getOrdersToSync(salesRep.id);
 
-      console.log('📤 [ANDROID] Starting transmission to Supabase...');
-      console.log('🔐 Using session token:', salesRep.sessionToken?.substring(0, 20) + '...');
-      
-      // Validar e normalizar dados dos pedidos antes da transmissão
-      const validatedOrders: LocalOrder[] = [];
-      const invalidOrders: { order: LocalOrder; errors: string[] }[] = [];
-      
-      for (const order of validPendingOrders) {
-        const validation = validateOrderData(order);
-        
-        if (validation.isValid) {
-          const normalizedOrder = normalizeOrderData(order);
-          validatedOrders.push(normalizedOrder);
-        } else {
-          console.error(`❌ [ANDROID] Invalid order data for ${order.id}:`, validation.errors);
-          invalidOrders.push({ order, errors: validation.errors });
+      if (!ordersToTransmit || ordersToTransmit.length === 0) {
+        toast.info('Nenhum pedido pendente para transmissão.');
+        return { success: true, transmitted: 0, failed: 0, errors: [] };
+      }
+
+      let transmittedCount = 0;
+      let failedCount = 0;
+      const failedOrders: { order: Order; error: string }[] = [];
+
+      for (const order of ordersToTransmit) {
+        try {
+          console.log(`Transmitting order ${order.id}:`, order.customer_name);
           
-          // Marcar pedidos inválidos como erro
-          await db.updateSyncStatus('orders', order.id, 'error');
-        }
-      }
-      
-      if (invalidOrders.length > 0) {
-        const errorMsg = `${invalidOrders.length} pedido(s) com dados inválidos foram marcados como erro`;
-        console.error('❌ [ANDROID] Invalid orders:', invalidOrders);
-        toast.error(errorMsg);
-      }
-      
-      if (validatedOrders.length === 0) {
-        throw new Error('Nenhum pedido válido para transmitir');
-      }
-      
-      // Transmit orders to Supabase (agora com dados validados e normalizados incluindo payment_table_id)
-      const transmissionResult = await supabaseService.transmitOrders(
-        validatedOrders, 
-        salesRep.sessionToken!
-      );
-
-      console.log('📊 [ANDROID] Transmission result:', transmissionResult);
-
-      if (transmissionResult.success && transmissionResult.successCount > 0) {
-        console.log(`✅ [ANDROID] ${transmissionResult.successCount} orders transmitted successfully`);
-        
-        // Mark successfully transmitted orders
-        for (const order of validatedOrders) {
-          try {
-            await db.markOrderAsTransmitted(order.id);
-            
-            logOrderAction({
-              action: 'ORDER_TRANSMITTED_TO_SUPABASE',
-              orderId: order.id,
-              salesRepId: salesRep?.id,
-              salesRepName: salesRep?.name,
-              customerName: order.customer_name,
-              syncStatus: 'transmitted',
-              details: { 
-                total: order.total, 
-                itemsCount: Array.isArray(order.items) ? order.items.length : 0,
-                paymentTableId: order.payment_table_id,
-                status: order.status,
-                reason: order.reason
-              }
+          const validatedOrder = validateOrderData(order);
+          if (!validatedOrder) {
+            console.error('Order validation failed:', order.id);
+            failedOrders.push({
+              order,
+              error: 'Dados do pedido inválidos'
             });
-            
-            console.log('✅ [ANDROID] Order marked as transmitted:', order.id);
-            
-          } catch (error) {
-            console.error('❌ [ANDROID] Error marking order as transmitted:', order.id, error);
-            await db.updateSyncStatus('orders', order.id, 'error');
+            continue;
           }
-        }
 
-        toast.success(`${transmissionResult.successCount} pedido(s) transmitido(s) com sucesso!`);
-      }
-      
-      if (transmissionResult.errorCount > 0) {
-        console.error('❌ [ANDROID] Some orders failed transmission:', transmissionResult.errors);
-        
-        // Mark failed orders as error
-        const db = getDatabaseAdapter();
-        for (const order of validatedOrders) {
-          await db.updateSyncStatus('orders', order.id, 'error');
-        }
-        
-        toast.error(`${transmissionResult.errorCount} pedido(s) falharam na transmissão`);
-        
-        if (transmissionResult.errors) {
-          setTransmissionError(transmissionResult.errors.join('\n'));
+          const transmissionResult = await supabaseService.transmitOrder(validatedOrder);
+
+          if (transmissionResult.success) {
+            console.log(`Order ${order.id} transmitted successfully.`);
+            await db.updateOrderStatus(order.id, 'transmitted');
+            transmittedCount++;
+          } else {
+            console.error(`Order ${order.id} transmission failed:`, transmissionResult.error);
+            failedOrders.push({
+              order,
+              error: transmissionResult.error || 'Erro desconhecido na transmissão'
+            });
+            failedCount++;
+          }
+        } catch (error) {
+          console.error('Error transmitting order:', error);
+          failedOrders.push({
+            order,
+            error: error instanceof Error ? error.message : 'Erro na transmissão'
+          });
         }
       }
 
-      if (transmissionResult.successCount === 0 && transmissionResult.errorCount > 0) {
-        throw new Error(transmissionResult.errorMessage || 'Todos os pedidos falharam na transmissão');
+      const totalOrders = ordersToTransmit.length;
+      const success = failedOrders.length === 0;
+
+      if (success) {
+        toast.success(`Todos os ${totalOrders} pedidos foram transmitidos com sucesso!`);
+      } else {
+        toast.warn(`${transmittedCount} pedidos transmitidos. ${failedCount} falharam.`);
+        failedOrders.forEach(failedOrder => {
+          toast.error(`Falha ao transmitir pedido para ${failedOrder.order.customer_name}: ${failedOrder.error}`);
+        });
       }
 
-      await loadOrders();
+      return {
+        success,
+        transmitted: transmittedCount,
+        failed: failedCount,
+        errors: failedOrders
+      };
 
     } catch (error) {
-      console.error('❌ [ANDROID] Error in transmission process:', error);
-      
-      let errorMsg = 'Erro no processo de transmissão';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Invalid authentication')) {
-          errorMsg = 'Erro de autenticação. Faça login novamente.';
-        } else if (error.message.includes('session token expired')) {
-          errorMsg = 'Sessão expirada. Faça login novamente.';
-        } else if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
-          errorMsg = 'Erro de conexão. Verifique sua internet e tente novamente.';
-        } else {
-          errorMsg = error.message;
-        }
-      }
-      
-      setTransmissionError(errorMsg);
-      toast.error('Erro na transmissão: ' + errorMsg);
-      
-      // Mark all orders as error if transmission failed completely
-      const db = getDatabaseAdapter();
-      const validPendingOrders = ensureTypedArray<LocalOrder>(pendingOrders, (item: any) => !!item?.id);
-      for (const order of validPendingOrders) {
-        await db.updateSyncStatus('orders', order.id, 'error');
-      }
-      await loadOrders();
+      console.error('Erro geral na transmissão de pedidos:', error);
+      toast.error('Erro ao transmitir pedidos. Verifique sua conexão e tente novamente.');
+      return { success: false, transmitted: 0, failed: ordersToTransmit.length, errors: [] };
     } finally {
       setIsTransmitting(false);
     }
-  };
-
-  const retryTransmission = async () => {
-    setTransmissionError(null);
-    await transmitAllOrders();
-  };
-
-  const retryOrder = async (orderId: string) => {
-    try {
-      const db = getDatabaseAdapter();
-      await db.updateSyncStatus('orders', orderId, 'pending_sync');
-      
-      logOrderAction({
-        action: 'ORDER_RETRY_QUEUED',
-        orderId,
-        salesRepId: salesRep?.id,
-        salesRepName: salesRep?.name,
-        syncStatus: 'pending_sync'
-      });
-      
-      toast.success('Pedido recolocado na fila de transmissão');
-      await loadOrders();
-    } catch (error) {
-      console.error('Error retrying order:', error);
-      toast.error('Erro ao tentar novamente');
-    }
-  };
-
-  const retryAllErrorOrders = async () => {
-    const validErrorOrders = ensureTypedArray<LocalOrder>(errorOrders, (item: any) => !!item?.id);
-    
-    if (validErrorOrders.length === 0) {
-      toast.warning('Não há pedidos com erro para tentar novamente');
-      return;
-    }
-
-    try {
-      const db = getDatabaseAdapter();
-      
-      for (const order of validErrorOrders) {
-        await db.updateSyncStatus('orders', order.id, 'pending_sync');
-        
-        logOrderAction({
-          action: 'ORDER_RETRY_QUEUED',
-          orderId: order.id,
-          salesRepId: salesRep?.id,
-          salesRepName: salesRep?.name,
-          customerName: order.customer_name,
-          syncStatus: 'pending_sync'
-        });
-      }
-      
-      toast.success(`${validErrorOrders.length} pedido(s) recolocados na fila de transmissão`);
-      await loadOrders();
-    } catch (error) {
-      console.error('❌ [ANDROID] Error retrying error orders:', error);
-      toast.error('Erro ao tentar novamente');
-    }
-  };
-
-  const deleteTransmittedOrder = async (orderId: string) => {
-    const validTransmittedOrders = ensureTypedArray<LocalOrder>(transmittedOrders, (item: any) => !!item?.id);
-    const orderToDelete = validTransmittedOrders.find((order: LocalOrder) => order && order.id === orderId);
-    
-    if (!confirm('Tem certeza que deseja excluir este pedido transmitido permanentemente? Esta ação não pode ser desfeita.')) {
-      return;
-    }
-
-    try {
-      const db = getDatabaseAdapter();
-      await db.deleteOrder(orderId);
-      
-      logOrderAction({
-        action: 'ORDER_DELETED_TRANSMITTED',
-        orderId,
-        salesRepId: salesRep?.id,
-        salesRepName: salesRep?.name,
-        customerName: orderToDelete?.customer_name,
-        syncStatus: 'transmitted',
-        details: { 
-          total: orderToDelete?.total,
-          deletedBy: 'transmission_page'
-        }
-      });
-      
-      toast.success('Pedido transmitido excluído com sucesso');
-      await loadOrders();
-    } catch (error) {
-      console.error('❌ [ANDROID] Error deleting order:', error);
-      toast.error('Erro ao excluir pedido');
-    }
-  };
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
+  }, [connected, salesRep]);
 
   return {
-    pendingOrders,
-    transmittedOrders,
-    errorOrders,
     isTransmitting,
-    isLoading,
-    transmissionError,
-    canTransmit: connected && isOnline,
-    loadOrders,
-    transmitAllOrders,
-    retryOrder,
-    retryAllErrorOrders,
-    deleteTransmittedOrder,
-    retryTransmission,
-    clearTransmissionError: () => setTransmissionError(null)
+    transmitOrders
   };
 };
