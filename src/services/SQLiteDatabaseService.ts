@@ -1,13 +1,41 @@
-import { CapacitorDatabase } from './database/types';
+
 import { DatabaseInitializer } from './database/DatabaseInitializer';
 import { ensureArray, validateOrderData } from '@/utils/androidDataValidator';
 
-export class SQLiteDatabaseService implements CapacitorDatabase {
+interface DatabaseAdapter {
+  initDatabase(): Promise<void>;
+  getCustomers(): Promise<any[]>;
+  getClients(): Promise<any[]>;
+  saveClients(clients: any[]): Promise<void>;
+  getProducts(): Promise<any[]>;
+  saveProducts(products: any[]): Promise<void>;
+  getPaymentTables(): Promise<any[]>;
+  savePaymentTables(paymentTables: any[]): Promise<void>;
+  getOrders(): Promise<any[]>;
+  getAllOrders(): Promise<any[]>;
+  getClientOrders(clientId: string): Promise<any[]>;
+  saveOrder(order: any): Promise<void>;
+  deleteOrder(orderId: string): Promise<void>;
+  deleteAllOrders(): Promise<void>;
+  clearMockData(): Promise<void>;
+  getOrdersToSync(salesRepId: string): Promise<any[]>;
+  updateOrderStatus(orderId: string, status: string): Promise<void>;
+}
+
+export class SQLiteDatabaseService implements DatabaseAdapter {
   private db: any = null;
   private isInitialized = false;
+  private static instance: SQLiteDatabaseService;
 
   constructor() {
     this.initDatabase();
+  }
+
+  static getInstance(): SQLiteDatabaseService {
+    if (!SQLiteDatabaseService.instance) {
+      SQLiteDatabaseService.instance = new SQLiteDatabaseService();
+    }
+    return SQLiteDatabaseService.instance;
   }
 
   async initDatabase(): Promise<void> {
@@ -228,6 +256,30 @@ export class SQLiteDatabaseService implements CapacitorDatabase {
     }
   }
 
+  async getOrdersToSync(salesRepId: string): Promise<any[]> {
+    try {
+      const sql = 'SELECT * FROM orders WHERE sales_rep_id = ? AND sync_status = ? ORDER BY order_date DESC';
+      const values = [salesRepId, 'pending_sync'];
+      const result = await this.db.query(sql, values);
+      return ensureArray(result?.values || []);
+    } catch (error) {
+      console.error('Error getting orders to sync:', error);
+      return [];
+    }
+  }
+
+  async updateOrderStatus(orderId: string, status: string): Promise<void> {
+    try {
+      const sql = 'UPDATE orders SET sync_status = ? WHERE id = ?';
+      const values = [status, orderId];
+      await this.db.run(sql, values);
+      console.log(`Order ${orderId} status updated to ${status}`);
+    } catch (error) {
+      console.error(`Error updating order ${orderId} status:`, error);
+      throw error;
+    }
+  }
+
   async saveOrder(order: any): Promise<void> {
     if (!this.db) {
       console.error('Database not initialized');
@@ -316,3 +368,5 @@ export class SQLiteDatabaseService implements CapacitorDatabase {
     }
   }
 }
+
+export default SQLiteDatabaseService;

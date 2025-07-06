@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { getDatabaseAdapter } from '@/services/DatabaseAdapter';
@@ -48,9 +49,9 @@ export const useOrderTransmission = () => {
 
     try {
       const db = getDatabaseAdapter();
-      const ordersToTransmit: Order[] = await db.getOrdersToSync(salesRep.id);
+      const pendingOrders: Order[] = await db.getOrdersToSync(salesRep.id);
 
-      if (!ordersToTransmit || ordersToTransmit.length === 0) {
+      if (!pendingOrders || pendingOrders.length === 0) {
         toast.info('Nenhum pedido pendente para transmissão.');
         return { success: true, transmitted: 0, failed: 0, errors: [] };
       }
@@ -59,7 +60,7 @@ export const useOrderTransmission = () => {
       let failedCount = 0;
       const failedOrders: { order: Order; error: string }[] = [];
 
-      for (const order of ordersToTransmit) {
+      for (const order of pendingOrders) {
         try {
           console.log(`Transmitting order ${order.id}:`, order.customer_name);
           
@@ -70,6 +71,7 @@ export const useOrderTransmission = () => {
               order,
               error: 'Dados do pedido inválidos'
             });
+            failedCount++;
             continue;
           }
 
@@ -93,16 +95,17 @@ export const useOrderTransmission = () => {
             order,
             error: error instanceof Error ? error.message : 'Erro na transmissão'
           });
+          failedCount++;
         }
       }
 
-      const totalOrders = ordersToTransmit.length;
+      const totalOrders = pendingOrders.length;
       const success = failedOrders.length === 0;
 
       if (success) {
         toast.success(`Todos os ${totalOrders} pedidos foram transmitidos com sucesso!`);
       } else {
-        toast.warn(`${transmittedCount} pedidos transmitidos. ${failedCount} falharam.`);
+        toast.error(`${transmittedCount} pedidos transmitidos. ${failedCount} falharam.`);
         failedOrders.forEach(failedOrder => {
           toast.error(`Falha ao transmitir pedido para ${failedOrder.order.customer_name}: ${failedOrder.error}`);
         });
@@ -118,7 +121,7 @@ export const useOrderTransmission = () => {
     } catch (error) {
       console.error('Erro geral na transmissão de pedidos:', error);
       toast.error('Erro ao transmitir pedidos. Verifique sua conexão e tente novamente.');
-      return { success: false, transmitted: 0, failed: ordersToTransmit.length, errors: [] };
+      return { success: false, transmitted: 0, failed: pendingOrders?.length || 0, errors: [] };
     } finally {
       setIsTransmitting(false);
     }

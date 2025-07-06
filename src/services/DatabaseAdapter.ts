@@ -1,5 +1,6 @@
+
 import WebDatabaseService from './WebDatabaseService';
-import SQLiteDatabaseService from './SQLiteDatabaseService';
+import { SQLiteDatabaseService } from './SQLiteDatabaseService';
 import { Capacitor } from '@capacitor/core';
 
 interface DatabaseAdapter {
@@ -12,56 +13,44 @@ interface DatabaseAdapter {
   updateSyncStatus(table: string, id: string, status: 'synced' | 'pending_sync' | 'error' | 'transmitted' | 'deleted'): Promise<void>;
   logSync(type: string, status: string, details?: string): Promise<void>;
   saveOrder(order: any): Promise<void>;
-  updateOrder(orderId: string, order: any): Promise<void>; // ✅ NOVO: Método para atualizar pedido
+  updateOrder(orderId: string, order: any): Promise<void>;
   updateClientStatus(clientId: string, status: string): Promise<void>;
   getClientById(clientId: string): Promise<any | null>;
   closeDatabase(): Promise<void>;
-  // New methods for offline flow
   getPendingOrders(): Promise<any[]>;
   markOrderAsTransmitted(orderId: string): Promise<void>;
   getOfflineOrdersCount(): Promise<number>;
-  // New methods for improved order management
   getClientOrders(clientId: string): Promise<any[]>;
   deleteOrder(orderId: string): Promise<void>;
   deleteAllOrders(): Promise<void>;
   getTransmittedOrders(): Promise<any[]>;
   getAllOrders(): Promise<any[]>;
-  // New method for mobile orders
   saveMobileOrder(order: any): Promise<void>;
-  // ✅ NOVO: Métodos para salvar dados em batch
   saveClients(clientsArray: any[]): Promise<void>;
   saveProducts(productsArray: any[]): Promise<void>;
-  savePaymentTables(paymentTablesArray: any[]): Promise<void>; // ✅ NOVO: Para tabelas de pagamento
+  savePaymentTables(paymentTablesArray: any[]): Promise<void>;
   saveClient(client: any): Promise<void>;
   saveProduct(product: any): Promise<void>;
-  // ✅ NOVOS métodos para validações e controle de status
   isClientNegated(clientId: string): Promise<boolean>;
   unnegateClient(clientId: string, reason: string): Promise<void>;
   getClientStatusHistory(clientId: string): Promise<any[]>;
   hasClientPendingOrders(clientId: string): Promise<boolean>;
   canCreateOrderForClient(clientId: string): Promise<{ canCreate: boolean; reason?: string; existingOrder?: any }>;
-  // ✅ NOVO: Método específico para verificar pedido ativo único
   getActivePendingOrder(clientId: string): Promise<any | null>;
-  // ✅ NOVOS métodos adicionados para corrigir os erros
   getCustomers(): Promise<any[]>;
-  getPaymentTables(): Promise<any[]>; // ✅ NOVO: Para buscar tabelas de pagamento
-  // ✅ NOVO: Método para obter pedido por ID
+  getPaymentTables(): Promise<any[]>;
   getOrderById(orderId: string): Promise<any | null>;
-  // ✅ NOVO: Método para limpar dados mock
   clearMockData?(): Promise<void>;
-  // ✅ NOVOS: Métodos para atualização inteligente de status
   updateClientStatusAfterOrderDeletion?(clientId: string): Promise<void>;
   resetAllNegatedClientsStatus?(): Promise<void>;
-  
-  // ✅ NOVO: Método para salvar histórico de pedidos
   saveOrders(ordersArray: any[]): Promise<void>;
+  getOrdersToSync(salesRepId: string): Promise<any[]>;
+  updateOrderStatus(orderId: string, status: string): Promise<void>;
 }
 
-// Esta função determinará qual implementação de banco de dados usar
 export function getDatabaseAdapter(): DatabaseAdapter {
   console.log('🔍 Determining database adapter...');
   
-  // Para apps nativos, sempre tentar usar SQLite primeiro
   const isNative = Capacitor.isNativePlatform();
   
   console.log('🔍 Platform detection:', {

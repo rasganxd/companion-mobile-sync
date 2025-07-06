@@ -1,4 +1,3 @@
-
 class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
@@ -515,6 +514,42 @@ class SupabaseService {
     }
   }
 
+  async transmitOrder(order: any): Promise<{ success: boolean; error?: string }> {
+    console.log(`📤 Transmitting single order ${order.id}:`, {
+      customer_id: order.customer_id,
+      customer_name: order.customer_name,
+      total: order.total,
+      date: order.date,
+      itemsCount: order.items?.length || 0
+    });
+
+    try {
+      const response = await fetch(`${this.baseUrl}/mobile-orders-import`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.anonKey}`
+        },
+        body: JSON.stringify(order)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        const errorMsg = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        console.error(`❌ Error transmitting order ${order.id}:`, errorMsg);
+        return { success: false, error: errorMsg };
+      } else {
+        const result = await response.json();
+        console.log(`✅ Order ${order.id} transmitted successfully:`, result);
+        return { success: true };
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
+      console.error(`❌ Network error transmitting order ${order.id}:`, errorMsg);
+      return { success: false, error: errorMsg };
+    }
+  }
+
   async transmitOrders(orders: any[], sessionToken: string) {
     console.log(`📤 Transmitting ${orders.length} orders to Supabase individually`);
     
@@ -522,42 +557,14 @@ class SupabaseService {
     let errorCount = 0;
     const errors: string[] = [];
 
-    // Transmitir cada pedido individualmente
     for (const order of orders) {
-      try {
-        console.log(`📤 Transmitting order ${order.id}:`, {
-          customer_id: order.customer_id,
-          customer_name: order.customer_name,
-          total: order.total,
-          date: order.date,
-          itemsCount: order.items?.length || 0
-        });
-
-        const response = await fetch(`${this.baseUrl}/mobile-orders-import`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify(order) // Enviar pedido individual, não array
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          const errorMsg = errorData.error || `HTTP ${response.status}: ${response.statusText}`;
-          console.error(`❌ Error transmitting order ${order.id}:`, errorMsg);
-          errors.push(`Pedido ${order.id}: ${errorMsg}`);
-          errorCount++;
-        } else {
-          const result = await response.json();
-          console.log(`✅ Order ${order.id} transmitted successfully:`, result);
-          successCount++;
-        }
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
-        console.error(`❌ Network error transmitting order ${order.id}:`, errorMsg);
-        errors.push(`Pedido ${order.id}: ${errorMsg}`);
+      const result = await this.transmitOrder(order);
+      
+      if (result.success) {
+        successCount++;
+      } else {
         errorCount++;
+        errors.push(`Pedido ${order.id}: ${result.error}`);
       }
     }
 

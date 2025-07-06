@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import Header from '@/components/Header';
-import { useOrderTransmission } from '@/hooks/useOrderTransmission';
+import { useTransmitOrdersPage } from '@/hooks/useTransmitOrdersPage';
 import OrderSummaryCard from '@/components/transmit/OrderSummaryCard';
 import OrderTabs from '@/components/transmit/OrderTabs';
 import OrderActionButtons from '@/components/transmit/OrderActionButtons';
@@ -28,7 +28,7 @@ const TransmitOrders = () => {
     deleteTransmittedOrder,
     retryTransmission,
     clearTransmissionError
-  } = useOrderTransmission();
+  } = useTransmitOrdersPage();
 
   const getCurrentOrders = () => {
     switch (activeTab) {
