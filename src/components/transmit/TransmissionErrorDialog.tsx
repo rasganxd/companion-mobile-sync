@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, RefreshCw, LogIn } from 'lucide-react';
+import { translateError } from '@/utils/errorTranslator';
 
 interface TransmissionErrorDialogProps {
   isOpen: boolean;
@@ -26,7 +27,11 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
   isRetrying
 }) => {
   const getErrorMessage = (error: string) => {
-    if (error.includes('Vendedor não identificado') || error.includes('Token de sessão expirado') || error.includes('Sessão expirada')) {
+    // Primeiro, traduz o erro para português
+    const translatedError = translateError(error);
+    
+    // Depois categoriza baseado no erro traduzido
+    if (translatedError.includes('Sessão expirada') || translatedError.includes('Token de sessão expirado')) {
       return {
         title: 'Sessão Expirada',
         message: 'Sua sessão expirou. Faça login novamente para continuar.',
@@ -35,7 +40,7 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
       };
     }
     
-    if (error.includes('Invalid authentication') || error.includes('Erro de autenticação')) {
+    if (translatedError.includes('Erro de autenticação') || translatedError.includes('Não autorizado')) {
       return {
         title: 'Erro de Autenticação',
         message: 'Sua autenticação não é válida. Faça login novamente.',
@@ -44,7 +49,7 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
       };
     }
     
-    if (error.includes('Sales representative not found')) {
+    if (translatedError.includes('Vendedor não encontrado') || translatedError.includes('Vendedor não identificado')) {
       return {
         title: 'Erro de Conta',
         message: 'Sua conta não está vinculada a um vendedor válido. Entre em contato com o administrador do sistema.',
@@ -53,7 +58,7 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
       };
     }
     
-    if (error.includes('Network Error') || error.includes('Failed to fetch') || error.includes('Erro de conexão')) {
+    if (translatedError.includes('Erro de conexão') || translatedError.includes('Falha na conexão')) {
       return {
         title: 'Erro de Conexão',
         message: 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet e tente novamente.',
@@ -64,7 +69,7 @@ const TransmissionErrorDialog: React.FC<TransmissionErrorDialogProps> = ({
     
     return {
       title: 'Erro na Transmissão',
-      message: error || 'Ocorreu um erro inesperado durante a transmissão dos pedidos.',
+      message: translatedError || 'Ocorreu um erro inesperado durante a transmissão dos pedidos.',
       canRetry: true,
       needsLogin: false
     };

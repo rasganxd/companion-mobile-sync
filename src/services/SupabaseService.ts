@@ -2,6 +2,18 @@ class SupabaseService {
   private baseUrl = 'https://ufvnubabpcyimahbubkd.supabase.co/functions/v1';
   private anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVmdm51YmFicGN5aW1haGJ1YmtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4MzQ1NzIsImV4cCI6MjA2MzQxMDU3Mn0.rL_UAaLky3SaSAigQPrWAZjhkM8FBmeO0w-pEiB5aro';
 
+  private translateError(error: string): string {
+    // Import inline para evitar problemas de dependência
+    const translations: Record<string, string> = {
+      'Invalid authentication: Mobile session token expired': 'Sessão expirada. Faça login novamente.',
+      'Invalid authentication': 'Erro de autenticação. Faça login novamente.',
+      'Sales representative not found': 'Vendedor não encontrado.',
+      'Network Error': 'Erro de conexão. Verifique sua internet.',
+      'Failed to fetch': 'Falha na conexão. Verifique sua internet.',
+    };
+    return translations[error] || error;
+  }
+
   async authenticateSalesRep(code: string, password: string) {
     console.log('🔐 Authenticating sales rep via Supabase only:', code);
     
