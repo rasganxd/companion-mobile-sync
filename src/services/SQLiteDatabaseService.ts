@@ -311,12 +311,24 @@ export class SQLiteDatabaseService implements DatabaseAdapter {
     }
   }
 
-  async updateOrderStatus(orderId: string, status: string): Promise<void> {
+  async updateOrderStatus(orderId: string, status: string, reason?: string): Promise<void> {
     try {
-      const sql = 'UPDATE orders SET sync_status = ? WHERE id = ?';
-      const values = [status, orderId];
+      let sql = 'UPDATE orders SET sync_status = ?';
+      let values = [status];
+      
+      if (reason) {
+        sql += ', reason = ?';
+        values.push(reason);
+      } else if (status === 'transmitted' || status === 'synced') {
+        // Limpar o motivo quando o pedido for transmitido com sucesso
+        sql += ', reason = NULL';
+      }
+      
+      sql += ' WHERE id = ?';
+      values.push(orderId);
+      
       await this.db.run(sql, values);
-      console.log(`Order ${orderId} status updated to ${status}`);
+      console.log(`Order ${orderId} status updated to ${status}${reason ? ` with reason: ${reason}` : ''}`);
     } catch (error) {
       console.error(`Error updating order ${orderId} status:`, error);
       throw error;

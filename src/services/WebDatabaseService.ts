@@ -91,11 +91,17 @@ class WebDatabaseService {
     );
   }
 
-  async updateOrderStatus(orderId: string, status: string): Promise<void> {
+  async updateOrderStatus(orderId: string, status: string, reason?: string): Promise<void> {
     await this.ensureDatabaseInitialized();
     const order = await this.db!.get('orders', orderId);
     if (order) {
       order.sync_status = status;
+      if (reason) {
+        order.reason = reason;
+      } else if (status === 'transmitted' || status === 'synced') {
+        // Limpar o motivo quando o pedido for transmitido com sucesso
+        order.reason = null;
+      }
       await this.db!.put('orders', order);
     }
   }

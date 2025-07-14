@@ -72,9 +72,11 @@ export const useOrderTransmission = () => {
           const validatedOrder = validateOrderData(order);
           if (!validatedOrder) {
             console.error('Order validation failed:', order.id);
+            const errorMessage = 'Dados do pedido inválidos';
+            await db.updateOrderStatus(order.id, 'error', errorMessage);
             failedOrders.push({
               order,
-              error: 'Dados do pedido inválidos'
+              error: errorMessage
             });
             failedCount++;
             continue;
@@ -89,17 +91,21 @@ export const useOrderTransmission = () => {
             transmittedCount++;
           } else {
             console.error(`Order ${order.id} transmission failed:`, transmissionResult.error);
+            const errorMessage = transmissionResult.error || 'Erro desconhecido na transmissão';
+            await db.updateOrderStatus(order.id, 'error', errorMessage);
             failedOrders.push({
               order,
-              error: transmissionResult.error || 'Erro desconhecido na transmissão'
+              error: errorMessage
             });
             failedCount++;
           }
         } catch (error) {
           console.error('Error transmitting order:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Erro na transmissão';
+          await db.updateOrderStatus(order.id, 'error', errorMessage);
           failedOrders.push({
             order,
-            error: error instanceof Error ? error.message : 'Erro na transmissão'
+            error: errorMessage
           });
           failedCount++;
         }

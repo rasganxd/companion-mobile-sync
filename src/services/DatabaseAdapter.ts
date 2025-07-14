@@ -45,7 +45,7 @@ interface DatabaseAdapter {
   resetAllNegatedClientsStatus?(): Promise<void>;
   saveOrders(ordersArray: any[]): Promise<void>;
   getOrdersToSync(salesRepId: string): Promise<any[]>;
-  updateOrderStatus(orderId: string, status: string): Promise<void>;
+  updateOrderStatus(orderId: string, status: string, reason?: string): Promise<void>;
 }
 
 export function getDatabaseAdapter(): DatabaseAdapter {

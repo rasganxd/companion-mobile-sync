@@ -67,7 +67,7 @@ export const useTransmitOrdersPage = () => {
         try {
           const validatedOrder = validateOrderData(order);
           if (!validatedOrder) {
-            await db.updateOrderStatus(order.id, 'error');
+            await db.updateOrderStatus(order.id, 'error', 'Dados do pedido inválidos');
             errorCount++;
             continue;
           }
@@ -78,11 +78,12 @@ export const useTransmitOrdersPage = () => {
             await db.updateOrderStatus(order.id, 'transmitted');
             successCount++;
           } else {
-            await db.updateOrderStatus(order.id, 'error');
+            await db.updateOrderStatus(order.id, 'error', result.error || 'Erro na transmissão');
             errorCount++;
           }
         } catch (error) {
-          await db.updateOrderStatus(order.id, 'error');
+          const errorMessage = error instanceof Error ? error.message : 'Erro na transmissão';
+          await db.updateOrderStatus(order.id, 'error', errorMessage);
           errorCount++;
         }
       }
@@ -135,6 +136,7 @@ export const useTransmitOrdersPage = () => {
         toast.success('Pedido transmitido com sucesso!');
         await loadOrders();
       } else {
+        await db.updateOrderStatus(orderId, 'error', result.error || 'Erro na transmissão');
         toast.error(`Erro ao transmitir: ${result.error}`);
       }
     } catch (error) {
@@ -183,9 +185,12 @@ export const useTransmitOrdersPage = () => {
             await db.updateOrderStatus(order.id, 'transmitted');
             successCount++;
           } else {
+            await db.updateOrderStatus(order.id, 'error', result.error || 'Erro na transmissão');
             errorCount++;
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Erro na transmissão';
+          await db.updateOrderStatus(order.id, 'error', errorMessage);
           errorCount++;
         }
       }
