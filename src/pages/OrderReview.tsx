@@ -231,6 +231,9 @@ const OrderReview = () => {
             {client.company_name && client.company_name !== client.name && (
               <div className="text-xs text-blue-100 mt-1">{client.company_name}</div>
             )}
+            <div className="text-xs text-blue-100 mt-1">
+              Pagamento: {paymentMethod || 'Não selecionada'}
+            </div>
           </div>
           <div className="text-right">
             <div className="text-xs text-blue-100">Total:</div>
