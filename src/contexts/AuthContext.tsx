@@ -285,6 +285,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       key === 'last_sync_date' || 
       key === 'sales_rep_id'
     ));
+    
+    // Redirect to login page immediately after logout
+    console.log('🔐 AuthContext: Redirecting to login page');
+    window.location.href = '/login';
   };
 
   const markSyncCompleted = () => {

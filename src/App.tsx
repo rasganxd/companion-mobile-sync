@@ -141,11 +141,19 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
-                {/* Default redirect - vai para HOME, não para login */}
-                <Route path="/" element={<Navigate to="/home" replace />} />
+                {/* Default redirect - check auth first */}
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Navigate to="/home" replace />
+                  </ProtectedRoute>
+                } />
                 
-                {/* Catch all route - vai para HOME, não para login */}
-                <Route path="*" element={<Navigate to="/home" replace />} />
+                {/* Catch all route - redirect to home via protected route */}
+                <Route path="*" element={
+                  <ProtectedRoute>
+                    <Navigate to="/home" replace />
+                  </ProtectedRoute>
+                } />
               </Routes>
               
               <Toaster richColors position="top-center" />

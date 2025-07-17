@@ -53,6 +53,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
             setHasStoredAuth(false);
           }
         } else {
+          // No salesRep data in localStorage - user is not authenticated
           setHasStoredAuth(false);
         }
       } catch (error) {
