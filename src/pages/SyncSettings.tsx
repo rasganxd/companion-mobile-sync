@@ -10,6 +10,8 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DataCleanupDialog } from '@/components/DataCleanupDialog';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { useConfirm } from '@/hooks/useConfirm';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -37,6 +39,7 @@ const SyncSettings = () => {
   } = useDataSync();
   const [isClearingData, setIsClearingData] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const { isOpen, options, confirm, handleConfirm, handleCancel } = useConfirm();
 
   React.useEffect(() => {
     loadLastSyncDate();
@@ -95,7 +98,13 @@ const SyncSettings = () => {
       toast.error('Sem conexão com a internet. Conecte-se para sincronizar.');
       return;
     }
-    if (!confirm('Isso irá limpar todos os dados locais e recarregar tudo do servidor. Continuar?')) {
+    const confirmed = await confirm({
+      title: 'Ressincronização Completa',
+      description: 'Isso irá limpar todos os dados locais e recarregar tudo do servidor. Esta ação não pode ser desfeita.',
+      confirmText: 'Continuar',
+      cancelText: 'Cancelar'
+    });
+    if (!confirmed) {
       return;
     }
     console.log('🔄 Iniciando ressincronização completa...');
@@ -120,7 +129,13 @@ const SyncSettings = () => {
   };
 
   const handleClearLocalData = async () => {
-    if (!confirm('Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Continuar?')) {
+    const confirmed = await confirm({
+      title: 'Limpar Dados Locais',
+      description: 'Isso irá limpar todos os dados locais. Você precisará fazer login novamente. Esta ação não pode ser desfeita.',
+      confirmText: 'Limpar Dados',
+      cancelText: 'Cancelar'
+    });
+    if (!confirmed) {
       return;
     }
     setIsClearingData(true);
@@ -283,6 +298,16 @@ const SyncSettings = () => {
         isOpen={showCleanupDialog}
         onClose={() => setShowCleanupDialog(false)}
         onCleanupComplete={handleCleanupComplete}
+      />
+
+      <ConfirmDialog
+        isOpen={isOpen}
+        title={options.title}
+        description={options.description}
+        confirmText={options.confirmText || 'Confirmar'}
+        cancelText={options.cancelText || 'Cancelar'}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
       />
     </div>;
 };
