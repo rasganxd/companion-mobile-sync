@@ -9,34 +9,53 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { toast } from 'sonner';
 
 const InitialSyncScreen: React.FC = () => {
-  const { salesRep, needsInitialSync } = useAuth();
+  const { salesRep, needsInitialSync, markSyncCompleted } = useAuth();
   const { isSyncing, syncProgress, performFullSync, forceResync } = useDataSync();
   const { connected } = useNetworkStatus();
   const [syncCompleted, setSyncCompleted] = useState(false);
 
   const handleSync = async () => {
     if (!salesRep || !salesRep.sessionToken) {
+      console.error('🔄 Sync: Sessão inválida', { salesRep: !!salesRep, sessionToken: !!salesRep?.sessionToken });
       toast.error('Sessão expirada. Faça login novamente.');
       return;
     }
 
     if (!connected) {
+      console.error('🔄 Sync: Sem conexão');
       toast.error('Sem conexão com a internet');
       return;
     }
 
+    if (isSyncing) {
+      console.warn('🔄 Sync: Sincronização já em andamento, ignorando nova tentativa');
+      return;
+    }
+
     try {
+      console.log('🔄 Sync: Iniciando sincronização manual', {
+        salesRepId: salesRep.id,
+        salesRepName: salesRep.name,
+        hasToken: !!salesRep.sessionToken
+      });
+      
       const result = await performFullSync(salesRep.id, salesRep.sessionToken);
       
       if (result.success) {
+        console.log('✅ Sync: Sincronização bem-sucedida', result.syncedData);
         setSyncCompleted(true);
+        
+        // Atualizar estado de needsInitialSync no contexto
+        markSyncCompleted();
+        
         const { syncedData } = result;
         toast.success(`Sincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
       } else {
+        console.error('❌ Sync: Falha na sincronização', result.error);
         toast.error('Falha na sincronização: ' + result.error);
       }
     } catch (error) {
-      console.error('Sync error:', error);
+      console.error('❌ Sync: Erro durante sincronização', error);
       toast.error('Erro durante a sincronização');
     }
   };
@@ -57,6 +76,10 @@ const InitialSyncScreen: React.FC = () => {
       
       if (result.success) {
         setSyncCompleted(true);
+        
+        // Atualizar estado de needsInitialSync no contexto
+        markSyncCompleted();
+        
         const { syncedData } = result;
         toast.success(`Ressincronização concluída! ${syncedData?.clients || 0} clientes, ${syncedData?.products || 0} produtos`);
       } else {

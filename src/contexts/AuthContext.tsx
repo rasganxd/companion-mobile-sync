@@ -21,6 +21,7 @@ interface AuthContextType {
   loginWithCredentials: (code: string, password: string) => Promise<boolean>;
   logout: () => void;
   needsInitialSync: boolean;
+  markSyncCompleted: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -134,11 +135,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setSalesRep(null);
         }
       }
+      
+      // Escutar mudanças no status de sincronização
+      if (e.key === 'sync_completed' && e.newValue === 'true') {
+        console.log('🔄 AuthContext: Sincronização concluída detectada, removendo needsInitialSync');
+        setNeedsInitialSync(false);
+        localStorage.removeItem('sync_completed'); // Limpar o sinal
+      }
+      
+      // Escutar mudanças na data de sincronização
+      if (e.key === 'last_sync_date' && e.newValue) {
+        console.log('🔄 AuthContext: Data de sincronização atualizada, removendo needsInitialSync');
+        setNeedsInitialSync(false);
+        loadLastSyncDate();
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [loadLastSyncDate]);
 
   const login = (salesRepData: SalesRep) => {
     console.log('🔐 AuthContext: login() called for:', salesRepData.name);
@@ -204,7 +219,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return false;
       }
       
-      // Authenticate with Supabase only
+      // Authenticate with Supabase only - sem sincronização automática
       const authResult = await supabaseService.authenticateSalesRep(code, password);
       console.log('🔐 Resultado da autenticação recebido:', authResult);
       
@@ -217,21 +232,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('✅ Login bem-sucedido, salvando dados do vendedor');
         login(salesRepData);
         
-        // Perform initial sync if needed
+        // Apenas detectar se precisa de sincronização inicial - SEM executar automaticamente
         if (!lastSyncDate) {
-          console.log('🔄 Iniciando sincronização inicial...');
-          toast.success('Login realizado! Iniciando sincronização de dados...');
-          
-          const syncResult = await performFullSync(salesRepData.id, authResult.sessionToken);
-          if (syncResult.success) {
-            setNeedsInitialSync(false);
-            const { clients = 0, products = 0, paymentTables = 0 } = syncResult.syncedData || {};
-            toast.success(`Sincronização concluída! ${clients} clientes, ${products} produtos`);
-          } else {
-            console.error('❌ Sincronização falhou:', syncResult.error);
-            toast.error('Falha na sincronização: ' + syncResult.error);
-            setNeedsInitialSync(true);
-          }
+          console.log('🔄 Detectada necessidade de sincronização inicial');
+          setNeedsInitialSync(true);
+          toast.success('Login realizado! É necessário sincronizar dados para uso offline.');
+        } else {
+          console.log('✅ Login concluído - dados já sincronizados anteriormente');
+          toast.success('Login realizado com sucesso!');
         }
         
         return true;
@@ -279,6 +287,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     ));
   };
 
+  const markSyncCompleted = () => {
+    console.log('🔄 AuthContext: markSyncCompleted() chamado');
+    setNeedsInitialSync(false);
+  };
+
   const value = {
     salesRep,
     isLoading,
@@ -287,7 +300,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     loginWithCredentials,
     logout,
-    needsInitialSync
+    needsInitialSync,
+    markSyncCompleted
   };
 
   return (

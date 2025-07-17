@@ -131,13 +131,30 @@ export const useDataSync = () => {
   };
 
   const performFullSync = useCallback(async (salesRepId: string, sessionToken: string, forceClear = false): Promise<SyncResult> => {
+    // Evitar múltiplas sincronizações simultâneas
+    if (isSyncing) {
+      console.warn('🔄 useDataSync: Sincronização já em andamento, abortando nova tentativa');
+      return {
+        success: false,
+        error: 'Sincronização já em andamento'
+      };
+    }
+
     try {
+      console.log('🔄 useDataSync: Iniciando performFullSync', {
+        salesRepId,
+        hasSessionToken: !!sessionToken,
+        forceClear,
+        timestamp: new Date().toISOString()
+      });
+      
       setIsSyncing(true);
+      setSyncProgress({ stage: 'Iniciando...', current: 0, total: 5, percentage: 0 });
       
       try {
         validateSyncParams(salesRepId, sessionToken);
       } catch (validationError) {
-        console.error('Parameter validation failed:', validationError);
+        console.error('❌ useDataSync: Validação de parâmetros falhou', validationError);
         return {
           success: false,
           error: validationError instanceof Error ? validationError.message : 'Parâmetros inválidos'
